@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+import threading
 from pathlib import Path
 
 from ..core.config import require_tool
@@ -14,15 +15,34 @@ def detect_scenes(path: Path, duration_ms: int, threshold: float = 27.0,
                   token: CancelToken | None = None) -> dict:
     """threshold — шкала PySceneDetect ContentDetector (по умолчанию 27); для FFmpeg пересчитывается в 0..1."""
     try:
-        return _with_pyscenedetect(path, duration_ms, threshold)
+        return _with_pyscenedetect(path, duration_ms, threshold, token)
     except ImportError:
         return _with_ffmpeg(path, duration_ms, threshold, token)
 
 
-def _with_pyscenedetect(path: Path, duration_ms: int, threshold: float) -> dict:
-    from scenedetect import ContentDetector, detect  # type: ignore
+def _with_pyscenedetect(path: Path, duration_ms: int, threshold: float, token: CancelToken | None) -> dict:
+    from scenedetect import ContentDetector, SceneManager, open_video  # type: ignore
 
-    scenes = detect(str(path), ContentDetector(threshold=threshold))
+    manager = SceneManager()
+    manager.add_detector(ContentDetector(threshold=threshold))
+    video = open_video(str(path))
+    done = threading.Event()
+
+    def watch() -> None:  # PySceneDetect работает в этом же потоке, поэтому отмену ловит отдельный
+        while not done.wait(0.2):
+            if token is not None and token.cancelled:
+                manager.stop()
+                return
+
+    watcher = threading.Thread(target=watch, daemon=True)
+    watcher.start()
+    try:
+        manager.detect_scenes(video)
+    finally:
+        done.set()
+    if token is not None:
+        token.check()  # при отмене бросает исключение, неполный результат не используется
+    scenes = manager.get_scene_list()
     cuts = sorted({round(s[0].get_seconds() * 1000) for s in scenes if s[0].get_seconds() > 0})
     return _build("pyscenedetect", cuts, duration_ms)
 
