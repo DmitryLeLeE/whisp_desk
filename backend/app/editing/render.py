@@ -27,6 +27,44 @@ class RenderError(RuntimeError):
     pass
 
 
+HW_ENCODERS = ("h264_nvenc", "h264_qsv", "h264_amf")
+_encoder_cache: dict[str, bool] = {}
+
+
+def encoder_works(name: str) -> bool:
+    """Пробное кодирование одного кадра: наличие в списке кодеков не гарантирует, что есть железо."""
+    if name == "libx264":
+        return True
+    if name not in _encoder_cache:
+        try:
+            code, _ = run([require_tool("ffmpeg"), "-v", "error", "-nostdin", "-f", "lavfi", "-i",
+                           "color=s=256x256:d=0.2", "-frames:v", "2", "-c:v", name, "-f", "null", "-"])
+        except Exception:  # noqa: BLE001
+            code = 1
+        _encoder_cache[name] = code == 0
+    return _encoder_cache[name]
+
+
+def pick_encoder(preference: str = "libx264") -> str:
+    """'auto' — первый рабочий аппаратный энкодер, иначе libx264. Явно заданный нерабочий — откат на libx264."""
+    if preference == "auto":
+        return next((e for e in HW_ENCODERS if encoder_works(e)), "libx264")
+    if preference in HW_ENCODERS and not encoder_works(preference):
+        return "libx264"
+    return preference if preference in HW_ENCODERS else "libx264"
+
+
+def video_codec_args(encoder: str, v: dict) -> list[str]:
+    crf = str(v["crf"])
+    if encoder == "h264_nvenc":
+        return ["-c:v", encoder, "-preset", "p5", "-rc", "vbr", "-cq", crf, "-b:v", "0", "-pix_fmt", "yuv420p"]
+    if encoder == "h264_qsv":
+        return ["-c:v", encoder, "-global_quality", crf, "-preset", "veryfast", "-pix_fmt", "nv12"]
+    if encoder == "h264_amf":
+        return ["-c:v", encoder, "-quality", "balanced", "-rc", "cqp", "-qp_i", crf, "-qp_p", crf, "-pix_fmt", "yuv420p"]
+    return ["-c:v", "libx264", "-preset", str(v["preset"]), "-crf", crf, "-pix_fmt", "yuv420p"]
+
+
 def _sec(ms: int) -> str:
     return f"{ms / 1000:.6f}"
 
@@ -37,7 +75,7 @@ def merge_options(mode: str, template: dict | None, overrides: dict | None) -> d
         raise RenderError(f"Неизвестный режим рендера: {mode}")
     template = template or {}
     overrides = overrides or {}
-    video = {**MODES[mode], **template.get("export", {})}
+    video = {"encoder": "libx264", **MODES[mode], **template.get("export", {})}
     if mode == "fast":  # быстрый режим всегда лёгкий, шаблон его не утяжеляет
         video.update({k: MODES["fast"][k] for k in ("height", "crf", "preset", "audio_bitrate")})
     video.update(overrides.get("video", {}))
@@ -223,16 +261,19 @@ def render(*, plan: dict, meta: dict, source: Path, out_path: Path, work_dir: Pa
 
     part = out_path.with_name(out_path.stem + ".part" + out_path.suffix)
     v = options["video"]
-    cmd = [require_tool("ffmpeg"), "-y", "-v", "error", "-nostdin", "-progress", "pipe:1", *inputs,
-           "-filter_complex_script", str(script_path)]
-    if has_video:
-        cmd += ["-map", "[vout]", "-map", "[aout]", "-c:v", "libx264", "-preset", str(v["preset"]),
-                "-crf", str(v["crf"]), "-pix_fmt", "yuv420p"]
-    else:
-        cmd += ["-map", "[aout]"]
-    cmd += ["-c:a", "aac", "-b:a", str(v["audio_bitrate"]), "-ar", str(options["audio"]["sample_rate"]),
-            "-movflags", "+faststart", "-f", "mp4", str(part)]
-    log(f"Рендер: {len(kept_ranges(plan))} фрагментов, ожидаемая длительность {expected_s:.1f} с")
+    encoder = pick_encoder(v.get("encoder", "libx264")) if has_video else "libx264"
+
+    def build_cmd(enc: str) -> list[str]:
+        c = [require_tool("ffmpeg"), "-y", "-v", "error", "-nostdin", "-progress", "pipe:1", *inputs,
+             "-filter_complex_script", str(script_path)]
+        if has_video:
+            c += ["-map", "[vout]", "-map", "[aout]", *video_codec_args(enc, v)]
+        else:
+            c += ["-map", "[aout]"]
+        return c + ["-c:a", "aac", "-b:a", str(v["audio_bitrate"]), "-ar", str(options["audio"]["sample_rate"]),
+                    "-movflags", "+faststart", "-f", "mp4", str(part)]
+
+    log(f"Рендер: {len(kept_ranges(plan))} фрагментов, ожидаемая длительность {expected_s:.1f} с, кодек {encoder}")
 
     def on_line(line: str) -> None:
         m = _TIME.match(line)
@@ -240,7 +281,12 @@ def render(*, plan: dict, meta: dict, source: Path, out_path: Path, work_dir: Pa
             progress(min(1.0, int(m.group(1)) / 1e6 / max(expected_s, 0.001)))
 
     try:
-        code, out = run(cmd, cwd=work_dir, token=token, on_line=on_line)
+        code, out = run(build_cmd(encoder), cwd=work_dir, token=token, on_line=on_line)
+        if code != 0 and encoder != "libx264":
+            log(f"Аппаратный энкодер {encoder} не сработал, повтор на процессоре (libx264)")
+            part.unlink(missing_ok=True)
+            encoder = "libx264"
+            code, out = run(build_cmd(encoder), cwd=work_dir, token=token, on_line=on_line)
     except BaseException:
         part.unlink(missing_ok=True)
         raise
@@ -269,6 +315,6 @@ def render(*, plan: dict, meta: dict, source: Path, out_path: Path, work_dir: Pa
     part.replace(out_path)
     if progress:
         progress(1.0)
-    return {"output": out_path.name, "duration_ms": res["duration_ms"], "expected_ms": round(expected_s * 1000),
+    return {"output": out_path.name, "encoder": encoder, "duration_ms": res["duration_ms"], "expected_ms": round(expected_s * 1000),
             "size_bytes": out_path.stat().st_size, "video": res.get("video"),
             "audio": res["audio_streams"][0] if res["audio_streams"] else None}

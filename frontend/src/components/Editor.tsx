@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, fmtTime, parseTime } from "../api";
-import type { Cue, PlanPayload, Project, Scenes, Segment, Waveform } from "../types";
+import type { Cue, PlanPayload, Project, Scenes, Segment, Thumbs, Waveform } from "../types";
 import Timeline from "./Timeline";
 
 interface Props {
@@ -29,6 +29,10 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
   const [jump, setJump] = useState("");
   const [onlyUnreviewed, setOnlyUnreviewed] = useState(false);
   const [error, setError] = useState("");
+  const [rate, setRate] = useState(1);
+  const [msg, setMsg] = useState("");
+  const [thumbs, setThumbs] = useState<Thumbs | null>(null);
+  const [showScenes, setShowScenes] = useState(false);
   const rangeEnd = useRef<number | null>(null);
   const segsRef = useRef(segs);
   segsRef.current = segs;
@@ -88,6 +92,29 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
     if (x < el.scrollLeft || x > el.scrollLeft + el.clientWidth - 40) el.scrollLeft = Math.max(0, x - 80);
   }, [current, playing, pps]);
 
+  useEffect(() => { if (videoRef.current) videoRef.current.playbackRate = rate; }, [rate, project.has_proxy]);
+  useEffect(() => { api.get<Thumbs>(`/api/projects/${pid}/analysis/thumbnails`).then(setThumbs).catch(() => setThumbs(null)); }, [pid]);
+
+  // Ctrl + колесо — масштаб вокруг курсора; обычное колесо — обычная прокрутка.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      const cursor = e.clientX - rect.left;
+      setPps((old) => {
+        const next = Math.max(0.5, Math.min(300, old * (e.deltaY < 0 ? 1.25 : 0.8)));
+        const t = (el.scrollLeft + cursor) / old;
+        requestAnimationFrame(() => { el.scrollLeft = t * next - cursor; });
+        return next;
+      });
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
+
   const togglePlay = useCallback(() => {
     const v = videoRef.current;
     if (!v) return;
@@ -115,6 +142,31 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
     catch (e) { setError((e as Error).message); }
   };
 
+  // Быстрая проверка: следующее непроверенное решение, проигрывается с запасом до и после.
+  const reviewNext = useCallback(async (acceptCurrent: boolean) => {
+    const list = segsRef.current;
+    const cur = list.find((s) => s.id === selectedId);
+    let updated = list;
+    if (acceptCurrent && cur && !cur.reviewed) {
+      setError("");
+      try {
+        const r = await api.post<PlanPayload>(`/api/projects/${pid}/timeline/ops`, { op: "review", ids: [cur.id], reviewed: true });
+        onPayload(r);
+        updated = r.plan.segments;
+      } catch (e) { setError((e as Error).message); return; }
+    }
+    const from = Math.max(0, updated.findIndex((s) => s.id === selectedId));
+    const order = [...updated.slice(from + 1), ...updated.slice(0, from + 1)];
+    const next = order.find((s) => !s.reviewed);
+    if (!next) { setMsg("Все решения проверены"); return; }
+    setMsg("");
+    setSelectedId(next.id);
+    const pre = 1500;
+    playRange(Math.max(0, next.source_start_ms - pre), Math.min(plan.duration_ms, next.source_end_ms + pre));
+    const el = scrollRef.current;
+    if (el) el.scrollLeft = Math.max(0, (next.source_start_ms / 1000) * pps - el.clientWidth / 3);
+  }, [selectedId, pid, onPayload, plan.duration_ms, pps]);  // eslint-disable-line react-hooks/exhaustive-deps
+
   const selected = segs.find((s) => s.id === selectedId) ?? null;
   const here = segAt(current);
   const frameMs = 1000 / fps;
@@ -136,6 +188,8 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
         case "k": if (sel) run({ op: "set_action", id: sel.id, action: "KEEP" }); break;
         case "c": if (sel) run({ op: "set_action", id: sel.id, action: "CUT" }); break;
         case "s": if (here) run({ op: "split", id: here.id, at_ms: snapMs(current) }); break;
+        case "n": reviewNext(false); break;
+        case "enter": reviewNext(true); break;
         case "r": if (sel) run({ op: "review", ids: [sel.id], reviewed: !sel.reviewed }); break;
       }
     };
@@ -171,7 +225,14 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
             <div><span>Удалено</span><b>{fmtTime(stats.removed_ms, false)}</b></div>
             <div><span>Не проверено</span><b>{stats.unreviewed}</b></div>
           </div>
+          <div className="reviewbar" title={`Проверено ${stats.segments - stats.unreviewed} из ${stats.segments}`}>
+            <i style={{ width: `${stats.segments ? ((stats.segments - stats.unreviewed) / stats.segments) * 100 : 0}%` }} />
+          </div>
+          {msg && <p className="ok">{msg}</p>}
           <div className="row wrap">
+            <button className="primary" onClick={() => reviewNext(true)} disabled={busy || stats.unreviewed === 0} title="Enter: принять текущее и показать следующее непроверенное">
+              ✓ Принять и дальше</button>
+            <button onClick={() => reviewNext(false)} disabled={stats.unreviewed === 0} title="N">Следующее непроверенное</button>
             <button onClick={() => history("undo")} disabled={!payload.can_undo || busy} title="Ctrl+Z">↶ Отменить</button>
             <button onClick={() => history("redo")} disabled={!payload.can_redo || busy} title="Ctrl+Shift+Z">↷ Повторить</button>
           </div>
@@ -179,8 +240,13 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
             <input value={jump} onChange={(e) => setJump(e.target.value)} placeholder="Перейти: 1:23:45.500" />
             <button>Перейти</button>
           </form>
+          <label>Скорость
+            <select value={rate} onChange={(e) => setRate(Number(e.target.value))}>
+              {[0.75, 1, 1.25, 1.5, 2, 3].map((r) => <option key={r} value={r}>{r}×</option>)}
+            </select>
+          </label>
           <label className="check"><input type="checkbox" checked={skipCuts} onChange={(e) => setSkipCuts(e.target.checked)} /> Предпросмотр результата (пропускать вырезаемое)</label>
-          <div className="keys muted">Пробел — пуск · ←/→ кадр (Shift — 5 с) · I/O — границы интервала · K/C — оставить/удалить · S — разделить · R — проверено</div>
+          <div className="keys muted">Пробел — пуск · ←/→ кадр (Shift — 5 с) · I/O или протяжка мышью по шкале — интервал · K/C — оставить/удалить · S — разделить · R — проверено · N / Enter — следующее непроверенное · Ctrl+колесо — масштаб</div>
         </div>
       </div>
 
@@ -202,13 +268,30 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
       <Timeline durationMs={plan.duration_ms} fps={fps} segments={segs} sceneMs={scenes?.boundaries_ms ?? []} wave={wave}
         current={current} pps={pps} selectedId={selectedId} markIn={markIn} markOut={markOut}
         onSeek={seek} onSelect={(id) => setSelectedId(id)} scrollRef={scrollRef}
-        onMoveBoundary={(id, ms) => run({ op: "move_boundary", id, at_ms: ms })} />
+        onMoveBoundary={(id, ms) => run({ op: "move_boundary", id, at_ms: ms })}
+        onRange={(a, b) => { setMarkIn(a); setMarkOut(b); }} />
       <div className="legend">
         <span className="sw keep" /> оставить <span className="sw cut" /> удалить <span className="sw manual" /> изменено вручную
         <span className="sw unrev" /> не проверено <span className="sw scene" /> смена сцены
         <span className="muted"> · границы между фрагментами можно перетаскивать</span>
       </div>
       {error && <p className="error">{error}</p>}
+
+      {thumbs && thumbs.files.length > 0 && (
+        <div className="scenes">
+          <button className="link" onClick={() => setShowScenes(!showScenes)}>{showScenes ? "▾" : "▸"} Сцены ({thumbs.files.length})</button>
+          {showScenes && (
+            <div className="strip">
+              {thumbs.files.map((f, i) => (
+                <figure key={f} onClick={() => seek(thumbs.times_ms[i])}>
+                  <img src={`/api/projects/${pid}/thumbnails/${f}`} alt="" loading="lazy" />
+                  <figcaption>{fmtTime(thumbs.times_ms[i], false)}</figcaption>
+                </figure>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="row">
         <h3 className="grow">События ({rows.length})</h3>

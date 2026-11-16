@@ -16,6 +16,7 @@ interface Props {
   onSeek: (ms: number) => void;
   onSelect: (id: string) => void;
   onMoveBoundary: (leftId: string, ms: number) => void;
+  onRange: (a: number, b: number) => void;
   scrollRef: React.RefObject<HTMLDivElement>;
 }
 
@@ -27,6 +28,7 @@ const tickStep = (pps: number): number => {
 export default function Timeline(p: Props) {
   const inner = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<{ id: string; ms: number } | null>(null);
+  const sel = useRef<{ x: number; ms: number; moved: boolean } | null>(null);
   const width = Math.max(1, (p.durationMs / 1000) * p.pps);
   const x = (ms: number) => (ms / 1000) * p.pps;
 
@@ -68,7 +70,21 @@ export default function Timeline(p: Props) {
   return (
     <div className="timeline" ref={p.scrollRef}>
       <div className="tl-inner" ref={inner} style={{ width }}
-        onPointerDown={(e) => { if (e.button === 0) p.onSeek(msAt(e.clientX)); }}>
+        onPointerDown={(e) => {
+          if (e.button !== 0) return;
+          (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+          sel.current = { x: e.clientX, ms: msAt(e.clientX), moved: false };
+          p.onSeek(sel.current.ms);
+        }}
+        onPointerMove={(e) => {
+          const s = sel.current;
+          if (!s || drag) return;
+          if (!s.moved && Math.abs(e.clientX - s.x) < 5) return;
+          s.moved = true;
+          const a = snap(s.ms), b = snap(msAt(e.clientX));
+          p.onRange(Math.min(a, b), Math.max(a, b));
+        }}
+        onPointerUp={() => { sel.current = null; }}>
         <div className="ruler">
           {ticks.map((s) => <span key={s} style={{ left: s * p.pps }}>{fmtTime(s * 1000, false)}</span>)}
         </div>

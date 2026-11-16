@@ -4,7 +4,7 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
-from ..analysis import edit_planner, scene_detector, silence_detector
+from ..analysis import edit_planner, scene_detector, silence_detector, threshold
 from ..editing import exports, render as render_mod, subtitles as subs
 from ..editing.timeline import stats
 from ..integrations import whisp
@@ -17,7 +17,7 @@ from .templates import load_template
 EXPORT_FORMATS = {
     "srt": ("subtitles", "edited.srt"), "ass": ("subtitles", "edited.ass"),
     "plan": ("exports", "edit_plan.json"), "info": ("exports", "source_info.json"),
-    "v3": ("exports", "final.v3"), "fcpxml": ("exports", "final.fcpxml"),
+    "v3": ("exports", "final.v3"), "fcpxml": ("exports", "final.fcpxml"), "edl": ("exports", "final.edl"),
 }
 
 
@@ -67,6 +67,8 @@ def export_package(pm: ProjectManager, pid: str, formats: list[str], overwrite: 
         write_json_atomic(targets["info"], meta)
     if "v3" in formats:
         write_text_atomic(targets["v3"], exports.v3_json(plan, meta, source))
+    if "edl" in formats:
+        write_text_atomic(targets["edl"], exports.to_edl(plan, meta, source, pm.get(pid)["name"]))
     if "fcpxml" in formats:
         write_text_atomic(targets["fcpxml"], exports.to_fcpxml(plan, meta, source, pm.get(pid)["name"]))
     if "srt" in formats or "ass" in formats:
@@ -108,6 +110,17 @@ def register_all(queue: JobQueue, pm: ProjectManager) -> None:
         ctx.progress(0.03)
         params = edit_planner.profile_params(settings["profile"], settings["overrides"])
         dur = meta["duration_ms"]
+        state = read_json(adir / "state.json", {})
+        if p.get("auto_threshold"):
+            ctx.stage("Подбор порога громкости")
+            if not (adir / "waveform.json").is_file() or state.get("waveform_audio") != a_idx:
+                write_json_atomic(adir / "waveform.json", waveform.compute_peaks(source, a_idx, dur, token=ctx.token))
+                state["waveform_audio"] = a_idx
+                write_json_atomic(adir / "state.json", state)
+            sug = threshold.suggest_threshold(read_json(adir / "waveform.json")["peaks"])
+            params["noise_db"] = sug["noise_db"]
+            ctx.log(f"Фон {sug['floor_db']} dB, речь {sug['speech_db']} dB -> порог {sug['noise_db']} dBFS"
+                    + ("" if sug["confident"] else " (разница мала, значение осторожное)"))
 
         def sub(lo: float, hi: float):
             return lambda f: ctx.progress(lo + (hi - lo) * f)

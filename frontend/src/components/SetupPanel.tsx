@@ -19,6 +19,8 @@ export default function SetupPanel({ project, busy, onJob, onChanged }: {
   const [overrides, setOverrides] = useState<Record<string, number>>({});
   const [audio, setAudio] = useState(project.settings.audio_stream);
   const [scenes, setScenes] = useState(project.settings.detect_scenes);
+  const [auto, setAuto] = useState(!project.has_plan);
+  const [hint, setHint] = useState("");
   const [path, setPath] = useState(project.source?.path ?? "");
   const [browse, setBrowse] = useState(false);
   const [error, setError] = useState("");
@@ -34,12 +36,22 @@ export default function SetupPanel({ project, busy, onJob, onChanged }: {
     catch (e) { setError((e as Error).message); }
   };
 
+  const suggest = async () => {
+    setError(""); setHint("");
+    try {
+      const r = await api.get<{ noise_db: number; floor_db: number; speech_db: number; confident: boolean }>(`/api/projects/${project.id}/analysis/threshold`);
+      setOverrides({ ...overrides, noise_db: r.noise_db }); setAuto(false);
+      setHint(`Фон ≈ ${r.floor_db} dB, речь ≈ ${r.speech_db} dB → порог ${r.noise_db} dBFS${r.confident ? "" : " (запись почти ровная по громкости, значение осторожное)"}`);
+    } catch (e) { setError((e as Error).message); }
+  };
+
   const analyze = async () => {
     setError("");
     if (project.has_plan && !confirm("Монтажный план уже создан. Создать новый? Прежний сохранится как версия.")) return;
     try {
       onJob(await api.post<Job>(`/api/projects/${project.id}/analyze`, {
         profile, overrides, audio_stream: audio, detect_scenes: scenes, replace_plan: project.has_plan,
+        auto_threshold: auto && overrides.noise_db === undefined,
       }));
     } catch (e) { setError((e as Error).message); }
   };
@@ -92,6 +104,11 @@ export default function SetupPanel({ project, busy, onJob, onChanged }: {
             </select>
           </label>
         )}
+        <div className="row wrap">
+          <label className="check"><input type="checkbox" checked={auto} onChange={(e) => setAuto(e.target.checked)} /> Подобрать порог громкости по записи автоматически</label>
+          {project.has_plan && <button onClick={suggest}>Показать рекомендацию</button>}
+        </div>
+        {hint && <p className="ok">{hint}</p>}
         <label className="check"><input type="checkbox" checked={scenes} onChange={(e) => setScenes(e.target.checked)} /> Искать смену сцен (маркеры на шкале; ничего не удаляет)</label>
         <p className="muted">Тихая речь, вдохи и окончания фраз при мягких профилях сохраняются; между фразами остаётся запас паузы. Все решения можно проверить и изменить.</p>
         {error && <p className="error">{error}</p>}

@@ -17,6 +17,7 @@ class AnalyzeBody(BaseModel):
     detect_scenes: bool | None = None
     scene_threshold: float | None = None
     replace_plan: bool = False
+    auto_threshold: bool = False
 
 
 @router.get("/profiles")
@@ -34,3 +35,14 @@ def analyze(pid: str, body: AnalyzeBody, request: Request):
     if body.profile and body.profile not in PROFILES:
         raise ProjectError(f"Неизвестный профиль: {body.profile}")
     return jobs(request).submit(pid, "analyze", params)
+
+
+@router.get("/projects/{pid}/analysis/threshold")
+def suggested_threshold(pid: str, request: Request):
+    """Рекомендованный порог по уже посчитанной аудиоволне."""
+    from ..analysis.threshold import suggest_threshold
+    from ..core.fsutil import read_json
+    wave = read_json(pm(request).path(pid, "analysis", "waveform.json"))
+    if not wave:
+        raise ProjectError("Аудиоволна ещё не посчитана: запустите анализ или включите автоподбор порога")
+    return suggest_threshold(wave["peaks"])

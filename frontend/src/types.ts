@@ -71,6 +71,7 @@ export interface Cue { start_ms: number; end_ms: number; text: string }
 export interface FsEntry { name: string; dir: boolean; path: string }
 export interface FsListing { path: string; parent: string | null; entries: FsEntry[] }
 export interface ExportFile { name: string; size: number; where: string }
+export interface Thumbs { files: string[]; times_ms: number[] }
 export interface Scenes { engine: string; boundaries_ms: number[] }
 export interface Waveform { peaks_per_second: number; peaks: number[] }
 export interface VersionInfo { name: string; label: string; created: string }

@@ -147,3 +147,18 @@ def test_cancel_running_job(client, tmp_path):
     retried = client.post(f"/api/jobs/{job['id']}/retry").json()
     client.post(f"/api/jobs/{retried['id']}/cancel")
     wait(client, retried, 30)
+
+
+def test_auto_threshold_and_edl_export(client, sample_video):
+    pid = client.post("/api/projects", json={"name": "auto"}).json()["id"]
+    client.put(f"/api/projects/{pid}/source", json={"path": str(sample_video)})
+    assert client.get(f"/api/projects/{pid}/analysis/threshold").status_code == 400   # волны ещё нет
+    job = wait(client, client.post(f"/api/projects/{pid}/analyze", json={"auto_threshold": True}).json())
+    assert job["status"] == "COMPLETED", job
+    log = client.get(f"/api/jobs/{job['id']}").json()["log"]
+    assert any("порог" in line for line in log)
+    sug = client.get(f"/api/projects/{pid}/analysis/threshold").json()
+    assert -50 <= sug["noise_db"] <= -25
+    r = client.post(f"/api/projects/{pid}/export", json={"formats": ["edl"]})
+    assert r.status_code == 200 and r.json()["written"] == ["exports/final.edl"]
+    assert client.get(f"/api/projects/{pid}/exports/final.edl").text.startswith("TITLE: auto")

@@ -52,7 +52,7 @@ def create_app() -> FastAPI:
                              (JobConflict, 409), (RenderError, 500)):
         app.add_exception_handler(exc_type, err(status))
 
-    for r in (projects.router, media.router, analysis.router, timeline.router, render.router, subtitles.router,
+    for r in (projects.router, analysis.router, media.router, timeline.router, render.router, subtitles.router,
               jobs_api.router):
         app.include_router(r)
 

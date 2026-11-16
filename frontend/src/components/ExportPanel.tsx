@@ -4,7 +4,7 @@ import type { ExportFile, Job, PlanPayload, Project, TemplateInfo, VersionInfo }
 
 const FORMATS: [string, string][] = [
   ["srt", "Субтитры SRT (под новый монтаж)"], ["ass", "Субтитры ASS"], ["plan", "Монтажный план JSON"],
-  ["info", "Технические данные об исходнике"], ["v3", "Auto-Editor .v3 (экспериментально)"], ["fcpxml", "FCPXML для DaVinci Resolve (экспериментально)"],
+  ["info", "Технические данные об исходнике"], ["edl", "EDL CMX3600 (экспериментально)"], ["v3", "Auto-Editor .v3 (экспериментально)"], ["fcpxml", "FCPXML для DaVinci Resolve (экспериментально)"],
 ];
 
 export default function ExportPanel({ pid, project, payload, busy, onJob, onPayload }: {
@@ -14,6 +14,7 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
   const [template, setTemplate] = useState(project.settings.template);
   const [burn, setBurn] = useState(false);
   const [overwrite, setOverwrite] = useState(false);
+  const [encoder, setEncoder] = useState("libx264");
   const [formats, setFormats] = useState<string[]>(project.has_subtitles ? ["srt", "plan", "v3", "fcpxml"] : ["plan", "v3", "fcpxml"]);
   const [files, setFiles] = useState<ExportFile[]>([]);
   const [versions, setVersions] = useState<VersionInfo[]>([]);
@@ -34,7 +35,8 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
   };
   const render = (mode: "fast" | "final") => guard(async () => {
     await api.patch(`/api/projects/${pid}`, { settings: { template } });
-    onJob(await api.post<Job>(`/api/projects/${pid}/render`, { mode, template, burn_subtitles: burn && project.has_subtitles, overwrite }));
+    onJob(await api.post<Job>(`/api/projects/${pid}/render`, { mode, template, burn_subtitles: burn && project.has_subtitles, overwrite,
+      options: { video: { encoder } } }));
   });
   const toggle = (f: string) => setFormats(formats.includes(f) ? formats.filter((x) => x !== f) : [...formats, f]);
 
@@ -50,6 +52,12 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
           </select>
         </label>
         <p className="muted">{templates.find((t) => t.id === template)?.description}</p>
+        <label>Кодирование видео
+          <select value={encoder} onChange={(e) => setEncoder(e.target.value)}>
+            <option value="libx264">Процессор (libx264) — надёжно</option>
+            <option value="auto">Видеокарта, если доступна (NVENC / QSV / AMF), иначе процессор</option>
+          </select>
+        </label>
         <label className="check"><input type="checkbox" checked={burn} disabled={!project.has_subtitles} onChange={(e) => setBurn(e.target.checked)} /> Вшить субтитры в видео {project.has_subtitles ? "" : "(нет расшифровки)"}</label>
         <label className="check"><input type="checkbox" checked={overwrite} onChange={(e) => setOverwrite(e.target.checked)} /> Разрешить перезапись существующих результатов</label>
         <div className="row">

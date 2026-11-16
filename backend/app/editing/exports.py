@@ -82,3 +82,30 @@ def to_fcpxml(plan: dict, meta: dict, source: Path, name: str) -> str:
 
 def v3_json(plan: dict, meta: dict, source: Path) -> str:
     return json.dumps(to_auto_editor_v3(plan, meta, source), ensure_ascii=False, indent=2) + "\n"
+
+
+def to_edl(plan: dict, meta: dict, source: Path, name: str) -> str:
+    """CMX3600 EDL (NDF): один видео+аудио клип на каждый сохраняемый фрагмент. Запись начинается с 01:00:00:00."""
+    fps = plan["fps"]
+    real = fps["numerator"] / fps["denominator"]
+    base = round(real)
+
+    def tc(frames: int) -> str:
+        f = frames % base
+        sec = frames // base
+        return f"{sec // 3600:02d}:{sec // 60 % 60:02d}:{sec % 60:02d}:{f:02d}"
+
+    track = "AA/V" if meta["has_video"] else "AA"
+    lines = [f"TITLE: {name}", "FCM: NON-DROP FRAME", ""]
+    rec = 3600 * base
+    n = 0
+    for a, b in kept_ranges(plan):
+        fa, fb = _frames(a, fps), _frames(b, fps)
+        if fb <= fa:
+            continue
+        n += 1
+        dur = fb - fa
+        lines.append(f"{n:03d}  AX       {track:<5} C        {tc(fa)} {tc(fb)} {tc(rec)} {tc(rec + dur)}")
+        lines.append(f"* FROM CLIP NAME: {source.name}")
+        rec += dur
+    return "\n".join(lines) + "\n"

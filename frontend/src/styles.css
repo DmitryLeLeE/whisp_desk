@@ -95,3 +95,11 @@ hr { border: none; border-top: 1px solid var(--line); width: 100%; }
 .seglist tr.sel { background: #26324a; } .seglist tr:hover { background: #2a2e38; }
 .actions { display: flex; gap: 4px; justify-content: flex-end; } .actions button { padding: 2px 8px; }
 @media (max-width: 900px) { .player-row { grid-template-columns: 1fr; } }
+.reviewbar { height: 6px; background: var(--panel2); border-radius: 3px; overflow: hidden; }
+.reviewbar i { display: block; height: 100%; background: var(--keep); transition: width .2s; }
+.scenes { margin: 4px 0 12px; }
+.strip { display: flex; gap: 8px; overflow-x: auto; padding: 8px 0; }
+.strip figure { margin: 0; flex: none; cursor: pointer; }
+.strip img { width: 160px; height: 90px; object-fit: cover; border: 1px solid var(--line); border-radius: 4px; display: block; }
+.strip figure:hover img { border-color: var(--accent); }
+.strip figcaption { font-size: 11px; color: var(--muted); text-align: center; }
