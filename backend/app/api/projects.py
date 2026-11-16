@@ -4,6 +4,7 @@ from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
 
 from ..core.project_manager import PROJECT_TYPES
+from ..editing import timeline as T
 from .deps import jobs, pm
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
@@ -33,6 +34,33 @@ def types():
 @router.get("")
 def list_projects(request: Request):
     return pm(request).list()
+
+
+@router.get("/summary")
+def summary(request: Request):
+    """Список проектов с признаками готовности шагов: для карточек на главной странице."""
+    m = pm(request)
+    out = []
+    for row in m.list():
+        pid = row["id"]
+        try:
+            p = m.get(pid)
+            meta = m.metadata(pid) or {}
+            stats = None
+            if p["has_plan"]:
+                stats = T.stats(m.load_plan(pid))
+            thumbs = m.path(pid, "analysis", "thumbnails")
+            first = next(iter(sorted(thumbs.glob("*.jpg"))), None) if thumbs.is_dir() else None
+            exports = m.path(pid, "exports")
+            done = any(f.suffix == ".mp4" and ".part" not in f.name for f in exports.glob("*.mp4")) if exports.is_dir() else False
+            out.append({**row, "filename": (p["source"] or {}).get("filename"), "duration_ms": meta.get("duration_ms"),
+                        "has_source": p["source"] is not None, "has_plan": p["has_plan"], "has_subtitles": p["has_subtitles"],
+                        "unreviewed": stats["unreviewed"] if stats else None, "output_ms": stats["output_ms"] if stats else None,
+                        "removed_ms": stats["removed_ms"] if stats else None, "rendered": done,
+                        "thumb": f"/api/projects/{pid}/thumbnails/{first.name}" if first else None})
+        except Exception:  # noqa: BLE001  повреждённый проект не должен ломать весь список
+            out.append({**row, "broken": True})
+    return out
 
 
 @router.post("", status_code=201)

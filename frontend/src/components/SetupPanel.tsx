@@ -1,18 +1,26 @@
 import { useEffect, useState } from "react";
 import { api, fmtSize, fmtTime } from "../api";
-import type { Compare, Job, Profile, Project } from "../types";
+import type { Compare, Job, PlanPayload, Profile, Project } from "../types";
+import { hasNativePicker, nativePickFile } from "../native";
 import FileBrowser from "./FileBrowser";
+import Icon from "./Icon";
 
 const FIELDS: { key: keyof Profile; label: string; step: number; hint: string }[] = [
-  { key: "noise_db", label: "Порог громкости, dBFS", step: 1, hint: "Всё тише считается паузой. Подбирается на реальных записях." },
-  { key: "min_pause_s", label: "Мин. пауза для сокращения, с", step: 0.1, hint: "Более короткие паузы не трогаем." },
-  { key: "pad_before_s", label: "Запас до речи, с", step: 0.05, hint: "Сколько паузы оставить перед началом фразы." },
+  { key: "noise_db", label: "Порог громкости, dBFS", step: 1, hint: "Всё тише считается паузой. Чем меньше число (ближе к −50), тем строже." },
+  { key: "min_pause_s", label: "Минимальная пауза, с", step: 0.1, hint: "Более короткие паузы не трогаем." },
+  { key: "pad_before_s", label: "Запас перед речью, с", step: 0.05, hint: "Сколько паузы оставить перед началом фразы." },
   { key: "pad_after_s", label: "Запас после речи, с", step: 0.05, hint: "Сколько паузы оставить после конца фразы." },
-  { key: "min_keep_s", label: "Мин. сохраняемый фрагмент, с", step: 0.1, hint: "Более короткие куски между сокращениями помечаются на проверку." },
+  { key: "min_keep_s", label: "Минимальный фрагмент, с", step: 0.1, hint: "Более короткие куски между сокращениями помечаются на проверку." },
 ];
+const PROFILE_TEXT: Record<string, string> = {
+  careful: "Убирает только долгие паузы. Размышления и вдохи остаются. Для спокойных лекций.",
+  standard: "Убирает заметные паузы, оставляя запас до и после речи. Подходит для большинства записей.",
+  aggressive: "Убирает даже короткие паузы и тихие места. Динамичнее, но результат стоит проверить внимательнее.",
+};
+const sec = (n: number) => String(n).replace(".", ",");
 
-export default function SetupPanel({ project, busy, onJob, onChanged }: {
-  project: Project; busy: boolean; onJob: (j: Job) => void; onChanged: () => void;
+export default function SetupPanel({ project, payload, busy, onJob, onChanged }: {
+  project: Project; payload: PlanPayload | null; busy: boolean; onJob: (j: Job) => void; onChanged: () => void;
 }) {
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
   const [profile, setProfile] = useState(project.settings.profile);
@@ -38,10 +46,11 @@ export default function SetupPanel({ project, busy, onJob, onChanged }: {
   const value = (k: keyof Profile) => overrides[k] ?? (profiles[profile]?.[k] as number | undefined) ?? "";
 
   const saveSource = async (p: string) => {
-    setError("");
+    setError(""); setBrowse(false);
     try { await api.put(`/api/projects/${project.id}/source`, { path: p }); setPath(p); onChanged(); }
     catch (e) { setError((e as Error).message); }
   };
+  const pick = async () => { if (hasNativePicker()) { const p = await nativePickFile(); if (p) saveSource(p); } else setBrowse(true); };
 
   const suggest = async () => {
     setError(""); setHint("");
@@ -51,12 +60,10 @@ export default function SetupPanel({ project, busy, onJob, onChanged }: {
       setHint(`Фон ≈ ${r.floor_db} dB, речь ≈ ${r.speech_db} dB → порог ${r.noise_db} dBFS${r.confident ? "" : " (запись почти ровная по громкости, значение осторожное)"}`);
     } catch (e) { setError((e as Error).message); }
   };
-
   const runCompare = async () => {
     setError("");
     try { onJob(await api.post<Job>(`/api/projects/${project.id}/analysis/compare`)); } catch (e) { setError((e as Error).message); }
   };
-
   const analyze = async () => {
     setError("");
     if (project.has_plan && !confirm("Монтажный план уже создан. Создать новый? Прежний сохранится как версия.")) return;
@@ -69,76 +76,91 @@ export default function SetupPanel({ project, busy, onJob, onChanged }: {
   };
 
   return (
-    <div className="grid2">
+    <div className="stack" style={{ maxWidth: 980 }}>
       <section className="card">
-        <h2>Исходный файл</h2>
-        <div className="row">
-          <input className="grow" value={path} onChange={(e) => setPath(e.target.value)} placeholder="Полный путь к видео, например D:\Лекции\lecture.mp4" />
-          <button onClick={() => setBrowse(true)}>Обзор…</button>
-          <button className="primary" onClick={() => saveSource(path)} disabled={!path.trim()}>Привязать</button>
-        </div>
-        <p className="muted">Файл не копируется и не изменяется — проект хранит только ссылку. Если файл переместили, укажите новый путь.</p>
-        {browse && <FileBrowser onPick={(p) => { setBrowse(false); saveSource(p); }} onClose={() => setBrowse(false)} />}
-        {meta && (
-          <table className="kv">
-            <tbody>
-              <tr><td>Файл</td><td>{meta.filename} · {fmtSize(meta.size_bytes)}</td></tr>
-              <tr><td>Длительность</td><td>{fmtTime(meta.duration_ms, false)}</td></tr>
-              {meta.video && <tr><td>Видео</td><td>{meta.video.codec} · {meta.video.width}×{meta.video.height} · {meta.video.fps_value.toFixed(3)} к/с{meta.video.variable_frame_rate ? " (переменная частота)" : ""}</td></tr>}
-              {meta.audio_streams.map((a) => (
-                <tr key={a.index}><td>Аудио {a.index + 1}</td><td>{a.codec} · {a.sample_rate} Гц · {a.channels} кан.{a.language && a.language !== "und" ? ` · ${a.language}` : ""}{a.title ? ` · ${a.title}` : ""}</td></tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="card-title"><span className={`num ${project.source ? "done" : ""}`}>{project.source ? <Icon name="check" /> : 1}</span><h2>Видео</h2></div>
+        {project.source ? (
+          <div className="filecard">
+            <Icon name="film" />
+            <div className="grow">
+              <b>{project.source.filename}</b>
+              <div className="muted small">{fmtSize(project.source.size_bytes)}{meta ? ` · ${fmtTime(meta.duration_ms, false)}` : ""}
+                {meta?.video ? ` · ${meta.video.width}×${meta.video.height}, ${meta.video.fps_value.toFixed(2)} к/с` : ""}{meta && !meta.has_video ? " · только звук" : ""}</div>
+              {meta?.video?.variable_frame_rate && <div className="muted small">Переменная частота кадров: при рендере будет приведена к постоянной.</div>}
+            </div>
+            <button onClick={pick}>Заменить файл…</button>
+          </div>
+        ) : (
+          <div className="pick">
+            <Icon name="film" />
+            <div className="grow"><b>Файл не выбран</b><div className="muted">Выберите запись. Копия не создаётся, проект хранит только путь.</div></div>
+            <button className="primary" onClick={pick}>Выбрать видео…</button>
+          </div>
         )}
+        {!hasNativePicker() && (
+          <details className="more"><summary>Указать путь вручную</summary>
+            <div className="row"><input className="grow" value={path} onChange={(e) => setPath(e.target.value)} placeholder="D:\Лекции\lecture.mp4" />
+              <button onClick={() => saveSource(path)} disabled={!path.trim()}>Привязать</button></div>
+          </details>
+        )}
+        {browse && <FileBrowser onPick={saveSource} onClose={() => setBrowse(false)} />}
       </section>
 
       <section className="card">
-        <h2>Анализ и черновой монтаж</h2>
-        <div className="row wrap">
+        <div className="card-title"><span className={`num ${project.has_plan ? "done" : ""}`}>{project.has_plan ? <Icon name="check" /> : 2}</span><h2>Как убирать паузы</h2></div>
+        <div className="profiles" role="radiogroup">
           {Object.entries(profiles).map(([k, p]) => (
-            <label key={k} className={`chip ${profile === k ? "on" : ""}`}>
-              <input type="radio" checked={profile === k} onChange={() => { setProfile(k); setOverrides({}); }} /> {p.label}
+            <label key={k} className={`profile ${profile === k ? "on" : ""}`}>
+              <input type="radio" checked={profile === k} onChange={() => { setProfile(k); setOverrides({}); }} />
+              <b>{p.label}</b>
+              <span className="muted">{PROFILE_TEXT[k]}</span>
+              <span className="tags"><span className="badge">пауза от {sec(p.min_pause_s)} с</span><span className="badge">порог {p.noise_db} dB</span></span>
             </label>
           ))}
         </div>
-        <div className="fields">
-          {FIELDS.map((f) => (
-            <label key={f.key} title={f.hint}>{f.label}
-              <input type="number" step={f.step} value={value(f.key)} onChange={(e) => setOverrides({ ...overrides, [f.key]: Number(e.target.value) })} />
+        <p className="muted">Ничего не удаляется навсегда: программа лишь предложит сокращения, а вы проверите и поправите их на следующем шаге.</p>
+
+        <details className="more"><summary>Дополнительные настройки</summary>
+          <div className="fields">
+            {FIELDS.map((f) => (
+              <label key={f.key} title={f.hint}>{f.label}
+                <input type="number" step={f.step} value={value(f.key)} onChange={(e) => setOverrides({ ...overrides, [f.key]: Number(e.target.value) })} />
+              </label>
+            ))}
+          </div>
+          <div className="row wrap">
+            <label className="check"><input type="checkbox" checked={auto} onChange={(e) => setAuto(e.target.checked)} /> Подобрать порог громкости по записи</label>
+            {project.has_plan && <button onClick={suggest}>Показать рекомендацию</button>}
+          </div>
+          {hint && <p className="ok">{hint}</p>}
+          {meta && meta.audio_streams.length > 1 && (
+            <label>Аудиодорожка для анализа
+              <select value={audio} onChange={(e) => setAudio(Number(e.target.value))}>
+                {meta.audio_streams.map((a) => <option key={a.index} value={a.index}>№{a.index + 1}: {a.codec}, {a.channels} кан.{a.title ? `, ${a.title}` : ""}</option>)}
+              </select>
             </label>
-          ))}
-        </div>
-        {meta && meta.audio_streams.length > 1 && (
-          <label>Аудиодорожка для анализа
-            <select value={audio} onChange={(e) => setAudio(Number(e.target.value))}>
-              {meta.audio_streams.map((a) => <option key={a.index} value={a.index}>№{a.index + 1}: {a.codec}, {a.channels} кан.{a.title ? `, ${a.title}` : ""}</option>)}
-            </select>
-          </label>
-        )}
-        <div className="row wrap">
-          <span className="muted">Движок поиска пауз:</span>
-          <label className={`chip ${engine === "builtin" ? "on" : ""}`}><input type="radio" checked={engine === "builtin"} onChange={() => setEngine("builtin")} /> Встроенный (FFmpeg)</label>
-          <label className={`chip ${engine === "auto-editor" ? "on" : ""}`} title={ae?.available ? "" : "Auto-Editor не найден: положите auto-editor.exe в tools/auto-editor/"}>
-            <input type="radio" disabled={!ae?.available} checked={engine === "auto-editor"} onChange={() => setEngine("auto-editor")} /> Auto-Editor{ae?.available && ae.version ? ` ${ae.version}` : ""}
-          </label>
-          {ae?.available && project.metadata && <button onClick={runCompare} disabled={busy}>Сравнить движки</button>}
-        </div>
-        {cmp && (
-          <p className="muted">Сравнение на этом файле: встроенный — {cmp.builtin.cuts} сокращений ({(cmp.builtin.cut_ms / 1000).toFixed(1)} с),
-            Auto-Editor — {cmp.auto_editor.cuts} ({(cmp.auto_editor.cut_ms / 1000).toFixed(1)} с), совпадение по времени <b>{Math.round(cmp.agreement * 100)}%</b>.</p>
-        )}
-        <div className="row wrap">
-          <label className="check"><input type="checkbox" checked={auto} onChange={(e) => setAuto(e.target.checked)} /> Подобрать порог громкости по записи автоматически</label>
-          {project.has_plan && <button onClick={suggest}>Показать рекомендацию</button>}
-        </div>
-        {hint && <p className="ok">{hint}</p>}
-        <label className="check"><input type="checkbox" checked={scenes} onChange={(e) => setScenes(e.target.checked)} /> Искать смену сцен (маркеры на шкале; ничего не удаляет)</label>
-        <p className="muted">Тихая речь, вдохи и окончания фраз при мягких профилях сохраняются; между фразами остаётся запас паузы. Все решения можно проверить и изменить.</p>
+          )}
+          <label className="check"><input type="checkbox" checked={scenes} onChange={(e) => setScenes(e.target.checked)} /> Искать смену сцен (метки на шкале, ничего не удаляет)</label>
+          <div className="row wrap">
+            <span className="muted">Движок поиска пауз:</span>
+            <label className="check"><input type="radio" checked={engine === "builtin"} onChange={() => setEngine("builtin")} /> Встроенный</label>
+            <label className="check" title={ae?.available ? "" : "Auto-Editor не найден"}>
+              <input type="radio" disabled={!ae?.available} checked={engine === "auto-editor"} onChange={() => setEngine("auto-editor")} /> Auto-Editor{ae?.available && ae.version ? ` ${ae.version}` : ""}
+            </label>
+            {ae?.available && project.metadata && <button onClick={runCompare} disabled={busy}>Сравнить движки</button>}
+          </div>
+          {cmp && <p className="muted">Встроенный нашёл {cmp.builtin.cuts} сокращений ({(cmp.builtin.cut_ms / 1000).toFixed(1)} с), Auto-Editor — {cmp.auto_editor.cuts} ({(cmp.auto_editor.cut_ms / 1000).toFixed(1)} с). Совпадение по времени: <b>{Math.round(cmp.agreement * 100)}%</b>.</p>}
+        </details>
+
         {error && <p className="error">{error}</p>}
-        <button className="primary big" onClick={analyze} disabled={busy || !project.source}>
-          {project.has_plan ? "Пересоздать монтажный план" : "Запустить анализ"}
-        </button>
+        {!project.source && <div className="notice"><Icon name="info" /> Сначала выберите видео.</div>}
+        <div className="row">
+          <button className="primary big" onClick={analyze} disabled={busy || !project.source}>
+            <Icon name="scissors" /> {project.has_plan ? "Пересоздать монтажный план" : "Найти паузы и собрать черновик"}
+          </button>
+          {busy && <span className="muted">Анализ выполняется, ход виден справа внизу.</span>}
+        </div>
+        {payload && project.has_plan && <p className="muted">Сейчас в плане: {payload.stats.segments} фрагментов, убрано {fmtTime(payload.stats.removed_ms, false)}.</p>}
       </section>
     </div>
   );

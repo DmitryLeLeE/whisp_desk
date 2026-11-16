@@ -118,8 +118,9 @@ def test_whisp_cli_integration_with_fake_whisp(tmp_path, monkeypatch, sample_vid
     '''), encoding="utf-8")
     monkeypatch.setenv("WHISP_DIR", str(fake))
     from app.integrations import whisp
+    monkeypatch.setattr(whisp, "embedded_available", lambda: False)  # проверяем запасной путь: внешний Whisp
     assert whisp.info()["available"]
-    srt = whisp.transcribe(sample_video, tmp_path / "out", audio_index=0)
+    srt = whisp.transcribe(sample_video, tmp_path / "out", audio_index=0)["original"]
     assert srt.read_text(encoding="utf-8").strip().endswith("привет")
 
 
@@ -130,7 +131,8 @@ def test_whisp_missing_gives_clear_error(tmp_path, monkeypatch, sample_video):
     monkeypatch.setattr(config, "whisp_dir", lambda: None)
     from app.integrations import whisp
     monkeypatch.setattr(whisp, "whisp_dir", lambda: None)
-    with pytest.raises(RuntimeError, match="Whisp не найден"):
+    monkeypatch.setattr(whisp, "embedded_available", lambda: False)
+    with pytest.raises(RuntimeError, match="Whisp недоступен"):
         whisp.transcribe(sample_video, tmp_path / "o")
 
 

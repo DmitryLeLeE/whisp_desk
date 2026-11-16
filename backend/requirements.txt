@@ -2,5 +2,12 @@ fastapi>=0.115
 uvicorn>=0.30
 python-multipart>=0.0.9
 numpy>=1.26
+# Whisp (встроенный движок распознавания и перевода)
+faster-whisper>=1.1.0
+av>=11,<19
+ffmpeg-python>=0.2.0
+sentencepiece>=0.2.0
 # необязательно: точнее определяет смену сцен (иначе используется встроенный анализ FFmpeg)
 scenedetect[opencv-headless]>=0.6.4
+# окно приложения (Windows: WebView2); без него интерфейс откроется в браузере
+pywebview>=5.3; sys_platform == "win32"

@@ -61,6 +61,7 @@ def export_package(pm: ProjectManager, pid: str, formats: list[str], overwrite: 
     source = Path(pm.get(pid)["source"]["path"])
     tpl, _ = template_for(pm, pid, None)
     written = []
+    extras: list[Path] = []
     if "plan" in formats:
         write_json_atomic(targets["plan"], plan)
     if "info" in formats:
@@ -78,9 +79,15 @@ def export_package(pm: ProjectManager, pid: str, formats: list[str], overwrite: 
         new_cues = subs.remap_cues(cues, plan)
         if "srt" in formats:
             write_text_atomic(targets["srt"], subs.render_srt(new_cues))
+            # Машинный перевод (если делали расшифровку с переводом) пересчитывается под монтаж так же, как оригинал.
+            for tr in sorted((d / "subtitles").glob("translated.*.srt")):
+                lang = tr.stem.split(".", 1)[1]
+                extra = targets["srt"].with_name(f"{targets['srt'].stem}.{lang}.srt")
+                write_text_atomic(extra, subs.render_srt(subs.remap_cues(subs.load_subtitles(tr), plan)))
+                extras.append(extra)
         if "ass" in formats:
             write_text_atomic(targets["ass"], subs.render_ass(new_cues, tpl.get("subtitles")))
-    for f, t in targets.items():
+    for t in [*targets.values(), *extras]:
         written.append(str(t.relative_to(d)).replace("\\", "/"))
     pm.log_history(pid, "export", ", ".join(formats))
     return {"written": written}
@@ -274,13 +281,34 @@ def register_all(queue: JobQueue, pm: ProjectManager) -> None:
         tmp = pm.dir(pid) / "subtitles" / ".whisp"
         shutil.rmtree(tmp, ignore_errors=True)
         ctx.stage("Расшифровка (Whisp)")
-        srt = whisp.transcribe(source, tmp, audio_index=a_idx, model=p.get("model", "small"),
-                               language=p.get("language", "auto"), token=ctx.token, on_line=ctx.log)
+
+        def on_event(ev: dict) -> None:
+            kind = ev["k"]
+            if kind == "stage":
+                ctx.stage(ev["label"])
+            elif kind == "download" and ev.get("total"):
+                ctx.progress(0.02 + 0.08 * ev["done"] / ev["total"], message=f"Загрузка модели: {ev['done'] / 1048576:.0f} из {ev['total'] / 1048576:.0f} МБ")
+            elif kind == "progress" and ev.get("total"):
+                ctx.progress(0.12 + 0.83 * ev["done"] / ev["total"], message=f"Распознано {ev['done']:.0f} из {ev['total']:.0f} с")
+            elif kind == "translate" and ev.get("total"):
+                ctx.progress(0.95 + 0.04 * ev["done"] / ev["total"], message="Перевод субтитров")
+
+        opts = {k: p[k] for k in ("device", "task", "translate_to", "vad", "max_line_chars", "max_lines", "max_duration") if k in p}
+        files = whisp.transcribe(source, tmp, audio_index=a_idx, model=p.get("model", "small"),
+                                 language=p.get("language", "auto"), token=ctx.token, on_event=on_event, on_line=ctx.log, **opts)
+        srt = files["original"]
         raw = srt.read_bytes()
         cues = subs.load_subtitles(srt)
-        shutil.rmtree(tmp, ignore_errors=True)
         save_cues(pm, pid, cues, f"{source.stem}.whisper.srt", raw)
-        return {"cues": len(cues)}
+        extra = []
+        for variant, path in files.items():
+            if variant != "original":
+                lang = path.stem.rsplit(".", 1)[-1]
+                dst = pm.dir(pid) / "subtitles" / f"translated.{lang}.srt"
+                shutil.copyfile(path, dst)
+                extra.append(dst.name)
+        shutil.rmtree(tmp, ignore_errors=True)
+        return {"cues": len(cues), "translations": extra}
 
     def compare_engines(ctx: JobContext, _p: dict) -> dict:
         pid = ctx.project_id

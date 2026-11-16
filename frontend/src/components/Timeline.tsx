@@ -112,7 +112,7 @@ export default function Timeline(p: Props) {
         {p.sceneMs.map((ms) => <div key={ms} className="scene" style={{ left: x(ms) }} title={`Смена сцены ${fmtTime(ms)}`} />)}
         {p.markIn != null && <div className="mark in" style={{ left: x(p.markIn) }} />}
         {p.markOut != null && <div className="mark out" style={{ left: x(p.markOut) }} />}
-        {drag && <div className="ghost" style={{ left: x(drag.ms) }}><span>{fmtTime(drag.ms)}</span></div>}
+        {drag && <div className="tl-ghost" style={{ left: x(drag.ms) }}><span>{fmtTime(drag.ms)}</span></div>}
         <div className="playhead" style={{ left: x(p.current) }} />
       </div>
     </div>

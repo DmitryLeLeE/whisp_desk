@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -66,15 +67,15 @@ def main() -> None:
         with sync_playwright() as pw:
             browser = pw.chromium.launch(channel="chrome")
             page = browser.new_page(viewport={"width": 1400, "height": 900}, locale="ru-RU")
-            page.goto(BASE); page.wait_for_timeout(800)
+            page.goto(BASE); page.wait_for_timeout(1200)
             page.screenshot(path=str(out / "01-projects.png"))
-            page.get_by_text("Лекция: стерильность").first.click(); page.wait_for_timeout(1500)
-            page.screenshot(path=str(out / "02-setup.png"))
-            for label, name in (("Монтаж", "03-editor.png"), ("Субтитры", "04-subtitles.png"), ("Экспорт", "05-export.png")):
-                tab = page.get_by_role("button", name=label)
-                if tab.count():
-                    tab.first.click(); page.wait_for_timeout(1500)
-                    page.screenshot(path=str(out / name))
+            page.get_by_text("Лекция: стерильность").first.click(); page.wait_for_timeout(1800)
+            shots = (("Видео и анализ", "02-setup.png"), ("Монтаж", "03-editor.png"), ("Субтитры", "04-subtitles.png"), ("Экспорт", "05-export.png"))
+            for label, name in shots:
+                page.get_by_role("button", name=re.compile(label)).first.click(); page.wait_for_timeout(1500)
+                page.screenshot(path=str(out / name))
+            page.goto(BASE + "#/settings"); page.wait_for_timeout(1500)
+            page.screenshot(path=str(out / "06-settings.png"))
             browser.close()
         print("saved", sorted(p.name for p in out.glob("*.png")))
     finally:

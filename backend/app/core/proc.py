@@ -63,11 +63,13 @@ def run(
     token: CancelToken | None = None,
     on_line: Callable[[str], None] | None = None,
     merge_stderr: bool = True,
+    env: dict[str, str] | None = None,
 ) -> tuple[int, str]:
     """Запускает команду, возвращает (код, весь вывод). Построчно вызывает on_line."""
     proc = subprocess.Popen(
         [str(a) for a in args],
         cwd=str(cwd) if cwd else None,
+        env=env,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT if merge_stderr else subprocess.PIPE,
         stdin=subprocess.DEVNULL,

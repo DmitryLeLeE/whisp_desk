@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 from ..core import tasks
 from ..editing import subtitles as subs
+from ..integrations import whisp
 from .deps import jobs, pm
 
 router = APIRouter(prefix="/api/projects/{pid}/subtitles", tags=["subtitles"])
@@ -17,6 +18,13 @@ class TranscribeBody(BaseModel):
     model: str = "small"
     language: str = "auto"
     overwrite: bool = False
+    device: str = "auto"
+    task: str = "transcribe"
+    translate_to: str = ""
+    vad: bool = True
+    max_line_chars: int = 0
+    max_lines: int = 2
+    max_duration: float = 0.0
 
 
 @router.get("")
@@ -49,6 +57,12 @@ async def import_cues(pid: str, request: Request, file: UploadFile = File(...)):
 @router.post("/transcribe", status_code=202)
 def transcribe(pid: str, body: TranscribeBody, request: Request):
     pm(request).source_path(pid)
+    if body.model not in {m["name"] for m in whisp.MODELS}:
+        raise HTTPException(422, "Неизвестная модель")
+    if body.device not in ("auto", "cpu", "cuda") or body.task not in ("transcribe", "translate"):
+        raise HTTPException(422, "Некорректные параметры расшифровки")
+    if body.translate_to and body.task == "translate":
+        raise HTTPException(422, "Выберите либо перевод Whisper на английский, либо машинный перевод")
     return jobs(request).submit(pid, "transcribe", body.model_dump())
 
 

@@ -21,6 +21,7 @@ FRONTEND_DIST = BUNDLE / "frontend" / "dist"
 DB_PATH = CONFIG_DIR / "desk.db"
 SETTINGS_PATH = CONFIG_DIR / "settings.json"
 
+VERSION = "0.3.0"
 HOST = "127.0.0.1"  # внешний доступ запрещён
 DEFAULT_PORT = 8765
 
@@ -56,9 +57,11 @@ def find_tool(name: str) -> str | None:
     custom = load_settings().get("tools", {}).get(name)
     if custom and Path(custom).is_file():
         return str(custom)
-    for candidate in (TOOLS_DIR / name / f"{name}{_EXE}", TOOLS_DIR / name / "bin" / f"{name}{_EXE}"):
-        if candidate.is_file():
-            return str(candidate)
+    # tools/ рядом с программой имеет приоритет (так пользователь подменяет версию), затем встроенные в exe.
+    for base in dict.fromkeys((TOOLS_DIR, BUNDLE / "tools")):
+        for candidate in (base / name / f"{name}{_EXE}", base / name / "bin" / f"{name}{_EXE}"):
+            if candidate.is_file():
+                return str(candidate)
     return shutil.which(name)
 
 

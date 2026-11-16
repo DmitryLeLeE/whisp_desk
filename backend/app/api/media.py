@@ -23,6 +23,17 @@ def system():
             "whisp": whisp.info()}
 
 
+@router.get("/fs/places")
+def places():
+    """Быстрые переходы в окне выбора файла: домашние папки пользователя и диски."""
+    home = Path.home()
+    names = [("Видео", "Videos"), ("Рабочий стол", "Desktop"), ("Загрузки", "Downloads"), ("Документы", "Documents")]
+    out = [{"name": label, "path": str(home / d)} for label, d in names if (home / d).is_dir()]
+    if sys.platform == "win32":
+        out += [{"name": f"Диск {d}:", "path": f"{d}:\\"} for d in string.ascii_uppercase if Path(f"{d}:\\").exists()]
+    return out
+
+
 @router.get("/fs")
 def browse(path: str = ""):
     """Простой обзор папок для выбора файла. Сервер доступен только с 127.0.0.1."""

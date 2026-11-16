@@ -30,23 +30,9 @@ jobs:
       - name: Icon
         run: python tools/make_icon.py
 
-      - name: FFmpeg (GPL build, libx264 + libass)
+      - name: FFmpeg and Auto-Editor (tools/)
         shell: pwsh
-        run: |
-          $url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip"
-          Invoke-WebRequest $url -OutFile ffmpeg.zip
-          Expand-Archive ffmpeg.zip -DestinationPath ffmpeg-dl
-          $bin = (Get-ChildItem ffmpeg-dl -Directory | Select-Object -First 1).FullName + "\bin"
-          New-Item -ItemType Directory -Force tools/ffmpeg, tools/ffprobe | Out-Null
-          Copy-Item "$bin\ffmpeg.exe" tools/ffmpeg/
-          Copy-Item "$bin\ffprobe.exe" tools/ffprobe/
-
-      - name: Auto-Editor
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force tools/auto-editor | Out-Null
-          $url = "https://github.com/WyattBlue/auto-editor/releases/download/$env:AUTO_EDITOR_VERSION/auto-editor-windows-amd64.exe"
-          Invoke-WebRequest $url -OutFile tools/auto-editor/auto-editor.exe
+        run: ./tools/fetch_tools.ps1 -AutoEditorVersion $env:AUTO_EDITOR_VERSION
 
       - name: Tests (with real ffmpeg and Auto-Editor)
         shell: pwsh
@@ -54,42 +40,90 @@ jobs:
           $env:PATH = "$PWD\tools\ffmpeg;$PWD\tools\ffprobe;$PWD\tools\auto-editor;$env:PATH"
           python -m pytest backend/tests -q
 
-      - name: PyInstaller
+      - name: PyInstaller (single exe)
         run: python -m PyInstaller --noconfirm --clean whisp_desk.spec
 
-      - name: Bundle tools next to exe
+      - name: Exe size
         shell: pwsh
         run: |
-          $d = "dist/WHISP_MEDIA_DESK"
-          foreach ($t in "ffmpeg","ffprobe","auto-editor") {
-            New-Item -ItemType Directory -Force "$d/tools/$t" | Out-Null
-            Copy-Item "tools/$t/*.exe" "$d/tools/$t/"
-          }
-          Copy-Item README.md, LICENSE, CHANGELOG.md $d
-          Copy-Item -Recurse docs $d/docs
+          $f = Get-Item dist/WHISP_MEDIA_DESK.exe
+          "{0:N0} MB" -f ($f.Length / 1MB)
 
-      - name: Smoke test of the built exe
+      - name: Smoke test, server mode (--no-window)
         shell: pwsh
         run: |
-          $p = Start-Process "dist/WHISP_MEDIA_DESK/WHISP_MEDIA_DESK.exe" -ArgumentList "--no-browser","--port","8799" -PassThru
+          $p = Start-Process "dist/WHISP_MEDIA_DESK.exe" -ArgumentList "--no-window","--port","8799" -PassThru
           $ok = $false
-          foreach ($i in 1..30) {
+          foreach ($i in 1..90) {
             Start-Sleep -Seconds 1
-            try { $r = Invoke-RestMethod "http://127.0.0.1:8799/api/system"; if ($r.ffmpeg.available) { $ok = $true; break } } catch {}
+            try { $r = Invoke-RestMethod "http://127.0.0.1:8799/api/system"; if ($r.ffmpeg.available -and $r.auto_editor.available) { $ok = $true; break } } catch {}
           }
+          if ($ok) { Invoke-RestMethod "http://127.0.0.1:8799/api/whisp/models" | ConvertTo-Json -Depth 4 | Select-Object -First 30 }
           Stop-Process $p -Force
-          if (-not $ok) { throw "exe не поднял сервер или не нашёл ffmpeg" }
+          if (-not $ok) { throw "exe не поднял сервер или не нашёл встроенные ffmpeg/Auto-Editor" }
+
+      - name: Smoke test, real Whisp from the exe (SAPI speech + tiny model)
+        shell: pwsh
+        run: |
+          Add-Type -AssemblyName System.Speech
+          $s = New-Object System.Speech.Synthesis.SpeechSynthesizer
+          $wav = Join-Path $PWD "speech.wav"
+          $s.SetOutputToWaveFile($wav); $s.Speak("Hello. This is a test of the speech recognition system."); $s.Dispose()
+          $out = Join-Path $PWD "whisp_out"; New-Item -ItemType Directory -Force $out | Out-Null
+          $params = @{ source=$wav; out_dir=$out; model="tiny"; language="en"; device="cpu"; task="transcribe"; translate_to="";
+                      vad=$true; audio_stream=0; max_line_chars=0; max_lines=2; max_duration=0.0; model_dir=$null; stem="whisp" } | ConvertTo-Json -Compress
+          $env:PATH = "$PWD\tools\ffmpeg;$PWD\tools\ffprobe;$env:PATH"
+          $arg = $params.Replace('"', '\"')
+          & "dist/WHISP_MEDIA_DESK.exe" --whisp-run transcribe $arg 2>&1 | Tee-Object -FilePath whisp_log.txt
+          Get-Content whisp_log.txt | Select-Object -Last 15
+          $srt = Join-Path $out "whisp.srt"
+          if (-not (Test-Path $srt)) { throw "Whisp из exe не создал SRT" }
+          Get-Content $srt -Encoding utf8
+          if ((Get-Content $srt -Raw) -notmatch "(?i)test|speech|hello") { throw "в SRT нет ожидаемых слов" }
+
+      - name: Smoke test, window mode
+        shell: pwsh
+        run: |
+          $p = Start-Process "dist/WHISP_MEDIA_DESK.exe" -PassThru
+          $ok = $false
+          foreach ($i in 1..90) {
+            Start-Sleep -Seconds 1
+            try { Invoke-RestMethod "http://127.0.0.1:8765/api/system" | Out-Null; $ok = $true; break } catch {}
+          }
+          Start-Sleep -Seconds 8
+          $p.Refresh()
+          "process alive: $(-not $p.HasExited), window handle: $($p.MainWindowHandle)"
+          Get-Process WHISP_MEDIA_DESK -ErrorAction SilentlyContinue | Stop-Process -Force
+          if (-not $ok) { throw "окно-режим: сервер не ответил" }
+
+      - name: Copy docs next to exe
+        shell: pwsh
+        run: Copy-Item README.md, LICENSE, CHANGELOG.md dist/
 
       - name: Zip
         shell: pwsh
-        run: Compress-Archive -Path dist/WHISP_MEDIA_DESK -DestinationPath WHISP_MEDIA_DESK-windows.zip
+        run: Compress-Archive -Path dist/WHISP_MEDIA_DESK.exe, dist/README.md, dist/LICENSE, dist/CHANGELOG.md -DestinationPath WHISP_MEDIA_DESK-windows.zip
+
+      - name: Installer (Inno Setup)
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" installer\whisp_desk.iss
 
       - uses: actions/upload-artifact@v4
-        with: { name: WHISP_MEDIA_DESK-windows, path: WHISP_MEDIA_DESK-windows.zip }
+        with:
+          name: WHISP_MEDIA_DESK-windows
+          path: |
+            WHISP_MEDIA_DESK-windows.zip
+            dist/WHISP_MEDIA_DESK.exe
+            dist/WHISP_MEDIA_DESK-setup.exe
 
       - name: Publish release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: WHISP_MEDIA_DESK-windows.zip
+          files: |
+            dist/WHISP_MEDIA_DESK.exe
+            dist/WHISP_MEDIA_DESK-setup.exe
+            WHISP_MEDIA_DESK-windows.zip
           generate_release_notes: true

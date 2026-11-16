@@ -77,3 +77,15 @@ export interface Scenes { engine: string; boundaries_ms: number[] }
 export interface Waveform { peaks_per_second: number; peaks: number[] }
 export interface VersionInfo { name: string; label: string; created: string }
 export interface TemplateInfo { id: string; name: string; description: string }
+
+export interface ProjectSummary extends ProjectRow {
+  filename?: string | null; duration_ms?: number | null; has_source?: boolean; has_plan?: boolean; has_subtitles?: boolean;
+  unreviewed?: number | null; output_ms?: number | null; removed_ms?: number | null; rendered?: boolean; thumb?: string | null; broken?: boolean;
+}
+export interface WhispModel {
+  name: string; size_mb: number; speed: string; quality: string; downloaded: boolean | null;
+  download: { state: "running" | "error"; done: number; total: number; error: string | null } | null;
+}
+export interface WhispModels { models: WhispModel[]; languages: Record<string, string>; model_dir: string; info: { available: boolean; mode: string | null } }
+export interface ToolInfo { available: boolean; path?: string | null; version?: string; mode?: string | null }
+export interface SettingsData { whisp_model_dir: string; root: string; projects_dir: string; frozen: boolean; version: string; tools: { ffmpeg: ToolInfo; auto_editor: ToolInfo; whisp: ToolInfo } }
