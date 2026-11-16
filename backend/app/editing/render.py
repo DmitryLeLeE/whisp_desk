@@ -9,6 +9,7 @@ from typing import Callable
 
 from ..core.config import require_tool
 from ..core.proc import CancelToken, run
+from ..integrations.ffmpeg import info as ffmpeg_info
 from ..media import ffprobe
 from .timeline import kept_ranges, output_duration_ms, snap_ms
 
@@ -43,6 +44,13 @@ def encoder_works(name: str) -> bool:
             code = 1
         _encoder_cache[name] = code == 0
     return _encoder_cache[name]
+
+
+def _script_flags(version_line: str) -> list[str]:
+    """`-filter_complex_script` убран в FFmpeg 8, вместо него `-/filter_complex` (есть с 7.0).
+    Сборки master/git (N-12345-g...) считаем новыми."""
+    m = re.search(r"version (\d+)\.", version_line or "")
+    return ["-filter_complex_script"] if m and int(m.group(1)) < 7 else ["-/filter_complex"]
 
 
 def pick_encoder(preference: str = "libx264") -> str:
@@ -284,9 +292,11 @@ def render(*, plan: dict, meta: dict, source: Path, out_path: Path, work_dir: Pa
     v = options["video"]
     encoder = pick_encoder(v.get("encoder", "libx264")) if has_video else "libx264"
 
+    script_flag = _script_flags(ffmpeg_info().get("version", ""))
+
     def build_cmd(enc: str) -> list[str]:
         c = [require_tool("ffmpeg"), "-y", "-v", "error", "-nostdin", "-progress", "pipe:1", *inputs,
-             "-filter_complex_script", str(script_path)]
+             *script_flag, str(script_path)]
         if has_video:
             c += ["-map", "[vout]", "-map", "[aout]", *video_codec_args(enc, v)]
         else:

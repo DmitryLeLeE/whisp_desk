@@ -132,3 +132,11 @@ def test_whisp_missing_gives_clear_error(tmp_path, monkeypatch, sample_video):
     monkeypatch.setattr(whisp, "whisp_dir", lambda: None)
     with pytest.raises(RuntimeError, match="Whisp не найден"):
         whisp.transcribe(sample_video, tmp_path / "o")
+
+
+def test_filter_script_flag_depends_on_ffmpeg_version():
+    from app.editing.render import _script_flags
+    assert _script_flags("ffmpeg version 6.1.1-3ubuntu5 Copyright") == ["-filter_complex_script"]
+    assert _script_flags("ffmpeg version 7.1 Copyright") == ["-/filter_complex"]
+    assert _script_flags("ffmpeg version N-118000-gabcdef Copyright") == ["-/filter_complex"]
+    assert _script_flags("") == ["-/filter_complex"]
