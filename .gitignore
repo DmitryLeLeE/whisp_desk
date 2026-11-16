@@ -12,3 +12,6 @@ tools/ffprobe/*
 tools/auto-editor/*
 !tools/*/.gitkeep
 *.part.mp4
+build/
+dist/
+*.spec.bak

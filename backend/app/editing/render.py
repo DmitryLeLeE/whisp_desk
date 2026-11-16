@@ -207,6 +207,27 @@ def check_disk_space(target_dir: Path, estimate_bytes: int) -> None:
         )
 
 
+def verify_output(part: Path, expected_s: float, has_video: bool) -> dict:
+    """Повторный FFprobe результата: читается, длительность в допуске, дорожки на месте. При неудаче файл удаляется."""
+    try:
+        res = ffprobe.probe(part)
+    except Exception as exc:
+        part.unlink(missing_ok=True)
+        raise RenderError(f"Результат не прошёл проверку FFprobe: {exc}") from exc
+    got_s = res["duration_ms"] / 1000
+    problems = []
+    if abs(got_s - expected_s) > max(0.5, expected_s * 0.01):
+        problems.append(f"длительность {got_s:.2f} с вместо {expected_s:.2f} с")
+    if not res["audio_streams"]:
+        problems.append("нет аудиодорожки")
+    if has_video and not res["has_video"]:
+        problems.append("нет видеодорожки")
+    if problems:
+        part.unlink(missing_ok=True)
+        raise RenderError("Проверка результата не пройдена: " + "; ".join(problems))
+    return res
+
+
 def render(*, plan: dict, meta: dict, source: Path, out_path: Path, work_dir: Path, options: dict,
            template: dict | None = None, template_dir: Path | None = None, subtitles_ass: str | None = None,
            overwrite: bool = False, token: CancelToken | None = None,
@@ -294,24 +315,7 @@ def render(*, plan: dict, meta: dict, source: Path, out_path: Path, work_dir: Pa
         part.unlink(missing_ok=True)
         raise RenderError(f"FFmpeg завершился с ошибкой (код {code}):\n{out[-1500:]}")
 
-    # Повторная проверка результата через FFprobe.
-    try:
-        res = ffprobe.probe(part)
-    except Exception as exc:
-        part.unlink(missing_ok=True)
-        raise RenderError(f"Результат не прошёл проверку FFprobe: {exc}") from exc
-    got_s = res["duration_ms"] / 1000
-    tol = max(0.5, expected_s * 0.01)
-    problems = []
-    if abs(got_s - expected_s) > tol:
-        problems.append(f"длительность {got_s:.2f} с вместо {expected_s:.2f} с")
-    if not res["audio_streams"]:
-        problems.append("нет аудиодорожки")
-    if has_video and not res["has_video"]:
-        problems.append("нет видеодорожки")
-    if problems:
-        part.unlink(missing_ok=True)
-        raise RenderError("Проверка результата не пройдена: " + "; ".join(problems))
+    res = verify_output(part, expected_s, has_video)
     part.replace(out_path)
     if progress:
         progress(1.0)

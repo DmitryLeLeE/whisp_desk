@@ -54,7 +54,7 @@ export interface Project extends ProjectRow {
   description: string;
   settings: {
     profile: string; overrides: Record<string, number | null>; audio_stream: number; template: string;
-    scene_threshold: number; detect_scenes: boolean;
+    scene_threshold: number; detect_scenes: boolean; engine: string;
   };
   source: { path: string; filename: string; size_bytes: number } | null;
   has_plan: boolean; has_proxy: boolean; has_subtitles: boolean;
@@ -71,6 +71,7 @@ export interface Cue { start_ms: number; end_ms: number; text: string }
 export interface FsEntry { name: string; dir: boolean; path: string }
 export interface FsListing { path: string; parent: string | null; entries: FsEntry[] }
 export interface ExportFile { name: string; size: number; where: string }
+export interface Compare { builtin: { cuts: number; cut_ms: number }; auto_editor: { cuts: number; cut_ms: number }; overlap_ms: number; agreement: number }
 export interface Thumbs { files: string[]; times_ms: number[] }
 export interface Scenes { engine: string; boundaries_ms: number[] }
 export interface Waveform { peaks_per_second: number; peaks: number[] }

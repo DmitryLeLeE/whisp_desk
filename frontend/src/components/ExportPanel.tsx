@@ -15,6 +15,8 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
   const [burn, setBurn] = useState(false);
   const [overwrite, setOverwrite] = useState(false);
   const [encoder, setEncoder] = useState("libx264");
+  const [engine, setEngine] = useState("ffmpeg");
+  const [aeOk, setAeOk] = useState(false);
   const [formats, setFormats] = useState<string[]>(project.has_subtitles ? ["srt", "plan", "v3", "fcpxml"] : ["plan", "v3", "fcpxml"]);
   const [files, setFiles] = useState<ExportFile[]>([]);
   const [versions, setVersions] = useState<VersionInfo[]>([]);
@@ -26,7 +28,10 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
     api.get<ExportFile[]>(`/api/projects/${pid}/exports`).then(setFiles);
     api.get<VersionInfo[]>(`/api/projects/${pid}/timeline/versions`).then(setVersions);
   }, [pid]);
-  useEffect(() => { api.get<TemplateInfo[]>("/api/templates").then(setTemplates); }, []);
+  useEffect(() => {
+    api.get<TemplateInfo[]>("/api/templates").then(setTemplates);
+    api.get<{ auto_editor: { available: boolean } }>("/api/system").then((s) => setAeOk(s.auto_editor.available)).catch(() => undefined);
+  }, []);
   useEffect(() => { reload(); }, [reload, busy]);
 
   const guard = async (fn: () => Promise<unknown>, ok = "") => {
@@ -35,7 +40,7 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
   };
   const render = (mode: "fast" | "final") => guard(async () => {
     await api.patch(`/api/projects/${pid}`, { settings: { template } });
-    onJob(await api.post<Job>(`/api/projects/${pid}/render`, { mode, template, burn_subtitles: burn && project.has_subtitles, overwrite,
+    onJob(await api.post<Job>(`/api/projects/${pid}/render`, { mode, template, burn_subtitles: burn && project.has_subtitles, overwrite, engine,
       options: { video: { encoder } } }));
   });
   const toggle = (f: string) => setFormats(formats.includes(f) ? formats.filter((x) => x !== f) : [...formats, f]);
@@ -52,13 +57,19 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
           </select>
         </label>
         <p className="muted">{templates.find((t) => t.id === template)?.description}</p>
+        <label>Движок рендера
+          <select value={engine} onChange={(e) => { setEngine(e.target.value); if (e.target.value === "auto-editor") setBurn(false); }}>
+            <option value="ffmpeg">FFmpeg — шаблоны, субтитры, заставки</option>
+            <option value="auto-editor" disabled={!aeOk}>Auto-Editor{aeOk ? " — без шаблонов и вшитых субтитров" : " (не найден)"}</option>
+          </select>
+        </label>
         <label>Кодирование видео
           <select value={encoder} onChange={(e) => setEncoder(e.target.value)}>
             <option value="libx264">Процессор (libx264) — надёжно</option>
             <option value="auto">Видеокарта, если доступна (NVENC / QSV / AMF), иначе процессор</option>
           </select>
         </label>
-        <label className="check"><input type="checkbox" checked={burn} disabled={!project.has_subtitles} onChange={(e) => setBurn(e.target.checked)} /> Вшить субтитры в видео {project.has_subtitles ? "" : "(нет расшифровки)"}</label>
+        <label className="check"><input type="checkbox" checked={burn} disabled={!project.has_subtitles || engine === "auto-editor"} onChange={(e) => setBurn(e.target.checked)} /> Вшить субтитры в видео {project.has_subtitles ? "" : "(нет расшифровки)"}</label>
         <label className="check"><input type="checkbox" checked={overwrite} onChange={(e) => setOverwrite(e.target.checked)} /> Разрешить перезапись существующих результатов</label>
         <div className="row">
           <button onClick={() => render("fast")} disabled={busy}>Быстрый тест (480p)</button>

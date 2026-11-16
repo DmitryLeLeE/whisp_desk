@@ -17,6 +17,7 @@ class RenderBody(BaseModel):
     burn_subtitles: bool = False
     overwrite: bool = False
     package: bool | None = None
+    engine: str | None = None
     options: dict | None = None
 
 
@@ -37,6 +38,8 @@ def render(pid: str, body: RenderBody, request: Request):
     m.source_path(pid)
     if body.mode not in ("fast", "final"):
         raise HTTPException(422, "mode: fast или final")
+    if body.engine not in (None, "ffmpeg", "auto-editor"):
+        raise HTTPException(422, "engine: ffmpeg или auto-editor")
     params = {k: v for k, v in body.model_dump().items() if v is not None}
     return jobs(request).submit(pid, "render", params)
 

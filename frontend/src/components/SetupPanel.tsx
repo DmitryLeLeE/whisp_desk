@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, fmtSize, fmtTime } from "../api";
-import type { Job, Profile, Project } from "../types";
+import type { Compare, Job, Profile, Project } from "../types";
 import FileBrowser from "./FileBrowser";
 
 const FIELDS: { key: keyof Profile; label: string; step: number; hint: string }[] = [
@@ -21,12 +21,19 @@ export default function SetupPanel({ project, busy, onJob, onChanged }: {
   const [scenes, setScenes] = useState(project.settings.detect_scenes);
   const [auto, setAuto] = useState(!project.has_plan);
   const [hint, setHint] = useState("");
+  const [engine, setEngine] = useState(project.settings.engine ?? "builtin");
+  const [ae, setAe] = useState<{ available: boolean; version?: string } | null>(null);
+  const [cmp, setCmp] = useState<Compare | null>(null);
   const [path, setPath] = useState(project.source?.path ?? "");
   const [browse, setBrowse] = useState(false);
   const [error, setError] = useState("");
   const meta = project.metadata;
 
   useEffect(() => { api.get<Record<string, Profile>>("/api/profiles").then(setProfiles); }, []);
+  useEffect(() => {
+    api.get<{ auto_editor: { available: boolean; version?: string } }>("/api/system").then((s) => setAe(s.auto_editor)).catch(() => undefined);
+    api.get<Compare>(`/api/projects/${project.id}/analysis/compare`).then(setCmp).catch(() => setCmp(null));
+  }, [project.id, busy]);
 
   const value = (k: keyof Profile) => overrides[k] ?? (profiles[profile]?.[k] as number | undefined) ?? "";
 
@@ -45,13 +52,18 @@ export default function SetupPanel({ project, busy, onJob, onChanged }: {
     } catch (e) { setError((e as Error).message); }
   };
 
+  const runCompare = async () => {
+    setError("");
+    try { onJob(await api.post<Job>(`/api/projects/${project.id}/analysis/compare`)); } catch (e) { setError((e as Error).message); }
+  };
+
   const analyze = async () => {
     setError("");
     if (project.has_plan && !confirm("Монтажный план уже создан. Создать новый? Прежний сохранится как версия.")) return;
     try {
       onJob(await api.post<Job>(`/api/projects/${project.id}/analyze`, {
         profile, overrides, audio_stream: audio, detect_scenes: scenes, replace_plan: project.has_plan,
-        auto_threshold: auto && overrides.noise_db === undefined,
+        auto_threshold: auto && overrides.noise_db === undefined, engine,
       }));
     } catch (e) { setError((e as Error).message); }
   };
@@ -103,6 +115,18 @@ export default function SetupPanel({ project, busy, onJob, onChanged }: {
               {meta.audio_streams.map((a) => <option key={a.index} value={a.index}>№{a.index + 1}: {a.codec}, {a.channels} кан.{a.title ? `, ${a.title}` : ""}</option>)}
             </select>
           </label>
+        )}
+        <div className="row wrap">
+          <span className="muted">Движок поиска пауз:</span>
+          <label className={`chip ${engine === "builtin" ? "on" : ""}`}><input type="radio" checked={engine === "builtin"} onChange={() => setEngine("builtin")} /> Встроенный (FFmpeg)</label>
+          <label className={`chip ${engine === "auto-editor" ? "on" : ""}`} title={ae?.available ? "" : "Auto-Editor не найден: положите auto-editor.exe в tools/auto-editor/"}>
+            <input type="radio" disabled={!ae?.available} checked={engine === "auto-editor"} onChange={() => setEngine("auto-editor")} /> Auto-Editor{ae?.available && ae.version ? ` ${ae.version}` : ""}
+          </label>
+          {ae?.available && project.metadata && <button onClick={runCompare} disabled={busy}>Сравнить движки</button>}
+        </div>
+        {cmp && (
+          <p className="muted">Сравнение на этом файле: встроенный — {cmp.builtin.cuts} сокращений ({(cmp.builtin.cut_ms / 1000).toFixed(1)} с),
+            Auto-Editor — {cmp.auto_editor.cuts} ({(cmp.auto_editor.cut_ms / 1000).toFixed(1)} с), совпадение по времени <b>{Math.round(cmp.agreement * 100)}%</b>.</p>
         )}
         <div className="row wrap">
           <label className="check"><input type="checkbox" checked={auto} onChange={(e) => setAuto(e.target.checked)} /> Подобрать порог громкости по записи автоматически</label>

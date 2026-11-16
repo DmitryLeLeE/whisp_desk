@@ -17,7 +17,7 @@ from .fsutil import read_json, write_json_atomic
 PROJECT_TYPES = {"lecture": "Лекция", "interview": "Интервью", "webinar": "Вебинар", "custom": "Произвольное видео"}
 UNDO_LIMIT = 50
 DEFAULT_SETTINGS = {"profile": "standard", "overrides": {}, "audio_stream": 0, "template": "default",
-                    "scene_threshold": 27.0, "detect_scenes": True}
+                    "scene_threshold": 27.0, "detect_scenes": True, "engine": "builtin"}
 _ID = re.compile(r"^[a-z]+_\d{3,}$")
 
 

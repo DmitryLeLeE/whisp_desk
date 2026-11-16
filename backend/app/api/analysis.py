@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 from ..analysis.edit_planner import PROFILES
 from ..core.project_manager import ProjectError
+from ..integrations import auto_editor
 from .deps import jobs, pm
 
 router = APIRouter(prefix="/api", tags=["analysis"])
@@ -18,6 +19,7 @@ class AnalyzeBody(BaseModel):
     scene_threshold: float | None = None
     replace_plan: bool = False
     auto_threshold: bool = False
+    engine: str | None = None
 
 
 @router.get("/profiles")
@@ -32,6 +34,10 @@ def analyze(pid: str, body: AnalyzeBody, request: Request):
     if m.get(pid)["has_plan"] and not body.replace_plan:
         raise FileExistsError("Монтажный план уже создан. Подтвердите пересоздание (прежний план сохранится как версия).")
     params = {k: v for k, v in body.model_dump().items() if v is not None and k != "replace_plan"}
+    if body.engine not in (None, "builtin", "auto-editor"):
+        raise ProjectError("engine: builtin или auto-editor")
+    if body.engine == "auto-editor" and not auto_editor.info()["available"]:
+        raise ProjectError("Auto-Editor не найден: положите auto-editor.exe в tools/auto-editor/ или добавьте в PATH")
     if body.profile and body.profile not in PROFILES:
         raise ProjectError(f"Неизвестный профиль: {body.profile}")
     return jobs(request).submit(pid, "analyze", params)
@@ -46,3 +52,12 @@ def suggested_threshold(pid: str, request: Request):
     if not wave:
         raise ProjectError("Аудиоволна ещё не посчитана: запустите анализ или включите автоподбор порога")
     return suggest_threshold(wave["peaks"])
+
+
+@router.post("/projects/{pid}/analysis/compare", status_code=202)
+def compare(pid: str, request: Request):
+    """Сравнивает сокращения встроенного детектора и Auto-Editor при текущих настройках проекта."""
+    if not auto_editor.info()["available"]:
+        raise ProjectError("Auto-Editor не найден")
+    pm(request).source_path(pid)
+    return jobs(request).submit(pid, "compare", {})

@@ -61,10 +61,18 @@ def build_plan(*, project_id: str, source: str, duration_ms: int, fps: dict, aud
             if not any(c["start_ms"] < o["end_ms"] and o["start_ms"] < c["end_ms"] for o in cuts):
                 cuts.append(c)
     cuts.sort(key=lambda c: c["start_ms"])
+    return build_plan_from_cuts(project_id=project_id, source=source, duration_ms=duration_ms, fps=fps,
+                                audio_index=audio_index, cuts=cuts, min_keep_s=params.get("min_keep_s", 0))
 
-    # Склеиваем пересекающиеся и вплотную идущие сокращения.
+
+def build_plan_from_cuts(*, project_id: str, source: str, duration_ms: int, fps: dict, audio_index: int,
+                         cuts: list[dict], min_keep_s: float = 0.0) -> dict:
+    """cuts — готовые сокращения [{start_ms, end_ms, reason}] (от встроенного детектора или Auto-Editor)."""
     merged: list[dict] = []
-    for c in cuts:
+    for c in sorted(cuts, key=lambda c: c["start_ms"]):
+        c = {**c, "start_ms": max(0, c["start_ms"]), "end_ms": min(duration_ms, c["end_ms"])}
+        if c["end_ms"] <= c["start_ms"]:
+            continue
         if merged and c["start_ms"] <= merged[-1]["end_ms"]:
             merged[-1]["end_ms"] = max(merged[-1]["end_ms"], c["end_ms"])
         else:
@@ -81,14 +89,14 @@ def build_plan(*, project_id: str, source: str, duration_ms: int, fps: dict, aud
         segments.append(_seg(pos, duration_ms, "KEEP", "speech"))
 
     # Слишком короткие сохраняемые фрагменты между сокращениями — вероятно, щелчки. Режем, но оставляем на проверку.
-    min_keep = round(params.get("min_keep_s", 0) * 1000)
+    min_keep = round(min_keep_s * 1000)
     if min_keep:
         for i, s in enumerate(segments):
             inner = 0 < i < len(segments) - 1
             if s["action"] == "KEEP" and inner and s["source_end_ms"] - s["source_start_ms"] < min_keep:
                 s["action"], s["reason"] = "CUT", "low_volume"
 
-    if segments and segments[0]["action"] == "KEEP" and segments[0]["reason"] == "speech" and segments[0]["source_start_ms"] == 0:
+    if segments and segments[0]["action"] == "KEEP" and segments[0]["source_start_ms"] == 0:
         segments[0]["reason"] = "opening"
 
     plan = {

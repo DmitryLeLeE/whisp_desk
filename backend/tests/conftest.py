@@ -30,3 +30,14 @@ def make_plan(segments, duration=10000, fps=(25, 1)):
             "segments": [{"id": f"segment_{i:03d}", "source_start_ms": a, "source_end_ms": b, "action": act,
                           "reason": "speech" if act == "KEEP" else "long_silence", "reviewed": False,
                           "locked": False, "manual": False} for i, (a, b, act) in enumerate(segments, 1)]}
+
+
+def auto_editor_available() -> bool:
+    try:
+        from app.integrations import auto_editor
+        return auto_editor.info()["available"]
+    except Exception:  # noqa: BLE001
+        return False
+
+
+needs_auto_editor = pytest.mark.skipif(not auto_editor_available(), reason="нужен auto-editor")

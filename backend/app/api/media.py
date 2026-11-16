@@ -63,7 +63,7 @@ def media_file(pid: str, kind: str, request: Request):
 
 @router.get("/projects/{pid}/analysis/{name}")
 def analysis_data(pid: str, name: str, request: Request):
-    if name not in ("metadata", "silence", "scenes", "waveform", "thumbnails"):
+    if name not in ("metadata", "silence", "scenes", "waveform", "thumbnails", "compare"):
         raise HTTPException(404)
     data = read_json(pm(request).path(pid, "analysis", f"{name}.json"))
     if data is None:

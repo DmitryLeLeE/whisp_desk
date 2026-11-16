@@ -1,7 +1,7 @@
 """Экспорт монтажного плана во внешние форматы: Auto-Editor v3 и FCPXML (DaVinci Resolve).
 
-Оба формата написаны по описаниям форматов и должны быть проверены на реальных версиях программ
-(см. ТЗ, раздел 5.10): здесь гарантируется только внутренняя согласованность с монтажным планом.
+.v3 проверен на Auto-Editor 29.3.1 (файл открывается и рендерится в ожидаемую длительность).
+FCPXML написан по описанию формата и требует проверки в вашей версии DaVinci Resolve (ТЗ, раздел 5.10).
 """
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ def to_auto_editor_v3(plan: dict, meta: dict, source: Path) -> dict:
         dur = end_f - start_f
         if dur <= 0:
             continue
-        clip = {"src": str(source), "start": pos, "dur": dur, "offset": start_f, "speed": 1.0}
+        clip = {"src": str(source), "start": pos, "dur": dur, "offset": start_f}
         v_clips.append({"name": "video", **clip, "stream": 0})
         a_clips.append({"name": "audio", **clip, "stream": plan.get("audio_stream", 0)})
         pos += dur

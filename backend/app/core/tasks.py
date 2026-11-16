@@ -4,10 +4,10 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
-from ..analysis import edit_planner, scene_detector, silence_detector, threshold
+from ..analysis import compare as compare_mod, edit_planner, scene_detector, silence_detector, threshold
 from ..editing import exports, render as render_mod, subtitles as subs
 from ..editing.timeline import stats
-from ..integrations import whisp
+from ..integrations import auto_editor, whisp
 from ..media import ffprobe, proxy, waveform
 from .fsutil import read_json, write_json_atomic, write_text_atomic
 from .job_queue import JobContext, JobQueue
@@ -86,6 +86,25 @@ def export_package(pm: ProjectManager, pid: str, formats: list[str], overwrite: 
     return {"written": written}
 
 
+def _render_with_auto_editor(ctx: JobContext, plan: dict, meta: dict, source: Path, out: Path, work: Path,
+                             options: dict, ass: str | None, overwrite: bool) -> dict:
+    """Альтернативный рендер: монтаж передаётся Auto-Editor как .v3. Шаблон и вшитые субтитры не поддерживаются."""
+    if ass:
+        raise ProjectError("Auto-Editor не вшивает субтитры: выключите вшивание или выберите рендер FFmpeg")
+    if out.exists() and not overwrite:
+        raise FileExistsError(f"Файл уже существует: {out.name}. Подтвердите перезапись.")
+    ctx.stage("Рендер (Auto-Editor)")
+    part = out.with_name(out.stem + ".part" + out.suffix)
+    expected = render_mod.output_duration_ms(plan) / 1000
+    auto_editor.render_v3(plan, meta, source, part, work, normalize=options["audio"]["normalize"],
+                          audio_bitrate=options["video"]["audio_bitrate"], token=ctx.token,
+                          progress=lambda f: ctx.progress(0.02 + 0.93 * f))
+    info = render_mod.verify_output(part, expected, meta["has_video"])
+    part.replace(out)
+    return {"output": out.name, "encoder": "auto-editor", "duration_ms": info["duration_ms"],
+            "expected_ms": round(expected * 1000), "size_bytes": out.stat().st_size}
+
+
 # ---------- задачи ----------
 
 def register_all(queue: JobQueue, pm: ProjectManager) -> None:
@@ -94,7 +113,7 @@ def register_all(queue: JobQueue, pm: ProjectManager) -> None:
         project = pm.get(pid)
         settings = {**project["settings"], **{k: v for k, v in p.items()
                                               if k in ("profile", "overrides", "audio_stream", "scene_threshold",
-                                                       "detect_scenes")}}
+                                                       "detect_scenes", "engine")}}
         adir = pm.dir(pid) / "analysis"
         source = pm.source_path(pid)
         ctx.stage("Чтение параметров файла (FFprobe)")
@@ -106,7 +125,7 @@ def register_all(queue: JobQueue, pm: ProjectManager) -> None:
             raise ProjectError(f"Нет аудиодорожки №{a_idx}: в файле их {meta['audio_stream_count']}")
         write_json_atomic(adir / "metadata.json", meta)
         pm.update(pid, settings={k: settings[k] for k in ("profile", "overrides", "audio_stream",
-                                                          "scene_threshold", "detect_scenes")})
+                                                          "scene_threshold", "detect_scenes", "engine")})
         ctx.progress(0.03)
         params = edit_planner.profile_params(settings["profile"], settings["overrides"])
         dur = meta["duration_ms"]
@@ -137,11 +156,27 @@ def register_all(queue: JobQueue, pm: ProjectManager) -> None:
             write_json_atomic(adir / f"silence_{label}.json", {"key": key, "intervals": res})
             return res
 
-        silence = silence_pass(params["noise_db"], params["min_pause_s"], 0.03, 0.40, "main")
-        low = None
-        if params.get("low_volume_db") is not None:
-            low = silence_pass(params["low_volume_db"], params["low_volume_min_s"], 0.40, 0.50, "low")
-        write_json_atomic(adir / "silence.json", {"params": params, "silence": silence, "low_volume": low or []})
+        engine = settings.get("engine", "builtin")
+        ae_cuts = None
+        if engine == "auto-editor":
+            ctx.stage("Поиск пауз (Auto-Editor)")
+            fps0 = meta["video"]["fps"] if meta["has_video"] else {"numerator": 25, "denominator": 1}
+            ae_cuts = auto_editor.detect_cuts(
+                source, audio_index=a_idx, fps=fps0, duration_ms=dur, noise_db=params["noise_db"],
+                min_pause_s=params["min_pause_s"], pad_before_s=params["pad_before_s"],
+                pad_after_s=params["pad_after_s"], min_keep_s=params["min_keep_s"], token=ctx.token)
+            if params.get("low_volume_db") is not None:
+                ctx.log("Проход «низкая громкость» доступен только во встроенном движке — пропущен")
+            write_json_atomic(adir / "silence.json", {"engine": engine, "params": params, "cuts": ae_cuts})
+            silence, low = [], None
+            ctx.progress(0.5)
+        else:
+            silence = silence_pass(params["noise_db"], params["min_pause_s"], 0.03, 0.40, "main")
+            low = None
+            if params.get("low_volume_db") is not None:
+                low = silence_pass(params["low_volume_db"], params["low_volume_min_s"], 0.40, 0.50, "low")
+            write_json_atomic(adir / "silence.json", {"engine": engine, "params": params, "silence": silence,
+                                                      "low_volume": low or []})
         ctx.check()
 
         # --- сцены ---
@@ -155,8 +190,12 @@ def register_all(queue: JobQueue, pm: ProjectManager) -> None:
 
         # --- монтажный план ---
         fps = meta["video"]["fps"] if meta["has_video"] else {"numerator": 25, "denominator": 1}
-        plan = edit_planner.build_plan(project_id=pid, source=meta["filename"], duration_ms=dur, fps=fps,
-                                       audio_index=a_idx, silence=silence, params=params, low_volume=low)
+        if ae_cuts is not None:
+            plan = edit_planner.build_plan_from_cuts(project_id=pid, source=meta["filename"], duration_ms=dur,
+                                                     fps=fps, audio_index=a_idx, cuts=ae_cuts)
+        else:
+            plan = edit_planner.build_plan(project_id=pid, source=meta["filename"], duration_ms=dur, fps=fps,
+                                           audio_index=a_idx, silence=silence, params=params, low_volume=low)
         if (pm.dir(pid) / "timeline" / "edit_plan.json").is_file():
             name = pm.save_version(pid, "Перед пересозданием плана")
             ctx.log(f"Прежний план сохранён как {name}")
@@ -184,7 +223,7 @@ def register_all(queue: JobQueue, pm: ProjectManager) -> None:
             write_json_atomic(adir / "thumbnails.json", {"files": names, "times_ms": times[:len(names)]})
         write_json_atomic(adir / "state.json", state)
         pm.log_history(pid, "analyze", settings["profile"])
-        return {"stats": stats(plan), "scenes": len(scenes["scenes"]) if scenes else 0}
+        return {"engine": engine, "stats": stats(plan), "scenes": len(scenes["scenes"]) if scenes else 0}
 
     def render(ctx: JobContext, p: dict) -> dict:
         pid = ctx.project_id
@@ -210,11 +249,15 @@ def register_all(queue: JobQueue, pm: ProjectManager) -> None:
             clash = [EXPORT_FORMATS[f][1] for f in formats if (pm.dir(pid) / EXPORT_FORMATS[f][0] / EXPORT_FORMATS[f][1]).exists()]
             if clash:
                 raise FileExistsError("Файлы уже существуют: " + ", ".join(clash) + ". Подтвердите перезапись.")
-        ctx.stage(f"Рендер ({'быстрый' if mode == 'fast' else 'финальный'})")
-        result = render_mod.render(
-            plan=plan, meta=meta, source=source, out_path=out, work_dir=pm.dir(pid) / "exports" / ".work",
-            options=options, template=tpl, template_dir=tpl_dir, subtitles_ass=ass, overwrite=overwrite,
-            token=ctx.token, progress=lambda f: ctx.progress(0.02 + 0.93 * f), log=ctx.log)
+        work = pm.dir(pid) / "exports" / ".work"
+        if p.get("engine") == "auto-editor":
+            result = _render_with_auto_editor(ctx, plan, meta, source, out, work, options, ass, overwrite)
+        else:
+            ctx.stage(f"Рендер ({'быстрый' if mode == 'fast' else 'финальный'})")
+            result = render_mod.render(
+                plan=plan, meta=meta, source=source, out_path=out, work_dir=work, options=options, template=tpl,
+                template_dir=tpl_dir, subtitles_ass=ass, overwrite=overwrite, token=ctx.token,
+                progress=lambda f: ctx.progress(0.02 + 0.93 * f), log=ctx.log)
         shutil.rmtree(pm.dir(pid) / "exports" / ".work", ignore_errors=True)
         if package and formats:
             ctx.stage("Экспорт сопутствующих материалов")
@@ -239,6 +282,35 @@ def register_all(queue: JobQueue, pm: ProjectManager) -> None:
         save_cues(pm, pid, cues, f"{source.stem}.whisper.srt", raw)
         return {"cues": len(cues)}
 
+    def compare_engines(ctx: JobContext, _p: dict) -> dict:
+        pid = ctx.project_id
+        meta = pm.metadata(pid)
+        if not meta:
+            raise ProjectError("Сначала запустите анализ: нужны метаданные файла")
+        settings = pm.get(pid)["settings"]
+        params = edit_planner.profile_params(settings["profile"], settings["overrides"])
+        a_idx, dur = int(settings["audio_stream"]), meta["duration_ms"]
+        source = pm.source_path(pid)
+        fps = meta["video"]["fps"] if meta["has_video"] else {"numerator": 25, "denominator": 1}
+        ctx.stage("Встроенный детектор")
+        sil = silence_detector.detect_silence(source, a_idx, dur, params["noise_db"], params["min_pause_s"], ctx.token)
+        mine = edit_planner.build_plan(project_id=pid, source=meta["filename"], duration_ms=dur, fps=fps,
+                                       audio_index=a_idx, silence=sil, params=params)
+        ctx.progress(0.5)
+        ctx.stage("Auto-Editor")
+        cuts = auto_editor.detect_cuts(source, audio_index=a_idx, fps=fps, duration_ms=dur, noise_db=params["noise_db"],
+                                       min_pause_s=params["min_pause_s"], pad_before_s=params["pad_before_s"],
+                                       pad_after_s=params["pad_after_s"], min_keep_s=params["min_keep_s"], token=ctx.token)
+        theirs = edit_planner.build_plan_from_cuts(project_id=pid, source=meta["filename"], duration_ms=dur, fps=fps,
+                                                   audio_index=a_idx, cuts=cuts)
+        res = compare_mod.compare(compare_mod.cut_intervals(mine), compare_mod.cut_intervals(theirs),
+                                  ("builtin", "auto_editor"))
+        res["params"] = params
+        write_json_atomic(pm.dir(pid) / "analysis" / "compare.json", res)
+        ctx.log(f"Совпадение сокращений: {res['agreement'] * 100:.0f}%")
+        return res
+
+    queue.register("compare", compare_engines)
     queue.register("analyze", analyze)
     queue.register("render", render)
     queue.register("transcribe", transcribe)

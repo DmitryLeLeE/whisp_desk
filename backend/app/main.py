@@ -38,7 +38,7 @@ def create_app() -> FastAPI:
         queue.stop()
         db.close()
 
-    app = FastAPI(title="WHISP MEDIA DESK", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="WHISP MEDIA DESK", version="0.2.0", lifespan=lifespan)
     app.state.pm, app.state.jobs = pm, queue
     # Защита от DNS rebinding: принимаем только обращения к localhost.
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "testserver"])
@@ -61,11 +61,20 @@ def create_app() -> FastAPI:
 
         @app.get("/{path:path}", include_in_schema=False)
         def spa(path: str):
+            if path == "api" or path.startswith("api/"):
+                return JSONResponse({"detail": "Не найдено"}, status_code=404)
             f = (config.FRONTEND_DIST / path).resolve()
             if path and config.FRONTEND_DIST.resolve() in f.parents and f.is_file():
                 return FileResponse(f)
             return FileResponse(config.FRONTEND_DIST / "index.html")
     return app
+
+
+def _port_busy(port: int) -> bool:
+    import socket
+    with socket.socket() as s:
+        s.settimeout(0.3)
+        return s.connect_ex((config.HOST, port)) == 0
 
 
 def cli() -> None:
@@ -75,10 +84,17 @@ def cli() -> None:
     ap.add_argument("--port", type=int, default=config.DEFAULT_PORT)
     ap.add_argument("--no-browser", action="store_true")
     args = ap.parse_args()
-    logging.basicConfig(level=logging.INFO)
+    config.ensure_dirs()
+    logging.basicConfig(level=logging.INFO, handlers=[
+        logging.StreamHandler(), logging.FileHandler(config.LOGS_DIR / "desk.log", encoding="utf-8")])
+    if _port_busy(args.port):
+        print(f"Порт {args.port} занят. Возможно, WHISP MEDIA DESK уже запущен: http://{config.HOST}:{args.port}/")
+        if not args.no_browser:
+            webbrowser.open(f"http://{config.HOST}:{args.port}/")
+        return
     if not args.no_browser:
         threading.Timer(1.2, lambda: webbrowser.open(f"http://{config.HOST}:{args.port}/")).start()
-    uvicorn.run(create_app(), host=config.HOST, port=args.port, log_level="info")
+    uvicorn.run(create_app(), host=config.HOST, port=args.port, log_level="info", log_config=None)
 
 
 if __name__ == "__main__":
