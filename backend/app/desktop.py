@@ -60,9 +60,12 @@ def run_window(url: str) -> bool:
         win = webview.create_window(f"WHISP MEDIA DESK {config.VERSION}", url, js_api=api, width=1360, height=880,
                                     min_size=(1000, 640), text_select=True)
         api.window = win
+        started = time.time()
         webview.start(icon=str(icon) if icon.exists() else None, private_mode=False,
                       storage_path=str(config.CONFIG_DIR / "webview"))
-        return True
+        lived = time.time() - started
+        log.info("окно закрыто через %.1f с", lived)
+        return lived > 3  # мгновенный выход значит, что окно не показалось (нет WebView2): откроем браузер
     except Exception as e:
         log.exception("окно не открылось: %s", e)
         return False

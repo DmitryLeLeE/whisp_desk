@@ -99,8 +99,8 @@ jobs:
           $p.Refresh()
           "process alive: $(-not $p.HasExited), window handle: $($p.MainWindowHandle)"
           Get-Process WHISP_MEDIA_DESK -ErrorAction SilentlyContinue | Stop-Process -Force
+          Get-ChildItem dist/logs -ErrorAction SilentlyContinue | ForEach-Object { "== $($_.FullName)"; Get-Content $_.FullName -Tail 25 }
           if (-not $ok) {
-            Get-ChildItem dist/logs -ErrorAction SilentlyContinue | ForEach-Object { "== $($_.FullName)"; Get-Content $_.FullName -Tail 40 }
             throw "окно-режим: сервер не ответил"
           }
 
