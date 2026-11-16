@@ -1,0 +1,7 @@
+{
+  "name": "Лекция",
+  "description": "Стандартное оформление лекции: нормализация громкости, крупные субтитры. Заставка и логотип подключаются добавлением файлов (см. README).",
+  "subtitles": {"font": "Arial", "size": 68, "colour": "#FFFFFF", "outline_colour": "#1A1A1A", "outline": 3, "margin_v": 60},
+  "audio": {"normalize": true, "target_lufs": -16, "true_peak_db": -1.5, "limiter": true, "declick_ms": 8, "fade_out_s": 1.0},
+  "export": {"crf": 20, "preset": "veryfast", "audio_bitrate": "192k"}
+}

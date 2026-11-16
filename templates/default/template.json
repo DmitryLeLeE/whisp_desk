@@ -1,0 +1,7 @@
+{
+  "name": "Нейтральное оформление",
+  "description": "Без графики: только звук, субтитры и параметры экспорта.",
+  "subtitles": {"font": "Arial", "size": 64, "colour": "#FFFFFF", "outline_colour": "#000000", "outline": 3, "margin_v": 50},
+  "audio": {"normalize": false, "limiter": false, "declick_ms": 8},
+  "export": {"crf": 20, "preset": "veryfast", "audio_bitrate": "192k"}
+}

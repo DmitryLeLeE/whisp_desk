@@ -1,0 +1,6 @@
+fastapi>=0.115
+uvicorn>=0.30
+python-multipart>=0.0.9
+numpy>=1.26
+# необязательно: точнее определяет смену сцен (иначе используется встроенный анализ FFmpeg)
+scenedetect[opencv-headless]>=0.6.4

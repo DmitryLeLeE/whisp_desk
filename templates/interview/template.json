@@ -1,0 +1,7 @@
+{
+  "name": "Интервью",
+  "description": "Оформление интервью: нормализация громкости, субтитры чуть меньше и ниже.",
+  "subtitles": {"font": "Arial", "size": 58, "colour": "#FFFFFF", "outline_colour": "#000000", "outline": 2, "margin_v": 40},
+  "audio": {"normalize": true, "target_lufs": -16, "true_peak_db": -1.5, "limiter": true, "declick_ms": 8},
+  "export": {"crf": 20, "preset": "veryfast", "audio_bitrate": "192k"}
+}

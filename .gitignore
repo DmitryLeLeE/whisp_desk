@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+node_modules/
+frontend/dist/
+projects/
+logs/
+config/desk.db*
+config/settings.json
+tools/ffmpeg/*
+tools/ffprobe/*
+tools/auto-editor/*
+!tools/*/.gitkeep
+*.part.mp4

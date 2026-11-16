@@ -1,0 +1,274 @@
+"""Рендер итогового видео через FFmpeg по монтажному плану."""
+from __future__ import annotations
+
+import json
+import re
+import shutil
+from pathlib import Path
+from typing import Callable
+
+from ..core.config import require_tool
+from ..core.proc import CancelToken, run
+from ..media import ffprobe
+from .timeline import kept_ranges, output_duration_ms, snap_ms
+
+DEFAULT_AUDIO = {
+    "normalize": False, "target_lufs": -16.0, "true_peak_db": -1.5, "limiter": False,
+    "volume_db": 0.0, "declick_ms": 8, "fade_in_s": 0.0, "fade_out_s": 0.0, "sample_rate": 48000,
+}
+MODES = {
+    "fast": {"height": 480, "crf": 28, "preset": "veryfast", "audio_bitrate": "96k"},
+    "final": {"height": None, "crf": 20, "preset": "veryfast", "audio_bitrate": "192k"},
+}
+_TIME = re.compile(r"out_time_us=(\d+)")
+
+
+class RenderError(RuntimeError):
+    pass
+
+
+def _sec(ms: int) -> str:
+    return f"{ms / 1000:.6f}"
+
+
+def merge_options(mode: str, template: dict | None, overrides: dict | None) -> dict:
+    """Приоритет: переопределения запроса > шаблон > умолчания режима."""
+    if mode not in MODES:
+        raise RenderError(f"Неизвестный режим рендера: {mode}")
+    template = template or {}
+    overrides = overrides or {}
+    video = {**MODES[mode], **template.get("export", {})}
+    if mode == "fast":  # быстрый режим всегда лёгкий, шаблон его не утяжеляет
+        video.update({k: MODES["fast"][k] for k in ("height", "crf", "preset", "audio_bitrate")})
+    video.update(overrides.get("video", {}))
+    audio = {**DEFAULT_AUDIO, **template.get("audio", {}), **overrides.get("audio", {})}
+    return {"mode": mode, "video": video, "audio": audio}
+
+
+def output_size(meta: dict, height: int | None) -> tuple[int, int]:
+    w, h = meta["video"]["width"], meta["video"]["height"]
+    if height and h > height:
+        w, h = round(w * height / h / 2) * 2, height
+    return w - w % 2, h - h % 2
+
+
+def build_filter_script(plan: dict, meta: dict, options: dict, *, has_subs: bool, logo: dict | None,
+                        extra_inputs: dict[str, int], size: tuple[int, int],
+                        intro_s: float = 0.0, outro_s: float = 0.0) -> tuple[str, float]:
+    """Возвращает (текст filter_complex, ожидаемая длительность основной части в секундах)."""
+    ranges = kept_ranges(plan)
+    if not ranges:
+        raise RenderError("В плане нет сохраняемых фрагментов: нечего рендерить.")
+    audio = options["audio"]
+    sr = int(audio["sample_rate"] or meta["audio_streams"][plan.get("audio_stream", 0)]["sample_rate"] or 48000)
+    a_idx = plan.get("audio_stream", 0)
+    has_video = meta["has_video"]
+    n = len(ranges)
+    declick = audio["declick_ms"] / 1000
+    parts: list[str] = []
+    fps = meta["video"]["fps"] if has_video else None
+    vsrc = "[0:v:0]"
+    if has_video:
+        if meta["video"]["variable_frame_rate"]:
+            parts.append(f"[0:v:0]fps={fps['numerator']}/{fps['denominator']}[vcfr]")
+            vsrc = "[vcfr]"
+        if n > 1:
+            labels = "".join(f"[vs{i}]" for i in range(n))
+            parts.append(f"{vsrc}split={n}{labels}")
+    for i, (a, b) in enumerate(ranges):
+        dur = (b - a) / 1000
+        if has_video:
+            src = f"[vs{i}]" if n > 1 else vsrc
+            parts.append(f"{src}trim=start={_sec(a)}:end={_sec(b)},setpts=PTS-STARTPTS[v{i}]")
+        chain = f"[0:a:{a_idx}]atrim=start={_sec(a)}:end={_sec(b)},asetpts=PTS-STARTPTS,aresample={sr}"
+        if declick > 0 and dur > 2 * declick:
+            if a > 0:
+                chain += f",afade=t=in:st=0:d={declick:.4f}"
+            if b < plan["duration_ms"]:
+                chain += f",afade=t=out:st={dur - declick:.6f}:d={declick:.4f}"
+        parts.append(f"{chain}[a{i}]")
+    if has_video:
+        inputs = "".join(f"[v{i}][a{i}]" for i in range(n))
+        parts.append(f"{inputs}concat=n={n}:v=1:a=1[vc][ac]")
+    else:
+        inputs = "".join(f"[a{i}]" for i in range(n))
+        parts.append(f"{inputs}concat=n={n}:v=0:a=1[ac]")
+
+    # --- звук после склейки ---
+    a_chain: list[str] = []
+    if audio["volume_db"]:
+        a_chain.append(f"volume={audio['volume_db']}dB")
+    if audio["normalize"]:
+        a_chain.append(f"loudnorm=I={audio['target_lufs']}:TP={audio['true_peak_db']}:LRA=11")
+    if audio["limiter"]:
+        limit = 10 ** (audio["true_peak_db"] / 20)
+        a_chain.append(f"alimiter=limit={limit:.4f}")
+    total_s = sum(b - a for a, b in ranges) / 1000
+    if audio["fade_in_s"]:
+        a_chain.append(f"afade=t=in:st=0:d={audio['fade_in_s']}")
+    if audio["fade_out_s"]:
+        a_chain.append(f"afade=t=out:st={max(0.0, total_s - audio['fade_out_s']):.3f}:d={audio['fade_out_s']}")
+    has_cards = bool(intro_s or outro_s)
+    if has_cards:
+        a_chain.append(f"aformat=sample_rates={sr}:channel_layouts=stereo")
+    parts.append(f"[ac]{','.join(a_chain) if a_chain else 'anull'}[amain]")
+
+    if not has_video:
+        parts[-1] = parts[-1].replace("[amain]", "[aout]")
+        return ";\n".join(parts) + "\n", total_s
+
+    # --- видео после склейки ---
+    w, h = size
+    v_chain = [f"scale={w}:{h}:flags=bicubic", "setsar=1"] if (w, h) != (meta["video"]["width"], meta["video"]["height"]) \
+        else ["setsar=1"]
+    if has_subs:
+        v_chain.append("subtitles=subs.ass")
+    label = "[vc]"
+    parts.append(f"{label}{','.join(v_chain)}[vtxt]")
+    label = "[vtxt]"
+    if logo:
+        li = extra_inputs["logo"]
+        lw = max(16, round(w * float(logo.get("scale", 0.12))))
+        m = int(logo.get("margin", 24))
+        pos = {"top-left": f"{m}:{m}", "top-right": f"W-w-{m}:{m}",
+               "bottom-left": f"{m}:H-h-{m}", "bottom-right": f"W-w-{m}:H-h-{m}"}[logo.get("position", "top-right")]
+        parts.append(f"[{li}:v]scale={lw}:-1[lg]")
+        parts.append(f"{label}[lg]overlay={pos}[vlogo]")
+        label = "[vlogo]"
+    fps_expr = f"{fps['numerator']}/{fps['denominator']}"
+    seq_v, seq_a = [], []
+
+    def card(key: str, dur: float, tag: str) -> None:
+        idx = extra_inputs[key]
+        parts.append(f"[{idx}:v]scale={w}:{h}:force_original_aspect_ratio=decrease,"
+                     f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps={fps_expr},format=yuv420p[v{tag}]")
+        parts.append(f"anullsrc=r={sr}:cl=stereo,atrim=0:{dur}[a{tag}]")
+        seq_v.append(f"[v{tag}]")
+        seq_a.append(f"[a{tag}]")
+
+    if intro_s:
+        card("intro", intro_s, "intro")
+    seq_v.append(label)
+    seq_a.append("[amain]")
+    if outro_s:
+        card("outro", outro_s, "outro")
+    if has_cards:
+        joined = "".join(f"{v}{a}" for v, a in zip(seq_v, seq_a))
+        parts.append(f"{joined}concat=n={len(seq_v)}:v=1:a=1[vout][aout]")
+    else:
+        parts.append(f"{label}null[vout]")
+        parts.append("[amain]anull[aout]")
+    return ";\n".join(parts) + "\n", total_s
+
+
+def check_disk_space(target_dir: Path, estimate_bytes: int) -> None:
+    free = shutil.disk_usage(target_dir).free
+    if free < estimate_bytes:
+        raise RenderError(
+            f"Недостаточно места на диске: нужно около {estimate_bytes // 2**20} МБ, свободно {free // 2**20} МБ."
+        )
+
+
+def render(*, plan: dict, meta: dict, source: Path, out_path: Path, work_dir: Path, options: dict,
+           template: dict | None = None, template_dir: Path | None = None, subtitles_ass: str | None = None,
+           overwrite: bool = False, token: CancelToken | None = None,
+           progress: Callable[[float], None] | None = None, log: Callable[[str], None] | None = None) -> dict:
+    log = log or (lambda _m: None)
+    template = template or {}
+    if not source.is_file():
+        raise RenderError(f"Исходный файл недоступен: {source}")
+    if out_path.exists() and not overwrite:
+        raise FileExistsError(f"Файл уже существует: {out_path.name}. Подтвердите перезапись.")
+    work_dir.mkdir(parents=True, exist_ok=True)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    has_video = meta["has_video"]
+    size = output_size(meta, options["video"].get("height")) if has_video else (0, 0)
+    kept_ms = output_duration_ms(plan)
+    ratio = kept_ms / max(1, plan["duration_ms"])
+    check_disk_space(out_path.parent, int(meta["size_bytes"] * ratio * 1.2) + 200 * 2**20)
+
+    inputs: list[str] = ["-i", str(source)]
+    extra: dict[str, int] = {}
+    logo = None
+    intro_s = outro_s = 0.0
+    if has_video and template_dir:
+        def asset(name: str) -> Path | None:
+            p = (template_dir / name).resolve()
+            if template_dir.resolve() not in p.parents:
+                raise RenderError(f"Файл шаблона вне каталога шаблона: {name}")
+            return p if p.is_file() else None
+
+        if template.get("logo") and (lp := asset(template["logo"]["file"])):
+            logo = template["logo"]
+            extra["logo"] = len(extra) + 1
+            inputs += ["-i", str(lp)]
+        if template.get("intro") and (ip := asset(template["intro"]["image"])):
+            intro_s = float(template["intro"].get("duration_s", 3))
+            extra["intro"] = len(extra) + 1
+            inputs += ["-loop", "1", "-t", str(intro_s), "-i", str(ip)]
+        if template.get("outro") and (op := asset(template["outro"]["image"])):
+            outro_s = float(template["outro"].get("duration_s", 3))
+            extra["outro"] = len(extra) + 1
+            inputs += ["-loop", "1", "-t", str(outro_s), "-i", str(op)]
+
+    has_subs = bool(subtitles_ass) and has_video
+    if has_subs:
+        (work_dir / "subs.ass").write_text(subtitles_ass or "", encoding="utf-8")
+    script, main_s = build_filter_script(plan, meta, options, has_subs=has_subs, logo=logo, extra_inputs=extra,
+                                         size=size, intro_s=intro_s, outro_s=outro_s)
+    script_path = work_dir / "filter.txt"
+    script_path.write_text(script, encoding="utf-8")
+    expected_s = main_s + intro_s + outro_s
+
+    part = out_path.with_name(out_path.stem + ".part" + out_path.suffix)
+    v = options["video"]
+    cmd = [require_tool("ffmpeg"), "-y", "-v", "error", "-nostdin", "-progress", "pipe:1", *inputs,
+           "-filter_complex_script", str(script_path)]
+    if has_video:
+        cmd += ["-map", "[vout]", "-map", "[aout]", "-c:v", "libx264", "-preset", str(v["preset"]),
+                "-crf", str(v["crf"]), "-pix_fmt", "yuv420p"]
+    else:
+        cmd += ["-map", "[aout]"]
+    cmd += ["-c:a", "aac", "-b:a", str(v["audio_bitrate"]), "-ar", str(options["audio"]["sample_rate"]),
+            "-movflags", "+faststart", "-f", "mp4", str(part)]
+    log(f"Рендер: {len(kept_ranges(plan))} фрагментов, ожидаемая длительность {expected_s:.1f} с")
+
+    def on_line(line: str) -> None:
+        m = _TIME.match(line)
+        if m and progress:
+            progress(min(1.0, int(m.group(1)) / 1e6 / max(expected_s, 0.001)))
+
+    try:
+        code, out = run(cmd, cwd=work_dir, token=token, on_line=on_line)
+    except BaseException:
+        part.unlink(missing_ok=True)
+        raise
+    if code != 0:
+        part.unlink(missing_ok=True)
+        raise RenderError(f"FFmpeg завершился с ошибкой (код {code}):\n{out[-1500:]}")
+
+    # Повторная проверка результата через FFprobe.
+    try:
+        res = ffprobe.probe(part)
+    except Exception as exc:
+        part.unlink(missing_ok=True)
+        raise RenderError(f"Результат не прошёл проверку FFprobe: {exc}") from exc
+    got_s = res["duration_ms"] / 1000
+    tol = max(0.5, expected_s * 0.01)
+    problems = []
+    if abs(got_s - expected_s) > tol:
+        problems.append(f"длительность {got_s:.2f} с вместо {expected_s:.2f} с")
+    if not res["audio_streams"]:
+        problems.append("нет аудиодорожки")
+    if has_video and not res["has_video"]:
+        problems.append("нет видеодорожки")
+    if problems:
+        part.unlink(missing_ok=True)
+        raise RenderError("Проверка результата не пройдена: " + "; ".join(problems))
+    part.replace(out_path)
+    if progress:
+        progress(1.0)
+    return {"output": out_path.name, "duration_ms": res["duration_ms"], "expected_ms": round(expected_s * 1000),
+            "size_bytes": out_path.stat().st_size, "video": res.get("video"),
+            "audio": res["audio_streams"][0] if res["audio_streams"] else None}
