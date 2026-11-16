@@ -2,6 +2,7 @@ name: Release (Windows exe)
 on:
   push:
     tags: ["v*"]
+    branches: [feat/mvp-pipeline]   # сборка и проверка exe без публикации релиза
   workflow_dispatch:
 permissions:
   contents: write
