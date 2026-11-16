@@ -10,7 +10,7 @@ import time
 import urllib.request
 from pathlib import Path
 
-from . import config
+from .core import config
 
 log = logging.getLogger("desk.window")
 
