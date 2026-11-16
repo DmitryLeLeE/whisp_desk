@@ -114,7 +114,13 @@ def cli() -> None:
         return
 
     from . import desktop
-    thread = threading.Thread(target=server.run, name="uvicorn", daemon=True)
+    def serve() -> None:
+        try:
+            server.run()
+        except BaseException:
+            LOG.exception("сервер остановился с ошибкой")
+
+    thread = threading.Thread(target=serve, name="uvicorn", daemon=True)
     thread.start()
     if not desktop.wait_ready(url):
         LOG.error("сервер не ответил за 25 секунд, см. logs/desk.log")

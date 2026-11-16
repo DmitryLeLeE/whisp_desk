@@ -99,7 +99,10 @@ jobs:
           $p.Refresh()
           "process alive: $(-not $p.HasExited), window handle: $($p.MainWindowHandle)"
           Get-Process WHISP_MEDIA_DESK -ErrorAction SilentlyContinue | Stop-Process -Force
-          if (-not $ok) { throw "окно-режим: сервер не ответил" }
+          if (-not $ok) {
+            Get-ChildItem dist/logs -ErrorAction SilentlyContinue | ForEach-Object { "== $($_.FullName)"; Get-Content $_.FullName -Tail 40 }
+            throw "окно-режим: сервер не ответил"
+          }
 
       - name: Copy docs next to exe
         shell: pwsh
