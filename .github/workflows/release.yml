@@ -35,6 +35,7 @@ jobs:
         run: ./tools/fetch_tools.ps1 -AutoEditorVersion $env:AUTO_EDITOR_VERSION
 
       - name: Tests (with real ffmpeg and Auto-Editor)
+        if: startsWith(github.ref, 'refs/tags/v')
         shell: pwsh
         run: |
           $env:PATH = "$PWD\tools\ffmpeg;$PWD\tools\ffprobe;$PWD\tools\auto-editor;$env:PATH"
@@ -64,6 +65,7 @@ jobs:
 
       - name: Smoke test, real Whisp from the exe (SAPI speech + tiny model)
         shell: pwsh
+        timeout-minutes: 8
         run: |
           Add-Type -AssemblyName System.Speech
           $s = New-Object System.Speech.Synthesis.SpeechSynthesizer
@@ -74,8 +76,11 @@ jobs:
                       vad=$true; audio_stream=0; max_line_chars=0; max_lines=2; max_duration=0.0; model_dir=$null; stem="whisp" } | ConvertTo-Json -Compress
           $env:PATH = "$PWD\tools\ffmpeg;$PWD\tools\ffprobe;$env:PATH"
           $arg = $params.Replace('"', '\"')
-          & "dist/WHISP_MEDIA_DESK.exe" --whisp-run transcribe $arg 2>&1 | Tee-Object -FilePath whisp_log.txt
-          Get-Content whisp_log.txt | Select-Object -Last 15
+          $env:WHISP_RUNNER_LOG = Join-Path $PWD "whisp_log.txt"
+          $p = Start-Process "dist/WHISP_MEDIA_DESK.exe" -ArgumentList "--whisp-run","transcribe",$arg -PassThru
+          if (-not $p.WaitForExit(300000)) { $p.Kill(); Get-Content whisp_log.txt -ErrorAction SilentlyContinue | Select-Object -Last 20; throw "Whisp из exe не завершился за 5 минут" }
+          "exit code: $($p.ExitCode)"
+          Get-Content whisp_log.txt -ErrorAction SilentlyContinue | Select-Object -Last 15
           $srt = Join-Path $out "whisp.srt"
           if (-not (Test-Path $srt)) { throw "Whisp из exe не создал SRT" }
           Get-Content $srt -Encoding utf8
@@ -105,6 +110,7 @@ jobs:
         run: Compress-Archive -Path dist/WHISP_MEDIA_DESK.exe, dist/README.md, dist/LICENSE, dist/CHANGELOG.md -DestinationPath WHISP_MEDIA_DESK-windows.zip
 
       - name: Installer (Inno Setup)
+        if: startsWith(github.ref, 'refs/tags/v')
         shell: pwsh
         run: |
           choco install innosetup -y --no-progress

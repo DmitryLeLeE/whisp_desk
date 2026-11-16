@@ -15,7 +15,13 @@ PREFIX = "@@WD "
 
 
 def emit(kind: str, **data) -> None:
-    print(PREFIX + json.dumps({"k": kind, **data}, ensure_ascii=False), flush=True)
+    line = PREFIX + json.dumps({"k": kind, **data}, ensure_ascii=False)
+    log = os.environ.get("WHISP_RUNNER_LOG")  # для диагностики собранного exe, где stdout может быть недоступен
+    if log:
+        with open(log, "a", encoding="utf-8") as f:
+            f.write(line + "\n")
+    if sys.stdout is not None:
+        print(line, flush=True)
 
 
 def _setup() -> None:
