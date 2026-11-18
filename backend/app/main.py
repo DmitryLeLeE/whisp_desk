@@ -3,9 +3,14 @@ from __future__ import annotations
 
 import argparse
 import logging
+import mimetypes
 import threading
 import webbrowser
 from contextlib import asynccontextmanager
+
+# На Windows реестр может возвращать text/plain для .js, что ломает ES-модули в Chrome
+mimetypes.add_type("application/javascript", ".js")
+mimetypes.add_type("text/css", ".css")
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
