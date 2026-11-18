@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
@@ -143,7 +144,12 @@ def reveal_in_explorer(pid: str, request: Request, folder: str = "exports"):
     import subprocess
     import sys
     m = pm(request)
-    target = m.dir(pid) / folder if folder else m.dir(pid)
+    base_dir = m.dir(pid).resolve()
+    # Защита от Path Traversal: разрешаем только подпапки первого уровня внутри проекта
+    safe_folder = Path(folder).name if folder else ""
+    target = (base_dir / safe_folder).resolve() if safe_folder else base_dir
+    if not (target == base_dir or base_dir in target.parents):
+        target = base_dir
     target.mkdir(parents=True, exist_ok=True)
     try:
         if sys.platform == "win32":
@@ -153,8 +159,8 @@ def reveal_in_explorer(pid: str, request: Request, folder: str = "exports"):
         else:
             subprocess.run(["xdg-open", str(target)], check=False)
     except Exception as e:
-        return {"ok": False, "path": str(target.resolve()), "error": str(e)}
-    return {"ok": True, "path": str(target.resolve())}
+        return {"ok": False, "path": str(target), "error": str(e)}
+    return {"ok": True, "path": str(target)}
 
 
 @router.get("/{pid}/frame")

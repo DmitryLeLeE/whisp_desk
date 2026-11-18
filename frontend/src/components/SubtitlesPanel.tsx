@@ -436,7 +436,7 @@ export default function SubtitlesPanel({ pid, project: _project, cues, busy, onJ
                 {fillerMatches.length > 0 && (
                   <div className="row wrap" style={{ gap: 6, maxHeight: 110, overflowY: "auto" }}>
                     {fillerMatches.slice(0, 25).map((f) => (
-                      <span key={f.id} className="badge small" style={{ background: "rgba(239, 68, 68, 0.15)", color: "#ef4444" }}>
+                      <span key={f.id} className="filler-tag">
                         «{f.word}» ({fmtTime(f.start_ms, false)})
                       </span>
                     ))}

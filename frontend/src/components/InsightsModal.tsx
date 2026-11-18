@@ -38,22 +38,22 @@ export default function InsightsModal({ pid, onClose }: { pid: string; onClose: 
 
         {data && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 12 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
               {/* Скорость речи */}
-              <div style={{ padding: "14px", background: "var(--panel2)", borderRadius: 8, border: "1px solid var(--line)" }}>
+              <div className="insights-metric">
                 <div className="muted small">{lang === "ru" ? "Темп речи" : "Speech Pace"}</div>
-                <div style={{ fontSize: 24, fontWeight: 700, margin: "4px 0", color: data.pace === "optimal" ? "var(--accent)" : "inherit" }}>
-                  {data.wpm} <span style={{ fontSize: 14, fontWeight: 400 }}>{lang === "ru" ? "слов/мин" : "WPM"}</span>
+                <div style={{ fontSize: 26, fontWeight: 800, margin: "6px 0", color: data.pace === "optimal" ? "var(--accent)" : "inherit" }}>
+                  {data.wpm} <span style={{ fontSize: 14, fontWeight: 500 }}>{lang === "ru" ? "слов/мин" : "WPM"}</span>
                 </div>
-                <div className="small" style={{ color: "var(--accent)" }}>{data.pace_label}</div>
+                <div className="small" style={{ color: "var(--accent)", fontWeight: 600 }}>{data.pace_label}</div>
               </div>
 
               {/* Сэкономленное время */}
-              <div style={{ padding: "14px", background: "var(--panel2)", borderRadius: 8, border: "1px solid var(--line)" }}>
+              <div className="insights-metric">
                 <div className="muted small">{lang === "ru" ? "Сэкономлено времени" : "Time Saved"}</div>
-                <div style={{ fontSize: 24, fontWeight: 700, margin: "4px 0", color: "#10b981" }}>
+                <div style={{ fontSize: 26, fontWeight: 800, margin: "6px 0", color: "#10b981" }}>
                   -{fmtTime(data.removed_duration_ms, false)}{" "}
-                  <span style={{ fontSize: 14, fontWeight: 400 }}>({data.saved_percent}%)</span>
+                  <span style={{ fontSize: 14, fontWeight: 500 }}>({data.saved_percent}%)</span>
                 </div>
                 <div className="muted small">
                   {lang === "ru" ? `Вырезано ${data.silence_cuts} пауз` : `Cleaned ${data.silence_cuts} pauses`}
@@ -61,9 +61,9 @@ export default function InsightsModal({ pid, onClose }: { pid: string; onClose: 
               </div>
 
               {/* Хронометраж */}
-              <div style={{ padding: "14px", background: "var(--panel2)", borderRadius: 8, border: "1px solid var(--line)" }}>
+              <div className="insights-metric">
                 <div className="muted small">{lang === "ru" ? "Хронометраж готового видео" : "Final Video Duration"}</div>
-                <div style={{ fontSize: 22, fontWeight: 700, margin: "4px 0" }}>
+                <div style={{ fontSize: 24, fontWeight: 800, margin: "6px 0" }}>
                   {fmtTime(data.output_duration_ms, false)}
                 </div>
                 <div className="muted small">
@@ -72,10 +72,10 @@ export default function InsightsModal({ pid, onClose }: { pid: string; onClose: 
               </div>
 
               {/* Объём слов */}
-              <div style={{ padding: "14px", background: "var(--panel2)", borderRadius: 8, border: "1px solid var(--line)" }}>
+              <div className="insights-metric">
                 <div className="muted small">{lang === "ru" ? "Объём произнесённого текста" : "Spoken Content"}</div>
-                <div style={{ fontSize: 22, fontWeight: 700, margin: "4px 0" }}>
-                  {data.total_words} <span style={{ fontSize: 14, fontWeight: 400 }}>{lang === "ru" ? "слов" : "words"}</span>
+                <div style={{ fontSize: 24, fontWeight: 800, margin: "6px 0" }}>
+                  {data.total_words} <span style={{ fontSize: 14, fontWeight: 500 }}>{lang === "ru" ? "слов" : "words"}</span>
                 </div>
                 <div className="muted small">
                   {lang === "ru" ? `${data.total_cues} реплик • ${data.total_cuts} склеек` : `${data.total_cues} cues • ${data.total_cuts} cuts`}
