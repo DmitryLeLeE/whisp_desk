@@ -91,7 +91,7 @@ def export_package(pm: ProjectManager, pid: str, formats: list[str], overwrite: 
     if "davinci_markers" in formats:
         write_text_atomic(targets["davinci_markers"], exports.to_davinci_markers_csv(plan, meta))
     if "chapters" in formats:
-        write_text_atomic(targets["chapters"], exports.to_chapters(plan))
+        write_text_atomic(targets["chapters"], exports.to_chapters(plan, d / "exports" / "chapters.json"))
     if "audacity" in formats:
         write_text_atomic(targets["audacity"], exports.to_audacity_labels(plan))
 

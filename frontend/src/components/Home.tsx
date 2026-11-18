@@ -78,15 +78,43 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
     }
   };
 
+  const startBatch = async (paths: string[], autoAnalyze = false) => {
+    setError(""); setBusy(true); setBrowse(false);
+    try {
+      const res = await api.post<{ created: { id: string; name: string }[]; count: number }>("/api/projects/batch", {
+        paths,
+        type,
+        auto_analyze: autoAnalyze,
+        profile: "standard",
+      });
+      load();
+      setBusy(false);
+      if (res.count === 1 && !autoAnalyze) {
+        onOpen(res.created[0].id);
+      } else {
+        alert(lang === "ru" ? `Успешно создано проектов: ${res.count}` : `Successfully created ${res.count} projects`);
+      }
+    } catch (e) {
+      setError((e as Error).message);
+      setBusy(false);
+    }
+  };
+
   const pick = async () => {
     if (hasNativePicker()) { const p = await nativePickFile(); if (p) start(p); } else setBrowse(true);
   };
 
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault(); setDrag(false);
-    const f = e.dataTransfer.files[0] as (File & { pywebviewFullPath?: string }) | undefined;
-    if (f?.pywebviewFullPath) start(f.pywebviewFullPath);
-    else setError(lang === "ru" ? "Браузер не сообщает путь к перетащенному файлу. Нажмите «Выбрать видео»." : "Browser does not provide local path. Click 'Choose Video'.");
+    const files = Array.from(e.dataTransfer.files) as (File & { pywebviewFullPath?: string })[];
+    const valid = files.map((f) => f.pywebviewFullPath).filter(Boolean) as string[];
+    if (valid.length > 1) {
+      startBatch(valid);
+    } else if (valid.length === 1) {
+      start(valid[0]);
+    } else {
+      setError(lang === "ru" ? "Браузер не сообщает путь к перетащенному файлу. Нажмите «Выбрать видео»." : "Browser does not provide local path. Click 'Choose Video'.");
+    }
   };
 
   const remove = async (r: ProjectSummary, e: React.MouseEvent) => {
@@ -192,7 +220,7 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
         </div>
       </div>
       {error && <p className="error">{error}</p>}
-      {browse && <FileBrowser onPick={start} onClose={() => setBrowse(false)} />}
+      {browse && <FileBrowser onPick={start} onPickMultiple={(paths) => startBatch(paths)} onClose={() => setBrowse(false)} />}
 
       <div className="page-head">
         <div>

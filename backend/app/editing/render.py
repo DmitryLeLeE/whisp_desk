@@ -16,6 +16,7 @@ from .timeline import kept_ranges, output_duration_ms, snap_ms
 DEFAULT_AUDIO = {
     "normalize": False, "target_lufs": -16.0, "true_peak_db": -1.5, "limiter": False,
     "volume_db": 0.0, "declick_ms": 8, "fade_in_s": 0.0, "fade_out_s": 0.0, "sample_rate": 48000,
+    "denoise": False, "denoise_level": 12, "denoise_floor": -25,
 }
 MODES = {
     "fast": {"height": 480, "crf": 28, "preset": "veryfast", "audio_bitrate": "96k"},
@@ -142,6 +143,10 @@ def build_filter_script(plan: dict, meta: dict, options: dict, *, has_subs: bool
 
     # --- звук после склейки ---
     a_chain: list[str] = []
+    if audio.get("denoise"):
+        nr = int(audio.get("denoise_level") or 12)
+        nf = int(audio.get("denoise_floor") or -25)
+        a_chain.append(f"afftdn=nr={nr}:nf={nf}:tn=1")
     if audio["volume_db"]:
         a_chain.append(f"volume={audio['volume_db']}dB")
     if audio["normalize"]:

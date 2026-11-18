@@ -40,12 +40,17 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
   const [thumbs, setThumbs] = useState<Thumbs | null>(null);
   const [showScenes, setShowScenes] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [followPlayhead, setFollowPlayhead] = useState(true);
 
   const rangeEnd = useRef<number | null>(null);
   const segsRef = useRef(segs);
   segsRef.current = segs;
   const skipRef = useRef(skipCuts);
   skipRef.current = skipCuts;
+  const followRef = useRef(followPlayhead);
+  followRef.current = followPlayhead;
+  const ppsRef = useRef(pps);
+  ppsRef.current = pps;
 
   const segAt = useCallback((ms: number): Segment | undefined => {
     const s = segsRef.current;
@@ -103,12 +108,12 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
   // Прокрутка шкалы за playhead во время воспроизведения.
   useEffect(() => {
     const el = scrollRef.current;
-    if (!el || !playing) return;
+    if (!el || !playing || !followPlayhead) return;
     const x = (current / 1000) * pps;
-    if (x < el.scrollLeft || x > el.scrollLeft + el.clientWidth - 40) {
-      el.scrollLeft = Math.max(0, x - 80);
+    if (x < el.scrollLeft || x > el.scrollLeft + el.clientWidth - 60) {
+      el.scrollLeft = Math.max(0, x - el.clientWidth / 3);
     }
-  }, [current, playing, pps]);
+  }, [current, playing, pps, followPlayhead]);
 
   useEffect(() => {
     if (videoRef.current) {
@@ -402,6 +407,13 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
             <Icon name="zoom-in" />
           </button>
           <button onClick={fit}>{t("editor.zoom_fit")}</button>
+          <button
+            className={`small ${followPlayhead ? "primary" : "ghost"}`}
+            onClick={() => setFollowPlayhead(!followPlayhead)}
+            title={t("editor.autoscroll.title")}
+          >
+            <Icon name="compass" /> {t("editor.autoscroll")}
+          </button>
           <button className="ghost" onClick={() => setShowHelp(true)} title={t("common.help")}>
             <Icon name="help" />
           </button>

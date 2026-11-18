@@ -33,6 +33,50 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
   const [label, setLabel] = useState("");
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
+  const [denoise, setDenoise] = useState(false);
+  const [denoiseLevel, setDenoiseLevel] = useState(12);
+
+  interface Chapter { time_ms: number; title: string; source_ms?: number }
+  const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [loadingChapters, setLoadingChapters] = useState(false);
+
+  const loadChapters = useCallback(() => {
+    api.get<{ chapters: Chapter[] }>(`/api/projects/${pid}/chapters`).then((r) => setChapters(r.chapters || [])).catch(() => undefined);
+  }, [pid]);
+
+  useEffect(() => { loadChapters(); }, [loadChapters]);
+
+  const generateChapters = async () => {
+    setLoadingChapters(true);
+    try {
+      const res = await api.post<{ chapters: Chapter[]; formatted: string }>(`/api/projects/${pid}/chapters/generate`, {
+        min_interval_s: 60,
+        lang,
+      });
+      setChapters(res.chapters || []);
+      setMsg(lang === "ru" ? "Умные главы успешно сгенерированы!" : "Smart chapters generated!");
+      reload();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoadingChapters(false);
+    }
+  };
+
+  const copyChapters = () => {
+    const formatted = chapters.map((ch) => {
+      const s = Math.floor(ch.time_ms / 1000);
+      const m = Math.floor(s / 60);
+      const sec = s % 60;
+      const h = Math.floor(m / 60);
+      const min = m % 60;
+      const ts = h > 0 ? `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}` : `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+      return `${ts} ${ch.title}`;
+    }).join("\n");
+    navigator.clipboard.writeText(formatted);
+    setMsg(t("chapters.copied"));
+    setTimeout(() => setMsg(""), 3000);
+  };
 
   const reload = useCallback(() => {
     api.get<ExportFile[]>(`/api/projects/${pid}/exports`).then(setFiles);
@@ -55,7 +99,10 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
     await api.patch(`/api/projects/${pid}`, { settings: { template } });
     onJob(await api.post<Job>(`/api/projects/${pid}/render`, {
       mode, template, burn_subtitles: burn && project.has_subtitles, overwrite, engine,
-      options: { video: { encoder } },
+      options: {
+        video: { encoder },
+        audio: { denoise, denoise_level: denoiseLevel },
+      },
     }));
   });
 
@@ -223,6 +270,20 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
               {lang === "ru" ? "Вшить субтитры в видеоряд (Hardsub)" : "Burn subtitles into video (Hardsub)"}
             </label>
             <label className="check">
+              <input type="checkbox" checked={denoise} onChange={(e) => setDenoise(e.target.checked)} />
+              <span><b>{t("audio.denoise")}</b></span>
+            </label>
+            {denoise && (
+              <div className="row" style={{ marginLeft: 24, gap: 12 }}>
+                <span className="muted small">{t("audio.denoise_level")}:</span>
+                <select value={denoiseLevel} onChange={(e) => setDenoiseLevel(Number(e.target.value))}>
+                  <option value={6}>{t("audio.denoise.soft")}</option>
+                  <option value={12}>{t("audio.denoise.std")}</option>
+                  <option value={18}>{t("audio.denoise.strong")}</option>
+                </select>
+              </div>
+            )}
+            <label className="check">
               <input type="checkbox" checked={overwrite} onChange={(e) => setOverwrite(e.target.checked)} />
               {lang === "ru" ? "Перезаписывать существующие файлы" : "Overwrite existing files"}
             </label>
@@ -279,6 +340,55 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
                 ? "Нажмите на файл, чтобы скачать его. Все файлы также находятся в папке проекта (exports)."
                 : "Click on any file to download. Files are also stored in the project's 'exports' directory."}
             </p>
+          )}
+        </section>
+
+        {/* Умные главы (YouTube Chapters) */}
+        <section className="card">
+          <div className="card-title" style={{ justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+            <div className="row">
+              <span className="num"><Icon name="captions" /></span>
+              <h2>{t("chapters.title")}</h2>
+            </div>
+            <div className="row" style={{ gap: 8 }}>
+              <button className="primary small" onClick={generateChapters} disabled={loadingChapters || busy} title="Сгенерировать смысловые главы по тексту и паузам">
+                <Icon name="sparkles" /> {loadingChapters ? t("common.loading") : t("chapters.generate")}
+              </button>
+              {chapters.length > 0 && (
+                <button className="ghost small" onClick={copyChapters} title={t("chapters.copy_desc")}>
+                  <Icon name="file" /> {t("chapters.copy_desc")}
+                </button>
+              )}
+            </div>
+          </div>
+          <p className="muted small">{t("chapters.hint")}</p>
+
+          {chapters.length > 0 && (
+            <ul className="list" style={{ maxHeight: 220, overflow: "auto" }}>
+              {chapters.map((ch, idx) => {
+                const s = Math.floor(ch.time_ms / 1000);
+                const m = Math.floor(s / 60);
+                const sec = s % 60;
+                const h = Math.floor(m / 60);
+                const min = m % 60;
+                const ts = h > 0 ? `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}` : `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+                return (
+                  <li key={idx} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 10px" }}>
+                    <code style={{ minWidth: 65, color: "var(--accent)", fontWeight: 700 }}>{ts}</code>
+                    <input
+                      className="grow"
+                      value={ch.title}
+                      onChange={(e) => {
+                        const updated = [...chapters];
+                        updated[idx] = { ...updated[idx], title: e.target.value };
+                        setChapters(updated);
+                        api.put(`/api/projects/${pid}/chapters`, { chapters: updated }).catch(() => undefined);
+                      }}
+                    />
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </section>
       </div>

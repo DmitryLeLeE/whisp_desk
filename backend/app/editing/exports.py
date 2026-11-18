@@ -359,8 +359,16 @@ def to_davinci_markers_csv(plan: dict, meta: dict | None = None) -> str:
     return "\n".join(lines) + "\n"
 
 
-def to_chapters(plan: dict) -> str:
+def to_chapters(plan: dict, chapters_json_path: Path | None = None) -> str:
     """Оглавление (YouTube / плееры) с таймкодами готового монтажа."""
+    if chapters_json_path and chapters_json_path.is_file():
+        try:
+            data = json.loads(chapters_json_path.read_text(encoding="utf-8"))
+            if data.get("chapters"):
+                from .chapters import format_chapters_text
+                return format_chapters_text(data["chapters"])
+        except Exception:
+            pass
     ranges = kept_ranges(plan)
     pos_ms = 0
     lines = []

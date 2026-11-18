@@ -83,6 +83,25 @@ const DICT: Record<Language, Record<string, string>> = {
     "editor.stats.saved": "Сэкономлено",
     "editor.stats.unreviewed": "Непроверенных",
     "editor.help.title": "Горячие клавиши редактора",
+    "editor.autoscroll": "Автоскролл",
+    "editor.autoscroll.title": "Автоматически следовать за курсором воспроизведения",
+
+    // Chapters
+    "chapters.title": "Умные главы видео (YouTube)",
+    "chapters.generate": "Сгенерировать умные главы",
+    "chapters.copy_desc": "Скопировать для описания",
+    "chapters.copied": "Главы скопированы в буфер обмена!",
+    "chapters.hint": "Главы создаются автоматически по смысловым фразам, паузам и сменам сцен.",
+
+    // Batch & Denoise
+    "batch.title": "Пакетный импорт проектов",
+    "batch.btn_analyze_all": "Запустить анализ для всех",
+    "audio.denoise": "Подавление фонового шума (FFmpeg Denoiser)",
+    "audio.denoise_hint": "Удаляет гул вентилятора, кондиционера и фоновое шипение микрофона (afftdn)",
+    "audio.denoise_level": "Уровень шумоподавления",
+    "audio.denoise.soft": "Мягкое (-6 dB)",
+    "audio.denoise.std": "Стандартное (-12 dB)",
+    "audio.denoise.strong": "Сильное (-18 dB)",
 
     // Subtitles
     "subs.tab.orig": "Оригинал",
@@ -243,6 +262,25 @@ const DICT: Record<Language, Record<string, string>> = {
     "editor.stats.saved": "Saved",
     "editor.stats.unreviewed": "Unreviewed",
     "editor.help.title": "Editor Keyboard Shortcuts",
+    "editor.autoscroll": "Auto-Scroll",
+    "editor.autoscroll.title": "Automatically scroll timeline to follow playhead",
+
+    // Chapters
+    "chapters.title": "Smart Video Chapters (YouTube)",
+    "chapters.generate": "Generate Smart Chapters",
+    "chapters.copy_desc": "Copy for Video Description",
+    "chapters.copied": "Chapters copied to clipboard!",
+    "chapters.hint": "Chapters are generated automatically based on semantic keywords, speech pauses, and scene cuts.",
+
+    // Batch & Denoise
+    "batch.title": "Batch Project Import",
+    "batch.btn_analyze_all": "Analyze All in Queue",
+    "audio.denoise": "Noise Reduction (FFmpeg Denoiser)",
+    "audio.denoise_hint": "Removes fan hum, air conditioning, and microphone hiss (afftdn)",
+    "audio.denoise_level": "Reduction Level",
+    "audio.denoise.soft": "Soft (-6 dB)",
+    "audio.denoise.std": "Standard (-12 dB)",
+    "audio.denoise.strong": "Aggressive (-18 dB)",
 
     // Subtitles
     "subs.tab.orig": "Original",

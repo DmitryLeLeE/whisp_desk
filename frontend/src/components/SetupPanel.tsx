@@ -40,6 +40,7 @@ export default function SetupPanel({ project, payload: _payload, busy, onJob, on
   const [auto, setAuto] = useState(!project.has_plan);
   const [hint, setHint] = useState("");
   const [engine, setEngine] = useState(project.settings.engine ?? "builtin");
+  const [denoise, setDenoise] = useState(Boolean(project.settings.denoise));
   const [ae, setAe] = useState<{ available: boolean; version?: string } | null>(null);
   const [cmp, setCmp] = useState<Compare | null>(null);
   const [path, setPath] = useState(project.source?.path ?? "");
@@ -76,8 +77,8 @@ export default function SetupPanel({ project, payload: _payload, busy, onJob, on
   const analyze = async () => {
     setError("");
     try {
-      await api.patch(`/api/projects/${project.id}`, { settings: { profile, overrides, audio_stream: audio, detect_scenes: scenes, engine } });
-      onJob(await api.post<Job>(`/api/projects/${project.id}/analyze`, { profile, overrides, audio_stream: audio, detect_scenes: scenes, engine, auto_threshold: auto }));
+      await api.patch(`/api/projects/${project.id}`, { settings: { profile, overrides, audio_stream: audio, detect_scenes: scenes, engine, denoise } });
+      onJob(await api.post<Job>(`/api/projects/${project.id}/analyze`, { profile, overrides, audio_stream: audio, detect_scenes: scenes, engine, auto_threshold: auto, denoise }));
     } catch (e) { setError((e as Error).message); }
   };
 
@@ -219,6 +220,12 @@ export default function SetupPanel({ project, payload: _payload, busy, onJob, on
             <input type="checkbox" checked={scenes} onChange={(e) => setScenes(e.target.checked)} />
             {lang === "ru" ? "Определять смену сцен (помогает при видеомонтаже)" : "Detect scene boundaries"}
           </label>
+
+          <label className="check">
+            <input type="checkbox" checked={denoise} onChange={(e) => setDenoise(e.target.checked)} />
+            <span><b>{t("audio.denoise")}</b></span>
+          </label>
+          <p className="muted small" style={{ margin: "-6px 0 0 24px" }}>{t("audio.denoise_hint")}</p>
         </section>
 
         {cmp && (

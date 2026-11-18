@@ -54,7 +54,7 @@ export interface Project extends ProjectRow {
   description: string;
   settings: {
     profile: string; overrides: Record<string, number | null>; audio_stream: number; template: string;
-    scene_threshold: number; detect_scenes: boolean; engine: string;
+    scene_threshold: number; detect_scenes: boolean; engine: string; denoise?: boolean; denoise_level?: number;
   };
   source: { path: string; filename: string; size_bytes: number } | null;
   has_plan: boolean; has_proxy: boolean; has_subtitles: boolean;

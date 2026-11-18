@@ -5,10 +5,18 @@ import Icon from "./Icon";
 
 interface Place { name: string; path: string }
 
+interface Props {
+  onPick: (path: string) => void;
+  onPickMultiple?: (paths: string[]) => void;
+  onClose: () => void;
+  mode?: "file" | "dir";
+}
+
 /** Встроенный выбор файла или папки (когда нет окна приложения с системным диалогом). */
-export default function FileBrowser({ onPick, onClose, mode = "file" }: { onPick: (path: string) => void; onClose: () => void; mode?: "file" | "dir" }) {
+export default function FileBrowser({ onPick, onPickMultiple, onClose, mode = "file" }: Props) {
   const [listing, setListing] = useState<FsListing | null>(null);
   const [places, setPlaces] = useState<Place[]>([]);
+  const [selected, setSelected] = useState<string[]>([]);
   const [error, setError] = useState("");
   const go = (path: string) => api.get<FsListing>(`/api/fs?path=${encodeURIComponent(path)}`)
     .then((l) => { setListing(l); setError(""); }).catch((e) => setError(e.message));
@@ -34,14 +42,35 @@ export default function FileBrowser({ onPick, onClose, mode = "file" }: { onPick
         <ul className="list files">
           {listing?.parent != null && <li><button onClick={() => go(listing.parent!)}><Icon name="folder" /> ..</button></li>}
           {listing?.entries.filter((e) => mode === "file" || e.dir).map((e) => (
-            <li key={e.path}>
-              <button onClick={() => (e.dir ? go(e.path) : onPick(e.path))}><Icon name={e.dir ? "folder" : "film"} /> {e.name}</button>
+            <li key={e.path} style={{ display: "flex", alignItems: "center" }}>
+              {mode === "file" && !e.dir && (
+                <input
+                  type="checkbox"
+                  checked={selected.includes(e.path)}
+                  onChange={() => setSelected((prev) => prev.includes(e.path) ? prev.filter((p) => p !== e.path) : [...prev, e.path])}
+                  style={{ margin: "0 8px 0 12px" }}
+                />
+              )}
+              <button
+                className="grow"
+                onClick={() => (e.dir ? go(e.path) : onPick(e.path))}
+              >
+                <Icon name={e.dir ? "folder" : "film"} /> {e.name}
+              </button>
             </li>
           ))}
           {listing && listing.entries.length === 0 && <li className="muted" style={{ padding: 14 }}>Здесь нет папок и медиафайлов.</li>}
         </ul>
         <div className="row">
           <p className="muted grow">{mode === "dir" ? "Откройте нужную папку и нажмите «Выбрать эту папку»." : "Показаны папки и медиафайлы: MP4, MOV, MKV, AVI, MTS, MP3, WAV и другие."}</p>
+          {selected.length > 0 && mode === "file" && (
+            <button
+              className="primary"
+              onClick={() => onPickMultiple ? onPickMultiple(selected) : onPick(selected[0])}
+            >
+              Выбрать файлы ({selected.length})
+            </button>
+          )}
           {mode === "dir" && <button className="primary" disabled={!listing?.path} onClick={() => listing && onPick(listing.path)}>Выбрать эту папку</button>}
         </div>
       </div>

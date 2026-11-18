@@ -26,6 +26,13 @@ class SourceBody(BaseModel):
     path: str
 
 
+class BatchProjectCreate(BaseModel):
+    paths: list[str]
+    type: str = "lecture"
+    auto_analyze: bool = False
+    profile: str = "standard"
+
+
 @router.get("/types")
 def types():
     return PROJECT_TYPES
@@ -66,6 +73,28 @@ def summary(request: Request):
 @router.post("", status_code=201)
 def create_project(body: ProjectCreate, request: Request):
     return pm(request).create(body.name, body.type, body.description)
+
+
+@router.post("/batch", status_code=201)
+def create_batch(body: BatchProjectCreate, request: Request):
+    """Массовое создание проектов из списка файлов с возможностью сразу запустить анализ."""
+    from pathlib import Path
+    m = pm(request)
+    j_queue = jobs(request)
+    created = []
+    for path_str in body.paths:
+        p_path = Path(path_str)
+        if not p_path.is_file():
+            continue
+        name = p_path.stem or "Новый проект"
+        p = m.create(name, body.type)
+        m.set_source(p["id"], str(p_path.resolve()))
+        job_id = None
+        if body.auto_analyze:
+            job = j_queue.submit("analyze", p["id"], {"profile": body.profile})
+            job_id = job["id"]
+        created.append({"id": p["id"], "name": name, "path": str(p_path), "job_id": job_id})
+    return {"created": created, "count": len(created)}
 
 
 @router.post("/rescan")
