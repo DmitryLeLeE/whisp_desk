@@ -17,7 +17,7 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from .api import analysis, chapters, filler_words, jobs as jobs_api, media, projects, render, subtitles, timeline, whisp_api
+from .api import analysis, chapters, filler_words, jobs as jobs_api, media, patterns, projects, render, subtitles, timeline, whisp_api
 from .core import config, tasks
 from .core.db import Database
 from .core.job_queue import JobConflict, JobQueue
@@ -59,7 +59,7 @@ def create_app() -> FastAPI:
         app.add_exception_handler(exc_type, err(status))
 
     for r in (projects.router, analysis.router, media.router, timeline.router, render.router, subtitles.router,
-              chapters.router, filler_words.router, jobs_api.router, whisp_api.router):
+              chapters.router, filler_words.router, patterns.router, jobs_api.router, whisp_api.router):
         app.include_router(r)
 
     if config.FRONTEND_DIST.is_dir():

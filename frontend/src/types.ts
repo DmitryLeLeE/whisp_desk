@@ -117,3 +117,29 @@ export interface FillerWordItem {
   context: string;
 }
 
+
+export interface EditPattern {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+  icon: string;
+  badge: string;
+  params: Record<string, any>;
+}
+
+export interface PatternApplyResult {
+  pattern_id: string;
+  pattern_name: string;
+  summary: string;
+  saved_ms: number;
+  before_stats: Record<string, number>;
+  after_stats: Record<string, number>;
+  cuts_made?: number;
+  fillers_cleaned?: number;
+  restored_pauses?: number;
+  snapped_cuts?: number;
+  retakes_removed?: number;
+  compressed?: number;
+  selected_cues?: number;
+}

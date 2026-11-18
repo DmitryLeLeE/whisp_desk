@@ -69,59 +69,77 @@ export default function Timeline(p: Props) {
   };
 
   return (
-    <div className="timeline" ref={p.scrollRef}>
-      <div className="tl-inner" ref={inner} style={{ width }}
-        onPointerDown={(e) => {
-          if (e.button !== 0) return;
-          (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-          sel.current = { x: e.clientX, ms: msAt(e.clientX), moved: false };
-          p.onSeek(sel.current.ms);
-        }}
-        onPointerMove={(e) => {
-          setHoverMs(msAt(e.clientX));
-          const s = sel.current;
-          if (!s || drag) return;
-          if (!s.moved && Math.abs(e.clientX - s.x) < 5) return;
-          s.moved = true;
-          const a = snap(s.ms), b = snap(msAt(e.clientX));
-          p.onRange(Math.min(a, b), Math.max(a, b));
-        }}
-        onPointerLeave={() => { setHoverMs(null); }}
-        onPointerUp={() => { sel.current = null; }}>
-        <div className="ruler">
-          {ticks.map((s) => <span key={s} style={{ left: s * p.pps }}>{fmtTime(s * 1000, false)}</span>)}
+    <div className="timeline-wrapper">
+      <div className="track-headers">
+        <div className="th-cell th-ruler" title="Ruler">
+          <span className="th-code">TC</span>
         </div>
-        <div className="wave">
-          <svg viewBox={`0 0 ${Math.min(p.wave?.peaks.length ?? 1, 3000)} 100`} preserveAspectRatio="none" width={width} height="100%">
-            <path d={path} />
-          </svg>
+        <div className="th-cell th-v1" title="Video Track 1">
+          <span className="th-badge">V1</span>
+          <span className="th-icon">👁</span>
+          <span className="th-icon">🔒</span>
         </div>
-        <div className="segs">
-          {p.segments.map((s, i) => (
-            <div key={s.id}
-              className={`seg ${s.action.toLowerCase()} ${s.manual ? "manual" : ""} ${!s.reviewed ? "unrev" : ""} ${s.locked ? "locked" : ""} ${p.selectedId === s.id ? "sel" : ""}`}
-              style={{ left: x(s.source_start_ms), width: Math.max(1, x(s.source_end_ms - s.source_start_ms)) }}
-              title={`${fmtTime(s.source_start_ms)} – ${fmtTime(s.source_end_ms)} · ${s.action} · ${s.reason}${s.reviewed ? "" : " · не проверено"}`}
-              onPointerDown={(e) => { if (e.button === 0) { p.onSelect(s.id); } }}>
-              {i < p.segments.length - 1 && (
-                <div className="handle"
-                  onPointerDown={(e) => startDrag(e, s)}
-                  onPointerMove={(e) => { if (drag?.id === s.id) setDrag({ id: s.id, ms: snap(msAt(e.clientX)) }); }}
-                  onPointerUp={() => { if (drag?.id === s.id) { p.onMoveBoundary(s.id, drag.ms); setDrag(null); } }} />
-              )}
-            </div>
-          ))}
+        <div className="th-cell th-a1" title="Audio Track 1 (Waveform & Speech)">
+          <span className="th-badge">A1</span>
+          <span className="th-icon">🔊</span>
+          <span className="th-mute">M</span>
         </div>
-        {p.sceneMs.map((ms) => <div key={ms} className="scene" style={{ left: x(ms) }} title={`Смена сцены ${fmtTime(ms)}`} />)}
-        {p.markIn != null && <div className="mark in" style={{ left: x(p.markIn) }} />}
-        {p.markOut != null && <div className="mark out" style={{ left: x(p.markOut) }} />}
-        {drag && <div className="tl-ghost" style={{ left: x(drag.ms) }}><span>{fmtTime(drag.ms)}</span></div>}
-        {hoverMs != null && !drag && (
-          <div className="tl-hover-ghost" style={{ left: x(hoverMs) }}>
-            <span>{fmtTime(hoverMs, true)}</span>
+      </div>
+
+      <div className="timeline" ref={p.scrollRef}>
+        <div className="tl-inner" ref={inner} style={{ width }}
+          onPointerDown={(e) => {
+            if (e.button !== 0) return;
+            (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+            sel.current = { x: e.clientX, ms: msAt(e.clientX), moved: false };
+            p.onSeek(sel.current.ms);
+          }}
+          onPointerMove={(e) => {
+            setHoverMs(msAt(e.clientX));
+            const s = sel.current;
+            if (!s || drag) return;
+            if (!s.moved && Math.abs(e.clientX - s.x) < 5) return;
+            s.moved = true;
+            const a = snap(s.ms), b = snap(msAt(e.clientX));
+            p.onRange(Math.min(a, b), Math.max(a, b));
+          }}
+          onPointerLeave={() => { setHoverMs(null); }}
+          onPointerUp={() => { sel.current = null; }}>
+          <div className="ruler">
+            {ticks.map((s) => <span key={s} style={{ left: s * p.pps }}>{fmtTime(s * 1000, false)}</span>)}
           </div>
-        )}
-        <div className="playhead" style={{ left: x(p.current) }} />
+          <div className="wave">
+            <svg viewBox={`0 0 ${Math.min(p.wave?.peaks.length ?? 1, 3000)} 100`} preserveAspectRatio="none" width={width} height="100%">
+              <path d={path} />
+            </svg>
+          </div>
+          <div className="segs">
+            {p.segments.map((s, i) => (
+              <div key={s.id}
+                className={`seg ${s.action.toLowerCase()} ${s.manual ? "manual" : ""} ${!s.reviewed ? "unrev" : ""} ${s.locked ? "locked" : ""} ${p.selectedId === s.id ? "sel" : ""}`}
+                style={{ left: x(s.source_start_ms), width: Math.max(1, x(s.source_end_ms - s.source_start_ms)) }}
+                title={`${fmtTime(s.source_start_ms)} – ${fmtTime(s.source_end_ms)} · ${s.action} · ${s.reason}${s.reviewed ? "" : " · не проверено"}`}
+                onPointerDown={(e) => { if (e.button === 0) { p.onSelect(s.id); } }}>
+                {i < p.segments.length - 1 && (
+                  <div className="handle"
+                    onPointerDown={(e) => startDrag(e, s)}
+                    onPointerMove={(e) => { if (drag?.id === s.id) setDrag({ id: s.id, ms: snap(msAt(e.clientX)) }); }}
+                    onPointerUp={() => { if (drag?.id === s.id) { p.onMoveBoundary(s.id, drag.ms); setDrag(null); } }} />
+                )}
+              </div>
+            ))}
+          </div>
+          {p.sceneMs.map((ms) => <div key={ms} className="scene" style={{ left: x(ms) }} title={`Смена сцены ${fmtTime(ms)}`} />)}
+          {p.markIn != null && <div className="mark in" style={{ left: x(p.markIn) }} />}
+          {p.markOut != null && <div className="mark out" style={{ left: x(p.markOut) }} />}
+          {drag && <div className="tl-ghost" style={{ left: x(drag.ms) }}><span>{fmtTime(drag.ms)}</span></div>}
+          {hoverMs != null && !drag && (
+            <div className="tl-hover-ghost" style={{ left: x(hoverMs) }}>
+              <span>{fmtTime(hoverMs, true)}</span>
+            </div>
+          )}
+          <div className="playhead" style={{ left: x(p.current) }} />
+        </div>
       </div>
     </div>
   );

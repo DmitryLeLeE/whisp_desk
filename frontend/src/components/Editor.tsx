@@ -3,6 +3,7 @@ import { api, fmtTime, parseTime } from "../api";
 import { useTranslation } from "../i18n";
 import type { Cue, PlanPayload, Project, Scenes, Segment, Thumbs, Waveform } from "../types";
 import Icon from "./Icon";
+import AutoPatternModal from "./AutoPatternModal";
 import InsightsModal from "./InsightsModal";
 import ShortcutsModal from "./ShortcutsModal";
 import Timeline from "./Timeline";
@@ -42,6 +43,7 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
   const [showScenes, setShowScenes] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showInsights, setShowInsights] = useState(false);
+  const [showPatterns, setShowPatterns] = useState(false);
   const [followPlayhead, setFollowPlayhead] = useState(true);
 
   const rangeEnd = useRef<number | null>(null);
@@ -303,28 +305,61 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
   return (
     <div className="editor">
       <div className="player-row">
-        <div className="player">
-          {project.has_proxy ? (
-            <video
-              ref={videoRef}
-              src={`/api/projects/${pid}/media/proxy`}
-              preload="auto"
-              onPlay={() => setPlaying(true)}
-              onPause={() => setPlaying(false)}
-              onClick={togglePlay}
-            />
-          ) : (
-            <p className="muted pad" style={{ padding: 40, textAlign: "center" }}>
-              {lang === "ru" ? "Копия для предпросмотра создаётся во время анализа." : "Proxy video is created during analysis."}
-            </p>
-          )}
-          {cue && <div className="subtitle">{cue.text}</div>}
-          {here?.action === "CUT" && (
-            <div className="cutflag">{lang === "ru" ? "вырезается" : "cut"}</div>
-          )}
+        <div className="monitor-panel">
+          <div className="studio-panel-bar">
+            <span className="studio-panel-title">
+              <Icon name="film" /> {lang === "ru" ? "МОНИТОР ПРОГРАММЫ" : "PROGRAM MONITOR"}
+            </span>
+            <div className="row" style={{ gap: 6, marginLeft: "auto", alignItems: "center" }}>
+              <span className="badge small" style={{ background: "rgba(255,255,255,0.06)", fontSize: 10, padding: "2px 6px" }}>
+                {project.metadata?.video ? `${project.metadata.video.width}×${project.metadata.video.height}` : "1080p"}
+              </span>
+              <button
+                className="ghost small"
+                onClick={captureFrame}
+                title={lang === "ru" ? "Сохранить HD стоп-кадр" : "Capture HD Frame"}
+                style={{ padding: "2px 7px", fontSize: 11 }}
+              >
+                <Icon name="image" /> HD
+              </button>
+            </div>
+          </div>
+          <div className="player">
+            {project.has_proxy ? (
+              <video
+                ref={videoRef}
+                src={`/api/projects/${pid}/media/proxy`}
+                preload="auto"
+                onPlay={() => setPlaying(true)}
+                onPause={() => setPlaying(false)}
+                onClick={togglePlay}
+              />
+            ) : (
+              <p className="muted pad" style={{ padding: 40, textAlign: "center" }}>
+                {lang === "ru" ? "Копия для предпросмотра создаётся во время анализа." : "Proxy video is created during analysis."}
+              </p>
+            )}
+            {cue && <div className="subtitle">{cue.text}</div>}
+            {here?.action === "CUT" && (
+              <div className="cutflag">{lang === "ru" ? "вырезается" : "cut"}</div>
+            )}
+          </div>
         </div>
 
         <div className="side">
+          <div className="studio-panel-bar" style={{ marginBottom: 2 }}>
+            <span className="studio-panel-title">
+              <Icon name="sliders" /> {lang === "ru" ? "ИНСПЕКТОР СЕКВЕНЦИИ" : "SEQUENCE INSPECTOR"}
+            </span>
+            <button
+              className="btn-pattern-pill"
+              onClick={() => setShowPatterns(true)}
+              title={lang === "ru" ? "Открыть мастер сборки по паттернам" : "Open Auto-Pattern Recipes"}
+            >
+              <Icon name="zap" /> {lang === "ru" ? "Паттерны" : "Recipes"}
+            </button>
+          </div>
+
           <div className="stats">
             <div>
               <span>{t("editor.stats.source")}</span>
@@ -459,6 +494,13 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
         </button>
         <button className="ghost" onClick={() => setShowInsights(true)} title={lang === "ru" ? "Аналитика речи и монтажа" : "Speech & Editing Insights"}>
           <Icon name="sliders" /> {lang === "ru" ? "Аналитика" : "Insights"}
+        </button>
+        <button
+          className="btn-pattern"
+          onClick={() => setShowPatterns(true)}
+          title={lang === "ru" ? "Автоматический монтаж по паттернам (Shorts, Подкаст, Лекция, Дубли)" : "Auto-Pattern Editing Studio"}
+        >
+          <Icon name="zap" /> {lang === "ru" ? "Паттерны сборки" : "Patterns"}
         </button>
 
         <span className="grow" />
@@ -633,6 +675,7 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
       {selected && <p className="muted small" style={{ marginTop: 6 }}>{lang === "ru" ? "Выбран сегмент" : "Selected segment"}: {selected.id}</p>}
       {showHelp && <ShortcutsModal onClose={() => setShowHelp(false)} />}
       {showInsights && <InsightsModal pid={pid} onClose={() => setShowInsights(false)} />}
+      {showPatterns && <AutoPatternModal pid={pid} onClose={() => setShowPatterns(false)} onPayload={onPayload} />}
     </div>
   );
 }

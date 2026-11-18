@@ -146,6 +146,17 @@ def main() -> None:
             for selector, name in shots:
                 page.locator(selector).first.click()
                 page.wait_for_timeout(1800)
+                if name == "03-editor.png":
+                    page.screenshot(path=str(out / name))
+                    try:
+                        page.get_by_role("button", name=re.compile("Паттерны сборки")).first.click()
+                        page.wait_for_timeout(800)
+                        page.screenshot(path=str(out / "03b-patterns.png"))
+                        page.locator(".panel-header-bar button").first.click()
+                        page.wait_for_timeout(500)
+                    except Exception:
+                        pass
+                    continue
                 if name == "04-subtitles.png":
                     # Раскроем блок слов-паразитов для демонстрации фичи
                     try:
