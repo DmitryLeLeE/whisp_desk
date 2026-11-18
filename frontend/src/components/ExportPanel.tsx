@@ -61,6 +61,13 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
 
   const toggle = (f: string) => setFormats(formats.includes(f) ? formats.filter((x) => x !== f) : [...formats, f]);
 
+  const copyPath = (filePath?: string) => {
+    if (!filePath) return;
+    navigator.clipboard.writeText(filePath);
+    setMsg(lang === "ru" ? "Полный путь к файлу скопирован в буфер обмена!" : "File path copied to clipboard!");
+    setTimeout(() => setMsg(""), 3000);
+  };
+
   const selectPreset = (presetFormats: string[]) => {
     setFormats(Array.from(new Set([...formats, ...presetFormats])));
   };
@@ -227,13 +234,30 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
           ) : (
             <ul className="list">
               {files.map((f) => (
-                <li key={f.where + f.name}>
+                <li key={f.where + f.name} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px" }}>
                   <Icon name={f.name.endsWith(".mp4") ? "film" : f.name.endsWith(".xml") || f.name.endsWith(".fcpxml") ? "scissors" : "file"} />
-                  <a href={`/api/projects/${pid}/exports/${encodeURIComponent(f.name)}`} download style={{ fontWeight: 600 }}>
-                    {f.name}
-                  </a>
-                  <span className="badge" style={{ marginLeft: 8 }}>{f.where}</span>
-                  <span className="muted">{fmtSize(f.size)}</span>
+                  <span style={{ fontWeight: 600, wordBreak: "break-all" }} className="grow">{f.name}</span>
+                  <span className="badge">{f.where}</span>
+                  <span className="muted small">{fmtSize(f.size)}</span>
+                  <div className="row" style={{ gap: 6 }}>
+                    {f.path && (
+                      <button
+                        className="ghost small"
+                        onClick={() => copyPath(f.path)}
+                        title={lang === "ru" ? "Копировать полный путь к файлу на диске" : "Copy full file path on disk"}
+                      >
+                        {lang === "ru" ? "Путь" : "Path"}
+                      </button>
+                    )}
+                    <a
+                      className="btn primary small"
+                      href={`/api/projects/${pid}/exports/${encodeURIComponent(f.name)}`}
+                      download
+                      title={lang === "ru" ? "Скачать файл" : "Download file"}
+                    >
+                      <Icon name="download" /> {lang === "ru" ? "Скачать" : "Download"}
+                    </a>
+                  </div>
                 </li>
               ))}
             </ul>

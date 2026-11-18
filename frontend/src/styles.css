@@ -95,26 +95,27 @@ input, select, textarea {
 input:focus, select:focus, textarea:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
 input[type=checkbox], input[type=radio] { padding: 0; accent-color: var(--accent); width: 17px; height: 17px; cursor: pointer; }
 
-button {
+button, a.btn {
   font: inherit; color: var(--text); background: var(--panel2); border: 1px solid var(--line);
   border-radius: var(--radius-sm); padding: 9px 15px; cursor: pointer; display: inline-flex;
   align-items: center; justify-content: center; gap: 8px; font-weight: 600; font-size: 13.5px;
-  transition: all .15s ease; user-select: none;
+  transition: all .15s ease; user-select: none; text-decoration: none;
 }
-button:hover:not(:disabled) { border-color: var(--accent); background: var(--raised); transform: translateY(-1px); }
-button:active:not(:disabled) { transform: translateY(0); }
+button:hover:not(:disabled), a.btn:hover { border-color: var(--accent); background: var(--raised); transform: translateY(-1px); text-decoration: none; }
+button:active:not(:disabled), a.btn:active { transform: translateY(0); }
 button:disabled { opacity: .45; cursor: default; }
 
-button.primary {
+button.primary, a.btn.primary {
   background: var(--accent); border-color: var(--accent); color: var(--on-accent);
   box-shadow: 0 3px 12px var(--accent-soft);
 }
-button.primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); filter: none; }
-button.big { padding: 12px 22px; font-size: 15px; border-radius: 10px; font-weight: 700; }
-button.ghost { background: none; border-color: transparent; color: var(--muted); }
-button.ghost:hover:not(:disabled) { color: var(--text); background: var(--panel2); border-color: transparent; }
-button.danger { color: var(--bad); }
-button.danger:hover:not(:disabled) { border-color: var(--bad); background: var(--bad-soft); }
+button.primary:hover:not(:disabled), a.btn.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); filter: none; }
+button.big, a.btn.big { padding: 12px 22px; font-size: 15px; border-radius: 10px; font-weight: 700; }
+button.small, a.btn.small { padding: 5px 10px; font-size: 12.5px; border-radius: 6px; }
+button.ghost, a.btn.ghost { background: none; border-color: transparent; color: var(--muted); }
+button.ghost:hover:not(:disabled), a.btn.ghost:hover { color: var(--text); background: var(--panel2); border-color: transparent; }
+button.danger, a.btn.danger { color: var(--bad); }
+button.danger:hover:not(:disabled), a.btn.danger:hover { border-color: var(--bad); background: var(--bad-soft); }
 button.link { background: none; border: none; color: var(--accent); padding: 2px 4px; text-align: left; font-weight: 500; }
 button.link:hover { text-decoration: underline; background: none; }
 
