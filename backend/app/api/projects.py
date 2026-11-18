@@ -103,3 +103,24 @@ def set_source(pid: str, body: SourceBody, request: Request):
 @router.get("/{pid}/history")
 def history(pid: str, request: Request):
     return pm(request).history(pid)
+
+
+@router.post("/{pid}/reveal")
+def reveal_in_explorer(pid: str, request: Request, folder: str = "exports"):
+    """Открывает папку проекта или экспорта в проводнике Windows / Mac / Linux."""
+    import os
+    import subprocess
+    import sys
+    m = pm(request)
+    target = m.dir(pid) / folder if folder else m.dir(pid)
+    target.mkdir(parents=True, exist_ok=True)
+    try:
+        if sys.platform == "win32":
+            os.startfile(str(target))
+        elif sys.platform == "darwin":
+            subprocess.run(["open", str(target)], check=False)
+        else:
+            subprocess.run(["xdg-open", str(target)], check=False)
+    except Exception as e:
+        return {"ok": False, "path": str(target.resolve()), "error": str(e)}
+    return {"ok": True, "path": str(target.resolve())}

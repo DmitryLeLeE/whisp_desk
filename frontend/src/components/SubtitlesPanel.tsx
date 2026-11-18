@@ -36,6 +36,11 @@ export default function SubtitlesPanel({ pid, cues, busy, onJob, onChanged, onJu
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [editingText, setEditingText] = useState("");
 
+  // Найти и заменить
+  const [showReplace, setShowReplace] = useState(false);
+  const [findText, setFindText] = useState("");
+  const [replaceText, setReplaceText] = useState("");
+
   // Быстрый перевод
   const [quickTargetLang, setQuickTargetLang] = useState("en");
 
@@ -134,6 +139,37 @@ export default function SubtitlesPanel({ pid, cues, busy, onJob, onChanged, onJu
         cues: targetCues,
         lang: viewMode === "trans" ? selectedTransLang : "original",
       });
+      loadSubtitlesData();
+      onChanged();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
+  const replaceAll = async () => {
+    if (!findText) return;
+    setError(""); setMsg("");
+    try {
+      let count = 0;
+      const targetCues = (viewMode === "trans" ? activeTransCues : cues).map((c) => {
+        if (c.text.includes(findText)) {
+          count += c.text.split(findText).length - 1;
+          return { ...c, text: c.text.split(findText).join(replaceText) };
+        }
+        return c;
+      });
+      if (count === 0) {
+        setMsg(lang === "ru" ? "Совпадений не найдено" : "No matches found");
+        return;
+      }
+      await api.put(`/api/projects/${pid}/subtitles`, {
+        cues: targetCues,
+        lang: viewMode === "trans" ? selectedTransLang : "original",
+      });
+      setMsg(lang === "ru" ? `Заменено вхождений: ${count}` : `Replaced ${count} occurrences`);
+      setFindText("");
+      setReplaceText("");
+      setShowReplace(false);
       loadSubtitlesData();
       onChanged();
     } catch (e) {
@@ -299,12 +335,42 @@ export default function SubtitlesPanel({ pid, cues, busy, onJob, onChanged, onJu
           <>
             <div className="row">
               <input className="grow" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("subs.search")} />
+              <button
+                className={`small ${showReplace ? "primary" : "ghost"}`}
+                onClick={() => setShowReplace(!showReplace)}
+                title={lang === "ru" ? "Найти и заменить текст в репликах" : "Find and replace text across cues"}
+              >
+                <Icon name="edit" /> {lang === "ru" ? "Замена…" : "Replace…"}
+              </button>
               {viewMode === "trans" && transLangs.length > 1 && (
                 <select value={selectedTransLang} onChange={(e) => setSelectedTransLang(e.target.value)}>
                   {transLangs.map((l) => <option key={l} value={l}>{l.toUpperCase()}</option>)}
                 </select>
               )}
             </div>
+
+            {showReplace && (
+              <div className="row wrap" style={{ padding: "10px 14px", background: "var(--panel2)", borderRadius: 8, border: "1px solid var(--line)" }}>
+                <input
+                  style={{ minWidth: 160 }}
+                  value={findText}
+                  onChange={(e) => setFindText(e.target.value)}
+                  placeholder={lang === "ru" ? "Что найти…" : "Find text…"}
+                />
+                <input
+                  style={{ minWidth: 160 }}
+                  value={replaceText}
+                  onChange={(e) => setReplaceText(e.target.value)}
+                  placeholder={lang === "ru" ? "Заменить на…" : "Replace with…"}
+                />
+                <button className="primary small" onClick={replaceAll} disabled={!findText || busy}>
+                  {lang === "ru" ? "Заменить все" : "Replace All"}
+                </button>
+                <button className="ghost small" onClick={() => setShowReplace(false)}>
+                  {t("common.cancel")}
+                </button>
+              </div>
+            )}
 
             <p className="muted small">{t("subs.edit_hint")}</p>
 

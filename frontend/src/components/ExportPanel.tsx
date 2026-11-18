@@ -68,6 +68,12 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
     setTimeout(() => setMsg(""), 3000);
   };
 
+  const openFolder = async () => {
+    try {
+      await api.post(`/api/projects/${pid}/reveal`, { folder: "exports" });
+    } catch { /* ignore */ }
+  };
+
   const selectPreset = (presetFormats: string[]) => {
     setFormats(Array.from(new Set([...formats, ...presetFormats])));
   };
@@ -225,9 +231,14 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
 
         {/* Экспортированные файлы */}
         <section className="card">
-          <div className="card-title">
-            <span className="num"><Icon name="download" /></span>
-            <h2>{t("export.files_title")}</h2>
+          <div className="card-title" style={{ justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+            <div className="row">
+              <span className="num"><Icon name="download" /></span>
+              <h2>{t("export.files_title")}</h2>
+            </div>
+            <button className="ghost small" onClick={openFolder} title={lang === "ru" ? "Открыть папку экспорта на компьютере" : "Open exports folder on computer"}>
+              <Icon name="folder" /> {lang === "ru" ? "Открыть в папке" : "Open in Folder"}
+            </button>
           </div>
           {files.length === 0 ? (
             <p className="muted">{lang === "ru" ? "Пока ничего не экспортировано. Сгенерируйте проекты или видео выше." : "No files yet. Export a project or render video above."}</p>

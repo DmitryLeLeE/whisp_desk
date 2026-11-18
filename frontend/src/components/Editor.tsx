@@ -194,6 +194,19 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
     if (el) el.scrollLeft = Math.max(0, (next.source_start_ms / 1000) * pps - el.clientWidth / 3);
   }, [selectedId, pid, onPayload, plan.duration_ms, pps, lang]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const acceptAll = async () => {
+    if (stats.unreviewed === 0) return;
+    if (!confirm(lang === "ru" ? `Отметить все ${stats.unreviewed} непроверенных фрагментов как проверенные?` : `Mark all ${stats.unreviewed} unreviewed segments as reviewed?`)) return;
+    setError("");
+    try {
+      onPayload(await api.post<PlanPayload>(`/api/projects/${pid}/timeline/ops`, { op: "review", ids: null, reviewed: true }));
+      setMsg(lang === "ru" ? "Все фрагменты отмечены проверенными!" : "All cuts marked as reviewed!");
+      setTimeout(() => setMsg(""), 3000);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
   const selected = segs.find((s) => s.id === selectedId) ?? null;
   const here = segAt(current);
   const frameMs = 1000 / fps;
@@ -298,6 +311,11 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
             <button onClick={() => reviewNext(false)} disabled={stats.unreviewed === 0} title="N">
               {t("editor.next_unreviewed")}
             </button>
+            {stats.unreviewed > 0 && (
+              <button className="ghost small" onClick={acceptAll} disabled={busy} title="Принять все предложения авто-монтажа">
+                <Icon name="check" /> {lang === "ru" ? `Принять всё (${stats.unreviewed})` : `Accept All (${stats.unreviewed})`}
+              </button>
+            )}
             <button onClick={() => history("undo")} disabled={!payload.can_undo || busy} title="Ctrl+Z">
               {t("editor.undo")}
             </button>

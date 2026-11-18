@@ -28,6 +28,7 @@ const tickStep = (pps: number): number => {
 export default function Timeline(p: Props) {
   const inner = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<{ id: string; ms: number } | null>(null);
+  const [hoverMs, setHoverMs] = useState<number | null>(null);
   const sel = useRef<{ x: number; ms: number; moved: boolean } | null>(null);
   const width = Math.max(1, (p.durationMs / 1000) * p.pps);
   const x = (ms: number) => (ms / 1000) * p.pps;
@@ -77,6 +78,7 @@ export default function Timeline(p: Props) {
           p.onSeek(sel.current.ms);
         }}
         onPointerMove={(e) => {
+          setHoverMs(msAt(e.clientX));
           const s = sel.current;
           if (!s || drag) return;
           if (!s.moved && Math.abs(e.clientX - s.x) < 5) return;
@@ -84,6 +86,7 @@ export default function Timeline(p: Props) {
           const a = snap(s.ms), b = snap(msAt(e.clientX));
           p.onRange(Math.min(a, b), Math.max(a, b));
         }}
+        onPointerLeave={() => { setHoverMs(null); }}
         onPointerUp={() => { sel.current = null; }}>
         <div className="ruler">
           {ticks.map((s) => <span key={s} style={{ left: s * p.pps }}>{fmtTime(s * 1000, false)}</span>)}
@@ -113,6 +116,11 @@ export default function Timeline(p: Props) {
         {p.markIn != null && <div className="mark in" style={{ left: x(p.markIn) }} />}
         {p.markOut != null && <div className="mark out" style={{ left: x(p.markOut) }} />}
         {drag && <div className="tl-ghost" style={{ left: x(drag.ms) }}><span>{fmtTime(drag.ms)}</span></div>}
+        {hoverMs != null && !drag && (
+          <div className="tl-hover-ghost" style={{ left: x(hoverMs) }}>
+            <span>{fmtTime(hoverMs, true)}</span>
+          </div>
+        )}
         <div className="playhead" style={{ left: x(p.current) }} />
       </div>
     </div>

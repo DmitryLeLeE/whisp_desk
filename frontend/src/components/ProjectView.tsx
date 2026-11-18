@@ -42,7 +42,24 @@ export default function ProjectView({ pid, onClose }: { pid: string; onClose: ()
   const [error, setError] = useState("");
   const [seekTo, setSeekTo] = useState<{ ms: number; n: number } | null>(null);
   const [showTour, setShowTour] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameVal, setNameVal] = useState("");
   const firstLoad = useRef(true);
+
+  const saveName = async () => {
+    const trimmed = nameVal.trim();
+    if (!trimmed || trimmed === project?.name) {
+      setEditingName(false);
+      return;
+    }
+    try {
+      await api.patch(`/api/projects/${pid}`, { name: trimmed });
+      setProject((p) => p ? { ...p, name: trimmed } : p);
+      setEditingName(false);
+    } catch {
+      setEditingName(false);
+    }
+  };
 
   const steps: [Tab, string][] = [
     ["setup", t("step.setup")],
@@ -149,7 +166,29 @@ export default function ProjectView({ pid, onClose }: { pid: string; onClose: ()
         <button className="ghost" onClick={onClose}>
           ← {t("nav.projects")}
         </button>
-        <span className="pname">{project.name}</span>
+        {editingName ? (
+          <input
+            autoFocus
+            style={{ fontWeight: 700, fontSize: 16, padding: "4px 8px", width: 220 }}
+            value={nameVal}
+            onChange={(e) => setNameVal(e.target.value)}
+            onBlur={saveName}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") saveName();
+              if (e.key === "Escape") setEditingName(false);
+            }}
+          />
+        ) : (
+          <span
+            className="pname"
+            onClick={() => { setNameVal(project.name); setEditingName(true); }}
+            title={lang === "ru" ? "Кликните, чтобы переименовать проект" : "Click to rename project"}
+            style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}
+          >
+            {project.name}
+            <Icon name="edit" style={{ opacity: 0.5, fontSize: "0.85em" }} />
+          </span>
+        )}
         {payload && (
           <span className="badge" style={{ marginLeft: 8 }}>
             {fmtTime(payload.stats.output_ms, false)} / {fmtTime(payload.stats.source_ms, false)}
