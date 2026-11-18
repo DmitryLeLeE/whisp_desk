@@ -241,6 +241,8 @@ export default function ProjectView({ pid, onClose }: { pid: string; onClose: ()
             onJob={setJob}
             onChanged={loadAll}
             onJump={(ms) => { setSeekTo({ ms, n: Date.now() }); setTab("edit"); }}
+            payload={payload}
+            onPayload={setPayload}
           />
         )}
         {tab === "export" && (

@@ -62,3 +62,23 @@ def test_batch_projects_and_chapters_api(client, sample_video, tmp_path):
     reveal_resp = client.post(f"/api/projects/{pid}/reveal")
     assert reveal_resp.status_code == 200
     assert reveal_resp.json()["ok"] is True
+
+    # 6. Frame capture
+    frame_resp = client.get(f"/api/projects/{pid}/frame?time_ms=500")
+    assert frame_resp.status_code == 200
+    assert frame_resp.headers["content-type"] == "image/jpeg"
+    assert len(frame_resp.content) > 100
+
+    # 7. Insights
+    insights_resp = client.get(f"/api/projects/{pid}/insights")
+    assert insights_resp.status_code == 200
+    ins_data = insights_resp.json()
+    assert "total_duration_ms" in ins_data
+    assert "efficiency_score" in ins_data
+
+    # 8. Filler words scan & clean
+    fw_resp = client.get(f"/api/projects/{pid}/filler-words")
+    assert fw_resp.status_code == 200
+    assert "matches" in fw_resp.json()
+    fw_clean = client.post(f"/api/projects/{pid}/filler-words/clean", json={})
+    assert fw_clean.status_code == 200

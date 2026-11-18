@@ -35,6 +35,8 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
   const [error, setError] = useState("");
   const [denoise, setDenoise] = useState(false);
   const [denoiseLevel, setDenoiseLevel] = useState(12);
+  const [aspectRatio, setAspectRatio] = useState("original");
+  const [voiceEnhancer, setVoiceEnhancer] = useState("off");
 
   interface Chapter { time_ms: number; title: string; source_ms?: number }
   const [chapters, setChapters] = useState<Chapter[]>([]);
@@ -100,11 +102,15 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
     onJob(await api.post<Job>(`/api/projects/${pid}/render`, {
       mode, template, burn_subtitles: burn && project.has_subtitles, overwrite, engine,
       options: {
-        video: { encoder },
-        audio: { denoise, denoise_level: denoiseLevel },
+        video: { encoder, aspect_ratio: aspectRatio },
+        audio: { denoise, denoise_level: denoiseLevel, voice_enhancer: voiceEnhancer },
       },
     }));
   });
+
+  const downloadThumbnail = () => {
+    window.open(`/api/projects/${pid}/frame?time_ms=1000&download=true`, "_blank");
+  };
 
   const toggle = (f: string) => setFormats(formats.includes(f) ? formats.filter((x) => x !== f) : [...formats, f]);
 
@@ -265,6 +271,26 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
               </select>
             </label>
 
+            <label>
+              {lang === "ru" ? "Формат кадра и соотношение сторон" : "Video Format & Aspect Ratio"}
+              <select value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value)}>
+                <option value="original">{lang === "ru" ? "16:9 Горизонтальный (Оригинал)" : "16:9 Horizontal (Original)"}</option>
+                <option value="9:16_crop">{lang === "ru" ? "9:16 Shorts / Reels (Кроп по центру 1080x1920)" : "9:16 Shorts / Reels (Center Crop 1080x1920)"}</option>
+                <option value="9:16_pad">{lang === "ru" ? "9:16 Shorts / Reels (С полями 1080x1920)" : "9:16 Shorts / Reels (Padded 1080x1920)"}</option>
+              </select>
+            </label>
+
+            <label>
+              {lang === "ru" ? "Улучшение голоса (Voice Enhancer)" : "Voice Enhancer Preset"}
+              <select value={voiceEnhancer} onChange={(e) => setVoiceEnhancer(e.target.value)}>
+                <option value="off">{lang === "ru" ? "Отключено (исходный звук)" : "Off (Original sound)"}</option>
+                <option value="podcast">{lang === "ru" ? "🎙️ Подкаст (тёплый, плотный, без бубнежа <80Гц)" : "🎙️ Podcast (Warm, rich, rumble filter)"}</option>
+                <option value="clarity">{lang === "ru" ? "✨ Чёткость речи (смягчение свистящих + разборчивость)" : "✨ Clarity (De-esser + presence)"}</option>
+                <option value="warmth">{lang === "ru" ? "☕ Теплота голоса (мягкий ламповый тон)" : "☕ Warmth (Gentle analog tone)"}</option>
+                <option value="radio">{lang === "ru" ? "📻 Студийное радио (компрессия и пробивная подача)" : "📻 Broadcast Radio (Punchy compression)"}</option>
+              </select>
+            </label>
+
             <label className="check">
               <input type="checkbox" checked={burn} disabled={!project.has_subtitles || engine === "auto-editor"} onChange={(e) => setBurn(e.target.checked)} />
               {lang === "ru" ? "Вшить субтитры в видеоряд (Hardsub)" : "Burn subtitles into video (Hardsub)"}
@@ -390,6 +416,36 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
               })}
             </ul>
           )}
+        </section>
+
+        {/* Стоп-кадр / Обложка */}
+        <section className="card">
+          <div className="card-title" style={{ justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+            <div className="row">
+              <span className="num"><Icon name="image" /></span>
+              <h2>{lang === "ru" ? "Обложка видео (Стоп-кадр)" : "Video Thumbnail (Cover Art)"}</h2>
+            </div>
+            <button className="primary small" onClick={downloadThumbnail}>
+              <Icon name="download" /> {lang === "ru" ? "Скачать стоп-кадр (HD)" : "Download HD Frame"}
+            </button>
+          </div>
+          <p className="muted small">
+            {lang === "ru"
+              ? "Захват кадра в оригинальном качестве без пережатия для превью на YouTube или в соцсетях."
+              : "Capture full-resolution video frame for YouTube or social media cover art."}
+          </p>
+          <div style={{ marginTop: 8, display: "flex", gap: 16, alignItems: "center" }}>
+            <img
+              src={`/api/projects/${pid}/frame?time_ms=1000`}
+              alt="Thumbnail preview"
+              style={{ width: 160, height: 90, objectFit: "cover", borderRadius: 6, border: "1px solid var(--line)" }}
+            />
+            <div className="small muted">
+              {lang === "ru"
+                ? "Вы также можете сохранить любой конкретный момент прямо в окне Монтажа кнопкой «Стоп-кадр»."
+                : "You can also capture any specific moment directly in the Editor timeline."}
+            </div>
+          </div>
         </section>
       </div>
 

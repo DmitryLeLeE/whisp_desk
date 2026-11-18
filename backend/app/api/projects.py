@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
+from ..core.config import require_tool
 from ..core.project_manager import PROJECT_TYPES
+from ..editing.analytics import calculate_insights
 from ..editing import timeline as T
 from .deps import jobs, pm
 
@@ -153,3 +155,45 @@ def reveal_in_explorer(pid: str, request: Request, folder: str = "exports"):
     except Exception as e:
         return {"ok": False, "path": str(target.resolve()), "error": str(e)}
     return {"ok": True, "path": str(target.resolve())}
+
+
+@router.get("/{pid}/frame")
+def capture_frame(pid: str, request: Request, time_ms: int = 0, download: bool = False):
+    """Захватывает один стоп-кадр видео в высоком качестве по заданному таймкоду."""
+    import subprocess
+    m = pm(request)
+    src = m.source_path(pid)
+    if not src or not src.is_file():
+        raise HTTPException(404, "Исходный файл не найден")
+    time_s = max(0, time_ms) / 1000
+    try:
+        ffmpeg = require_tool("ffmpeg")
+        cmd = [ffmpeg, "-ss", f"{time_s:.3f}", "-i", str(src), "-frames:v", "1", "-q:v", "2", "-f", "image2", "-"]
+        proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        headers = {}
+        if download:
+            p = m.get(pid)
+            name = (p.get("name") or "frame").replace(" ", "_")
+            headers["Content-Disposition"] = f'attachment; filename="{name}_{time_ms}ms.jpg"'
+        return Response(content=proc.stdout, media_type="image/jpeg", headers=headers)
+    except Exception as e:
+        raise HTTPException(500, f"Ошибка захвата кадра: {e}")
+
+
+@router.get("/{pid}/insights")
+def get_insights(pid: str, request: Request, lang: str = "ru"):
+    """Возвращает метрики речи, темпа, количества слов и эффективности монтажа."""
+    import json
+    m = pm(request)
+    plan = m.load_plan(pid) if m.get(pid).get("has_plan") else None
+    meta = m.metadata(pid)
+    cues = []
+    cues_path = m.dir(pid) / "subtitles" / "cues.json"
+    if cues_path.is_file():
+        try:
+            cues = json.loads(cues_path.read_text(encoding="utf-8"))
+        except Exception:
+            cues = []
+    return calculate_insights(plan, cues=cues, meta=meta, lang=lang)
+
+

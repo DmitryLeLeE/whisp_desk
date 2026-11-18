@@ -17,6 +17,7 @@ DEFAULT_AUDIO = {
     "normalize": False, "target_lufs": -16.0, "true_peak_db": -1.5, "limiter": False,
     "volume_db": 0.0, "declick_ms": 8, "fade_in_s": 0.0, "fade_out_s": 0.0, "sample_rate": 48000,
     "denoise": False, "denoise_level": 12, "denoise_floor": -25,
+    "voice_enhancer": "off",
 }
 MODES = {
     "fast": {"height": 480, "crf": 28, "preset": "veryfast", "audio_bitrate": "96k"},
@@ -92,7 +93,9 @@ def merge_options(mode: str, template: dict | None, overrides: dict | None) -> d
     return {"mode": mode, "video": video, "audio": audio}
 
 
-def output_size(meta: dict, height: int | None) -> tuple[int, int]:
+def output_size(meta: dict, height: int | None, aspect_ratio: str = "original") -> tuple[int, int]:
+    if aspect_ratio in ("9:16_crop", "9:16_pad"):
+        return (1080, 1920) if not height or height >= 1080 else (720, 1280)
     w, h = meta["video"]["width"], meta["video"]["height"]
     if height and h > height:
         w, h = round(w * height / h / 2) * 2, height
@@ -147,6 +150,15 @@ def build_filter_script(plan: dict, meta: dict, options: dict, *, has_subs: bool
         nr = int(audio.get("denoise_level") or 12)
         nf = int(audio.get("denoise_floor") or -25)
         a_chain.append(f"afftdn=nr={nr}:nf={nf}:tn=1")
+    enhancer = audio.get("voice_enhancer", "off")
+    if enhancer == "podcast":
+        a_chain.append("highpass=f=80,equalizer=f=3000:width_type=o:w=1:g=3,acompressor=threshold=-18dB:ratio=3:attack=10:release=100")
+    elif enhancer == "clarity":
+        a_chain.append("highpass=f=100,equalizer=f=6000:width_type=o:w=1:g=-4,equalizer=f=4000:width_type=o:w=1:g=3.5")
+    elif enhancer == "warmth":
+        a_chain.append("highpass=f=75,equalizer=f=220:width_type=o:w=1:g=3,equalizer=f=3500:width_type=o:w=1:g=1.5")
+    elif enhancer == "radio":
+        a_chain.append("highpass=f=90,lowpass=f=11000,equalizer=f=250:width_type=o:w=1:g=3,equalizer=f=4500:width_type=o:w=1:g=4,acompressor=threshold=-14dB:ratio=4:attack=5:release=50")
     if audio["volume_db"]:
         a_chain.append(f"volume={audio['volume_db']}dB")
     if audio["normalize"]:
@@ -170,8 +182,16 @@ def build_filter_script(plan: dict, meta: dict, options: dict, *, has_subs: bool
 
     # --- видео после склейки ---
     w, h = size
-    v_chain = [f"scale={w}:{h}:flags=bicubic", "setsar=1"] if (w, h) != (meta["video"]["width"], meta["video"]["height"]) \
-        else ["setsar=1"]
+    aspect = options.get("video", {}).get("aspect_ratio", "original")
+    v_chain = []
+    if aspect == "9:16_crop":
+        v_chain.extend(["crop=ih*9/16:ih:(iw-ih*9/16)/2:0", f"scale={w}:{h}:flags=bicubic", "setsar=1"])
+    elif aspect == "9:16_pad":
+        v_chain.extend([f"scale={w}:{h}:force_original_aspect_ratio=decrease", f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:black", "setsar=1"])
+    else:
+        if (w, h) != (meta["video"]["width"], meta["video"]["height"]):
+            v_chain.append(f"scale={w}:{h}:flags=bicubic")
+        v_chain.append("setsar=1")
     if has_subs:
         v_chain.append("subtitles=subs.ass")
     label = "[vc]"
@@ -255,7 +275,7 @@ def render(*, plan: dict, meta: dict, source: Path, out_path: Path, work_dir: Pa
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     has_video = meta["has_video"]
-    size = output_size(meta, options["video"].get("height")) if has_video else (0, 0)
+    size = output_size(meta, options["video"].get("height"), options["video"].get("aspect_ratio", "original")) if has_video else (0, 0)
     kept_ms = output_duration_ms(plan)
     ratio = kept_ms / max(1, plan["duration_ms"])
     check_disk_space(out_path.parent, int(meta["size_bytes"] * ratio * 1.2) + 200 * 2**20)

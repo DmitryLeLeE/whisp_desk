@@ -3,6 +3,7 @@ import { api, fmtTime, parseTime } from "../api";
 import { useTranslation } from "../i18n";
 import type { Cue, PlanPayload, Project, Scenes, Segment, Thumbs, Waveform } from "../types";
 import Icon from "./Icon";
+import InsightsModal from "./InsightsModal";
 import ShortcutsModal from "./ShortcutsModal";
 import Timeline from "./Timeline";
 
@@ -40,6 +41,7 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
   const [thumbs, setThumbs] = useState<Thumbs | null>(null);
   const [showScenes, setShowScenes] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [showInsights, setShowInsights] = useState(false);
   const [followPlayhead, setFollowPlayhead] = useState(true);
 
   const rangeEnd = useRef<number | null>(null);
@@ -217,6 +219,10 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
   const frameMs = 1000 / fps;
   const snapMs = (ms: number) => Math.round(Math.round(ms / frameMs) * frameMs);
 
+  const captureFrame = () => {
+    window.open(`/api/projects/${pid}/frame?time_ms=${snapMs(current)}&download=true`, "_blank");
+  };
+
   // Горячие клавиши.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -228,16 +234,51 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
         return;
       }
       const sel = segs.find((s) => s.id === selectedId);
+      const preset = localStorage.getItem("whisp_kbd_preset") || "whisp";
+
       switch (e.key.toLowerCase()) {
         case " ": e.preventDefault(); togglePlay(); break;
+        case "j": seek(current - (e.shiftKey ? 5000 : 2000)); break;
+        case "l":
+          if (preset === "premiere" || preset === "davinci") {
+            seek(current + (e.shiftKey ? 5000 : 2000));
+          } else {
+            if (sel) run({ op: "lock", id: sel.id, locked: !sel.locked });
+            else seek(current + (e.shiftKey ? 5000 : 2000));
+          }
+          break;
+        case "k":
+          if (preset === "premiere" || preset === "davinci") {
+            togglePlay();
+          } else {
+            if (sel) run({ op: "set_action", id: sel.id, action: "KEEP" });
+          }
+          break;
+        case "q":
+          if (here && current > here.source_start_ms + 100) {
+            run({ op: "set_range", start_ms: here.source_start_ms, end_ms: snapMs(current), action: "CUT" });
+          }
+          break;
+        case "w":
+          if (here && current < here.source_end_ms - 100) {
+            run({ op: "set_range", start_ms: snapMs(current), end_ms: here.source_end_ms, action: "CUT" });
+          }
+          break;
+        case "b":
+          if (here) run({ op: "split", id: here.id, at_ms: snapMs(current) });
+          break;
         case "arrowleft": seek(current - (e.shiftKey ? 5000 : frameMs)); break;
         case "arrowright": seek(current + (e.shiftKey ? 5000 : frameMs)); break;
         case "i": setMarkIn(snapMs(current)); break;
         case "o": setMarkOut(snapMs(current)); break;
-        case "k": if (sel) run({ op: "set_action", id: sel.id, action: "KEEP" }); break;
-        case "c": if (sel) run({ op: "set_action", id: sel.id, action: "CUT" }); break;
+        case "c":
+          if (preset === "premiere") {
+            if (here) run({ op: "split", id: here.id, at_ms: snapMs(current) });
+          } else {
+            if (sel) run({ op: "set_action", id: sel.id, action: "CUT" });
+          }
+          break;
         case "s": if (here) run({ op: "split", id: here.id, at_ms: snapMs(current) }); break;
-        case "l": if (sel) run({ op: "lock", id: sel.id, locked: !sel.locked }); break;
         case "n": reviewNext(false); break;
         case "enter": reviewNext(true); break;
         case "r": if (sel) run({ op: "review", ids: [sel.id], reviewed: !sel.reviewed }); break;
@@ -393,6 +434,13 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
 
         <button disabled={!here || busy} onClick={() => here && run({ op: "split", id: here.id, at_ms: snapMs(current) })}>
           <Icon name="scissors" /> {t("editor.split")}
+        </button>
+
+        <button onClick={captureFrame} title={lang === "ru" ? "Сохранить текущий стоп-кадр в HD (1080p)" : "Capture current frame in HD"}>
+          <Icon name="image" /> {lang === "ru" ? "Стоп-кадр" : "Frame"}
+        </button>
+        <button className="ghost" onClick={() => setShowInsights(true)} title={lang === "ru" ? "Аналитика речи и монтажа" : "Speech & Editing Insights"}>
+          <Icon name="sliders" /> {lang === "ru" ? "Аналитика" : "Insights"}
         </button>
 
         <span className="grow" />
@@ -563,6 +611,7 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
 
       {selected && <p className="muted small" style={{ marginTop: 6 }}>{lang === "ru" ? "Выбран сегмент" : "Selected segment"}: {selected.id}</p>}
       {showHelp && <ShortcutsModal onClose={() => setShowHelp(false)} />}
+      {showInsights && <InsightsModal pid={pid} onClose={() => setShowInsights(false)} />}
     </div>
   );
 }

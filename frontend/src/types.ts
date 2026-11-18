@@ -55,6 +55,7 @@ export interface Project extends ProjectRow {
   settings: {
     profile: string; overrides: Record<string, number | null>; audio_stream: number; template: string;
     scene_threshold: number; detect_scenes: boolean; engine: string; denoise?: boolean; denoise_level?: number;
+    voice_enhancer?: "off" | "podcast" | "clarity" | "warmth" | "radio";
   };
   source: { path: string; filename: string; size_bytes: number } | null;
   has_plan: boolean; has_proxy: boolean; has_subtitles: boolean;
@@ -89,3 +90,30 @@ export interface WhispModel {
 export interface WhispModels { models: WhispModel[]; languages: Record<string, string>; model_dir: string; info: { available: boolean; mode: string | null } }
 export interface ToolInfo { available: boolean; path?: string | null; version?: string; mode?: string | null }
 export interface SettingsData { whisp_model_dir: string; root: string; projects_dir: string; frozen: boolean; version: string; tools: { ffmpeg: ToolInfo; auto_editor: ToolInfo; whisp: ToolInfo } }
+
+export interface InsightsData {
+  total_duration_ms: number;
+  output_duration_ms: number;
+  removed_duration_ms: number;
+  saved_percent: number;
+  total_words: number;
+  total_cues: number;
+  speech_duration_ms: number;
+  wpm: number;
+  pace: "none" | "slow" | "optimal" | "fast";
+  pace_label: string;
+  silence_cuts: number;
+  total_cuts: number;
+  efficiency_score: number;
+}
+
+export interface FillerWordItem {
+  id: string;
+  cue_idx: number;
+  word: string;
+  start_ms: number;
+  end_ms: number;
+  duration_ms: number;
+  context: string;
+}
+
