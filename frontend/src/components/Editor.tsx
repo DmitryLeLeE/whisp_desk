@@ -409,10 +409,28 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
 
       {/* Панель инструментов таймлайна */}
       <div className="toolbar" style={{ marginTop: 12 }}>
-        <button onClick={togglePlay} className="primary">
-          <Icon name={playing ? "pause" : "play"} /> {playing ? (lang === "ru" ? "Пауза" : "Pause") : (lang === "ru" ? "Пуск" : "Play")}
-        </button>
-        <span className="tc">{fmtTime(current)}</span>
+        <div className="row" style={{ gap: 4 }}>
+          <button
+            className="ghost small"
+            onClick={() => seek(current - frameMs)}
+            title={lang === "ru" ? "Шаг на 1 кадр назад (←)" : "Step 1 frame backward (←)"}
+            style={{ padding: "6px 9px", fontSize: 13, minWidth: 32 }}
+          >
+            ◀
+          </button>
+          <button onClick={togglePlay} className="primary" style={{ minWidth: 96 }}>
+            <Icon name={playing ? "pause" : "play"} /> {playing ? (lang === "ru" ? "Пауза" : "Pause") : (lang === "ru" ? "Пуск" : "Play")}
+          </button>
+          <button
+            className="ghost small"
+            onClick={() => seek(current + frameMs)}
+            title={lang === "ru" ? "Шаг на 1 кадр вперёд (→)" : "Step 1 frame forward (→)"}
+            style={{ padding: "6px 9px", fontSize: 13, minWidth: 32 }}
+          >
+            ▶
+          </button>
+        </div>
+        <span className="tc" title={lang === "ru" ? "Текущий таймкод (чч:мм:сс.мс)" : "Current timecode"}>{fmtTime(current)}</span>
 
         <button onClick={() => setMarkIn(snapMs(current))}>[ In</button>
         <button onClick={() => setMarkOut(snapMs(current))}>Out ]</button>
@@ -446,7 +464,10 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
         <span className="grow" />
 
         {/* Масштабирование */}
-        <div className="row">
+        <div className="row" style={{ alignItems: "center" }}>
+          <span className="badge small" style={{ background: "rgba(56, 189, 248, 0.12)", color: "#38bdf8", border: "1px solid rgba(56, 189, 248, 0.3)", fontWeight: 700, letterSpacing: "0.03em" }}>
+            {fps.toFixed(0)} FPS
+          </span>
           <button className="ghost" onClick={() => setPps((p) => Math.max(0.5, p * 0.75))} title={t("editor.zoom_out")}>
             <Icon name="zoom-out" />
           </button>
