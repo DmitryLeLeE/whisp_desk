@@ -49,15 +49,23 @@ def export(pid: str, body: ExportBody, request: Request):
     return tasks.export_package(pm(request), pid, body.formats, body.overwrite)
 
 
+ALLOWED_EXPORT_SUFFIXES = {
+    ".mp4", ".xml", ".fcpxml", ".edl", ".otio", ".v3",
+    ".csv", ".txt", ".srt", ".vtt", ".ass", ".json",
+}
+
+
 @router.get("/projects/{pid}/exports")
 def list_exports(pid: str, request: Request):
     d = pm(request).path(pid, "exports")
     s = pm(request).path(pid, "subtitles")
     out = []
     for base in (d, s):
+        if not base.is_dir():
+            continue
         for f in sorted(base.glob("*")):
-            if f.is_file() and not f.name.endswith(".part.mp4") and f.suffix in (".mp4", ".srt", ".ass", ".json", ".v3", ".fcpxml"):
-                if base is s and not f.name.startswith("edited"):
+            if f.is_file() and not f.name.endswith(".part.mp4") and not f.name.endswith(".tmp") and f.suffix.lower() in ALLOWED_EXPORT_SUFFIXES:
+                if base is s and not (f.name.startswith("edited") or f.name.startswith("translated")):
                     continue
                 out.append({"name": f.name, "size": f.stat().st_size, "where": base.name})
     return out

@@ -18,11 +18,25 @@ const PATHS: Record<string, string> = {
   file: "M6 3h8l5 5v13H6zM14 3v5h5",
   x: "M6 6l12 12M18 6 6 18",
   play: "M8 5v14l11-7z",
+  pause: "M6 4h4v16H6zM14 4h4v16h-4z",
+  globe: "M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm7.93 9h-3.9a15.4 15.4 0 0 0-1.38-5A8 8 0 0 1 19.93 11zM12 4a13.3 13.3 0 0 1 1.9 7h-3.8A13.3 13.3 0 0 1 12 4zm-4.65 2a15.4 15.4 0 0 0-1.38 5H2.07a8 8 0 0 1 4.58-5zM2.07 13h3.9a15.4 15.4 0 0 0 1.38 5 8 8 0 0 1-4.58-5zm9.93 7a13.3 13.3 0 0 1-1.9-7h3.8a13.3 13.3 0 0 1-1.9 7zm2.65-2a15.4 15.4 0 0 0 1.38-5h3.9a8 8 0 0 1-4.58 5z",
+  edit: "M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z",
+  help: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zm0-6v.01M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3",
+  volume: "M11 5L6 9H2v6h4l5 4V5zm4.5 3a5 5 0 0 1 0 8M19 5a9 9 0 0 1 0 14",
+  "volume-x": "M11 5L6 9H2v6h4l5 4V5zm12 4l-6 6M17 9l6 6",
+  refresh: "M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2",
+  "zoom-in": "M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm10 2l-4.35-4.35M11 8v6M8 11h6",
+  "zoom-out": "M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm10 2l-4.35-4.35M8 11h6",
+  compass: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zm4.24-14.24l-2.83 8.48-8.48 2.83 2.83-8.48 8.48-2.83z",
+  lightbulb: "M9 18h6m-4 4h2M12 2a7 7 0 0 0-7 7c0 2.4 1.2 4.5 3 5.7V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.3c1.8-1.2 3-3.3 3-5.7a7 7 0 0 0-7-7z",
+  sparkles: "M12 3l1.9 5.8a2 2 0 0 0 1.3 1.3L21 12l-5.8 1.9a2 2 0 0 0-1.3 1.3L12 21l-1.9-5.8a2 2 0 0 0-1.3-1.3L3 12l5.8-1.9a2 2 0 0 0 1.3-1.3L12 3z",
+  "chevron-left": "M15 18l-6-6 6-6",
+  "chevron-right": "M9 18l6-6-6-6",
 };
 
-export default function Icon({ name, className = "" }: { name: keyof typeof PATHS | string; className?: string }) {
+export default function Icon({ name, className = "", style }: { name: keyof typeof PATHS | string; className?: string; style?: React.CSSProperties }) {
   return (
-    <svg className={`icon ${className}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg className={`icon ${className}`} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d={PATHS[name] ?? PATHS.info} />
     </svg>
   );

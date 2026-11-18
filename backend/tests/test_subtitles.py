@@ -75,3 +75,14 @@ def test_no_overlaps_and_sorted_after_remap():
 
 def test_ass_escapes_braces():
     assert "{bad}" not in S.render_ass([S.Cue(0, 1000, "{bad}")])
+
+
+def test_bilingual_and_transcript_render():
+    cues_ru = [S.Cue(0, 2000, "Привет мир"), S.Cue(2500, 4000, "Как дела?")]
+    cues_en = [S.Cue(0, 2000, "Hello world"), S.Cue(2500, 4000, "How are you?")]
+    bi = S.render_bilingual_srt(cues_ru, cues_en)
+    assert "Привет мир\nHello world" in bi
+    assert "Как дела?\nHow are you?" in bi
+
+    tr = S.render_transcript(cues_ru)
+    assert "[00:00:00" in tr and "Привет мир" in tr

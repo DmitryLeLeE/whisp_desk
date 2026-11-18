@@ -34,9 +34,14 @@ def _setup() -> None:
 
 def _download(p: dict) -> int:
     import whisper_universal as wu
+    model_name = p.get("model")
+    from app.integrations.whisp import MODELS
+    known = {m["name"] for m in MODELS}
+    if model_name not in known:
+        raise ValueError(f"Неизвестная модель: {model_name}. Доступны: {', '.join(sorted(known))}")
     model_dir = Path(p["model_dir"]) if p.get("model_dir") else None
-    emit("stage", name="download", label=f"Загрузка модели {p['model']}")
-    wu.download_model(p["model"], model_dir, lambda done, total: emit("download", done=done, total=total))
+    emit("stage", name="download", label=f"Загрузка модели {model_name}")
+    wu.download_model(model_name, model_dir, lambda done, total: emit("download", done=done, total=total))
     emit("done")
     return 0
 
@@ -82,6 +87,25 @@ def _transcribe(p: dict) -> int:
     return 0
 
 
+def _translate_cues(p: dict) -> int:
+    import whisper_universal as wu
+    source_lang = p.get("source_lang", "auto")
+    target_lang = p.get("target_lang", "en")
+    cues_data = p.get("cues", [])
+    model_dir = Path(p["model_dir"]) if p.get("model_dir") else None
+    device = wu.resolve_device(p.get("device", "auto"))
+
+    emit("stage", name="translate", label=f"Подготовка модели перевода ({target_lang})")
+    provider = wu.TranslatorProvider(device, model_dir, lambda d, t: emit("download", done=d, total=t))
+    translator = provider.get_translator()
+    texts = [c.get("text", "") for c in cues_data]
+    emit("stage", name="translate", label=f"Перевод субтитров ({len(texts)} реплик)")
+    tr_texts = translator.translate(texts, source_lang, target_lang,
+                                    progress=lambda d, t: emit("translate", done=d, total=t))
+    emit("done", translations=tr_texts)
+    return 0
+
+
 def _hide_child_consoles() -> None:
     """exe без консоли: каждый запуск ffmpeg из Whisp иначе мигает чёрным окном."""
     if sys.platform != "win32":
@@ -106,6 +130,8 @@ def main(argv: list[str]) -> int:
             return _download(params)
         if mode == "transcribe":
             return _transcribe(params)
+        if mode == "translate_cues":
+            return _translate_cues(params)
         print(f"неизвестный режим: {mode}", file=sys.stderr)
         return 2
     except Exception as exc:  # noqa: BLE001

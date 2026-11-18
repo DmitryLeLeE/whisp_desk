@@ -15,9 +15,21 @@ from .project_manager import ProjectError, ProjectManager
 from .templates import load_template
 
 EXPORT_FORMATS = {
-    "srt": ("subtitles", "edited.srt"), "ass": ("subtitles", "edited.ass"),
-    "plan": ("exports", "edit_plan.json"), "info": ("exports", "source_info.json"),
-    "v3": ("exports", "final.v3"), "fcpxml": ("exports", "final.fcpxml"), "edl": ("exports", "final.edl"),
+    "premiere": ("exports", "premiere.xml"),
+    "fcpxml": ("exports", "final.fcpxml"),
+    "edl": ("exports", "final.edl"),
+    "otio": ("exports", "final.otio"),
+    "v3": ("exports", "final.v3"),
+    "davinci_markers": ("exports", "davinci_markers.csv"),
+    "chapters": ("exports", "chapters.txt"),
+    "audacity": ("exports", "audacity_labels.txt"),
+    "plan": ("exports", "edit_plan.json"),
+    "info": ("exports", "source_info.json"),
+    "srt": ("subtitles", "edited.srt"),
+    "vtt": ("subtitles", "edited.vtt"),
+    "ass": ("subtitles", "edited.ass"),
+    "bilingual_srt": ("subtitles", "edited.bilingual.srt"),
+    "transcript": ("exports", "transcript.txt"),
 }
 
 
@@ -62,6 +74,8 @@ def export_package(pm: ProjectManager, pid: str, formats: list[str], overwrite: 
     tpl, _ = template_for(pm, pid, None)
     written = []
     extras: list[Path] = []
+    if "premiere" in formats:
+        write_text_atomic(targets["premiere"], exports.to_premiere_xml(plan, meta, source, pm.get(pid)["name"]))
     if "plan" in formats:
         write_json_atomic(targets["plan"], plan)
     if "info" in formats:
@@ -72,7 +86,17 @@ def export_package(pm: ProjectManager, pid: str, formats: list[str], overwrite: 
         write_text_atomic(targets["edl"], exports.to_edl(plan, meta, source, pm.get(pid)["name"]))
     if "fcpxml" in formats:
         write_text_atomic(targets["fcpxml"], exports.to_fcpxml(plan, meta, source, pm.get(pid)["name"]))
-    if "srt" in formats or "ass" in formats:
+    if "otio" in formats:
+        write_text_atomic(targets["otio"], exports.to_otio(plan, meta, source, pm.get(pid)["name"]))
+    if "davinci_markers" in formats:
+        write_text_atomic(targets["davinci_markers"], exports.to_davinci_markers_csv(plan, meta))
+    if "chapters" in formats:
+        write_text_atomic(targets["chapters"], exports.to_chapters(plan))
+    if "audacity" in formats:
+        write_text_atomic(targets["audacity"], exports.to_audacity_labels(plan))
+
+    sub_formats = {"srt", "vtt", "ass", "bilingual_srt", "transcript"}
+    if sub_formats & set(formats):
         cues = load_cues(pm, pid)
         if not cues:
             raise ProjectError("Расшифровка не загружена: нечего экспортировать как субтитры")
@@ -85,8 +109,20 @@ def export_package(pm: ProjectManager, pid: str, formats: list[str], overwrite: 
                 extra = targets["srt"].with_name(f"{targets['srt'].stem}.{lang}.srt")
                 write_text_atomic(extra, subs.render_srt(subs.remap_cues(subs.load_subtitles(tr), plan)))
                 extras.append(extra)
+        if "vtt" in formats:
+            write_text_atomic(targets["vtt"], subs.render_vtt(new_cues))
         if "ass" in formats:
             write_text_atomic(targets["ass"], subs.render_ass(new_cues, tpl.get("subtitles")))
+        if "transcript" in formats:
+            write_text_atomic(targets["transcript"], subs.render_transcript(new_cues))
+        if "bilingual_srt" in formats:
+            tr_files = sorted((d / "subtitles").glob("translated.*.srt"))
+            if tr_files:
+                tr_cues = subs.load_subtitles(tr_files[0])
+                new_tr_cues = subs.remap_cues(tr_cues, plan)
+                write_text_atomic(targets["bilingual_srt"], subs.render_bilingual_srt(new_cues, new_tr_cues))
+            else:
+                write_text_atomic(targets["bilingual_srt"], subs.render_srt(new_cues))
     for t in [*targets.values(), *extras]:
         written.append(str(t.relative_to(d)).replace("\\", "/"))
     pm.log_history(pid, "export", ", ".join(formats))
@@ -249,7 +285,7 @@ def register_all(queue: JobQueue, pm: ProjectManager) -> None:
                 raise ProjectError("Нельзя вшить субтитры: расшифровка не загружена")
             ass = subs.render_ass(subs.remap_cues(cues, plan), tpl.get("subtitles"))
         package = p.get("package", mode == "final")
-        formats = list(p.get("formats") or ["srt", "ass", "plan", "info", "v3", "fcpxml"])
+        formats = list(p.get("formats") or ["premiere", "fcpxml", "davinci_markers", "srt", "plan", "info", "v3", "otio"])
         if not package or not read_json(pm.dir(pid) / "subtitles" / "cues.json"):
             formats = [f for f in formats if f not in ("srt", "ass")]
         if package and not overwrite:   # проверяем всё заранее, чтобы не рендерить впустую
@@ -338,7 +374,32 @@ def register_all(queue: JobQueue, pm: ProjectManager) -> None:
         ctx.log(f"Совпадение сокращений: {res['agreement'] * 100:.0f}%")
         return res
 
+    def translate_subtitles(ctx: JobContext, p: dict) -> dict:
+        pid = ctx.project_id
+        cues = load_cues(pm, pid)
+        if not cues:
+            raise ProjectError("Расшифровка не найдена: сначала распознайте или загрузите субтитры")
+        target_lang = p.get("target_lang", "en")
+        source_lang = p.get("source_lang", "auto")
+        device = p.get("device", "auto")
+        ctx.stage(f"Перевод на {target_lang}")
+
+        def on_event(ev: dict) -> None:
+            if ev.get("k") == "stage":
+                ctx.stage(ev.get("label", "Перевод"))
+            elif ev.get("k") == "translate" and ev.get("total"):
+                ctx.progress(ev["done"] / ev["total"], message=f"Переведено {ev['done']} из {ev['total']} реплик")
+
+        tr_texts = whisp.translate_cues([c.to_dict() for c in cues], target_lang, source_lang=source_lang,
+                                        device=device, token=ctx.token, on_event=on_event, on_line=ctx.log)
+        tr_cues = [subs.Cue(c.start_ms, c.end_ms, tr) for c, tr in zip(cues, tr_texts)]
+        dst = pm.dir(pid) / "subtitles" / f"translated.{target_lang}.srt"
+        write_text_atomic(dst, subs.render_srt(tr_cues))
+        pm.log_history(pid, "subtitles:translate", f"{target_lang}: {len(tr_cues)}")
+        return {"target_lang": target_lang, "cues": len(tr_cues), "file": dst.name}
+
     queue.register("compare", compare_engines)
     queue.register("analyze", analyze)
     queue.register("render", render)
     queue.register("transcribe", transcribe)
+    queue.register("translate_subtitles", translate_subtitles)

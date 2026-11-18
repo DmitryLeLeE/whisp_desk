@@ -121,6 +121,21 @@ def download_model(name: str, *, token: CancelToken | None = None, on_event: Cal
     _run_runner("download", {"model": name, "model_dir": str(md) if md else None}, token, on_event, on_line)
 
 
+def translate_cues(cues: list[dict], target_lang: str, source_lang: str = "auto", device: str = "auto",
+                   token: CancelToken | None = None, on_event: Callable[[dict], None] | None = None,
+                   on_line: Callable[[str], None] | None = None) -> list[str]:
+    """Машинный перевод списка реплик на целевой язык без повторной расшифровки звука."""
+    _require()
+    md = model_dir()
+    params = {"cues": cues, "target_lang": target_lang, "source_lang": source_lang, "device": device,
+              "model_dir": str(md) if md else None}
+    events = _run_runner("translate_cues", params, token, on_event, on_line)
+    done = next((e for e in reversed(events) if e["k"] == "done"), None)
+    if not done or "translations" not in done:
+        raise RuntimeError("Перевод субтитров завершился без результата.")
+    return done["translations"]
+
+
 def _global_stream_index(source: Path, audio_index: int) -> int:
     """Whisp ждёт сквозной номер потока файла (у видео аудио часто имеет индекс 1), а в проекте хранится номер среди аудиодорожек."""
     from ..media import ffprobe

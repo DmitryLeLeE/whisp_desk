@@ -24,7 +24,7 @@ def test_parse_event():
 def test_runner_reports_error_event_and_exit_code_via_launcher():
     """Реальный запуск `launcher.py --whisp-run`: проверяет диспетчеризацию и протокол без сети и без модели."""
     r = subprocess.run([sys.executable, str(BACKEND / "launcher.py"), "--whisp-run", "download", json.dumps({"model": "nope"})],
-                       capture_output=True, text=True, encoding="utf-8", cwd=BACKEND, timeout=60)
+                       capture_output=True, text=True, encoding="utf-8", cwd=BACKEND, timeout=10)
     assert r.returncode == 1
     events = [whisp.parse_event(line) for line in r.stdout.splitlines()]
     assert any(e and e["k"] == "error" for e in events)

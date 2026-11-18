@@ -219,6 +219,31 @@ def render_vtt(cues: list[Cue]) -> str:
     return "WEBVTT\n\n" + body
 
 
+def render_bilingual_srt(cues_orig: list[Cue], cues_trans: list[Cue]) -> str:
+    """Генерирует двуязычный SRT: оригинальный текст + строка перевода снизу."""
+    out = []
+    # Если количество совпадает, сопоставляем 1-в-1
+    if len(cues_orig) == len(cues_trans):
+        for i, (co, ct) in enumerate(zip(cues_orig, cues_trans), 1):
+            text = f"{co.text}\n{ct.text}" if ct.text else co.text
+            out.append(f"{i}\n{_fmt(co.start_ms, ',')} --> {_fmt(co.end_ms, ',')}\n{text}\n\n")
+        return "".join(out)
+
+    # Иначе сопоставляем по пересечению интервалов времени
+    for i, co in enumerate(cues_orig, 1):
+        matching = [ct for ct in cues_trans if max(co.start_ms, ct.start_ms) < min(co.end_ms, ct.end_ms)]
+        trans_text = " / ".join(ct.text for ct in matching if ct.text)
+        text = f"{co.text}\n{trans_text}" if trans_text else co.text
+        out.append(f"{i}\n{_fmt(co.start_ms, ',')} --> {_fmt(co.end_ms, ',')}\n{text}\n\n")
+    return "".join(out)
+
+
+def render_transcript(cues: list[Cue]) -> str:
+    """Текстовая расшифровка с таймкодами для чтения."""
+    return "\n".join(f"[{_fmt(c.start_ms, '.')[:8]}] {c.text}" for c in cues) + "\n"
+
+
+
 def _ass_time(ms: int) -> str:
     h, rem = divmod(max(0, ms), 3_600_000)
     m, rem = divmod(rem, 60_000)

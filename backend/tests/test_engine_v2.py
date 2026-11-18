@@ -49,11 +49,48 @@ def test_hardware_encoder_failure_falls_back_to_cpu(sample_video, tmp_path, monk
     meta = ffprobe.probe(sample_video)
     plan = P.build_plan(project_id="t", source="s", duration_ms=20000, fps=meta["video"]["fps"], audio_index=0,
                         silence=[{"start_ms": 3000, "end_ms": 7000}], params=P.profile_params("standard"))
-    monkeypatch.setattr(R, "pick_encoder", lambda _p: "h264_nvenc")   # в песочнице такого железа нет
+    # На этой машине нет AMD GPU (h264_amf), поэтому энкодер AMF упадет и переключится на libx264
+    monkeypatch.setattr(R, "pick_encoder", lambda _p: "h264_amf")
     logs = []
     res = R.render(plan=plan, meta=meta, source=sample_video, out_path=tmp_path / "o.mp4", work_dir=tmp_path / "w",
                    options=R.merge_options("fast", None, {"video": {"encoder": "auto"}}), log=logs.append)
     assert res["encoder"] == "libx264" and any("повтор на процессоре" in m for m in logs)
+
+
+def test_premiere_xml_export():
+    from pathlib import Path
+    plan = make_plan([(0, 4000, "KEEP"), (4000, 6000, "CUT"), (6000, 10000, "KEEP")])
+    meta = {"has_video": True, "video": {"width": 1920, "height": 1080}, "audio_streams": [{"sample_rate": 48000, "channels": 2}]}
+    xml = E.to_premiere_xml(plan, meta, Path("E:/video/test.mp4"), "PremiereTest")
+    assert "<xmeml version=\"5\">" in xml
+    assert "<name>PremiereTest</name>" in xml
+    assert "clipitem-video-1" in xml
+    assert "clipitem-audio-1-1" in xml
+    assert "file://localhost/" in xml
+    assert "<mediatype>video</mediatype>" in xml
+
+
+def test_new_export_formats():
+    from pathlib import Path
+    plan = make_plan([(0, 4000, "KEEP"), (4000, 6000, "CUT"), (6000, 10000, "KEEP")])
+    meta = {"has_video": True, "video": {"width": 1920, "height": 1080}, "audio_streams": [{"sample_rate": 48000, "channels": 2}]}
+    source = Path("/media/test.mp4")
+    
+    # OTIO
+    otio_str = E.to_otio(plan, meta, source, "OTIOTest")
+    assert "OTIO_SCHEMA" in otio_str and "Timeline.1" in otio_str
+    
+    # DaVinci markers
+    markers = E.to_davinci_markers_csv(plan, meta)
+    assert "EDL Marker Name" in markers and "Green" in markers and "Red" in markers
+    
+    # Chapters
+    chapters = E.to_chapters(plan)
+    assert "00:00 Фрагмент 1" in chapters
+    
+    # Audacity labels
+    labels = E.to_audacity_labels(plan)
+    assert "KEEP_1" in labels and "0.000000\t4.000000" in labels
 
 
 @needs_ffmpeg

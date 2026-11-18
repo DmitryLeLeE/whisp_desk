@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, fmtTime } from "../api";
+import { useTranslation } from "../i18n";
 import type { Cue, Job, PlanPayload, Project, Scenes, Waveform } from "../types";
 import Editor from "./Editor";
 import ExportPanel from "./ExportPanel";
@@ -7,19 +8,30 @@ import Icon from "./Icon";
 import JobDock from "./JobDock";
 import SetupPanel from "./SetupPanel";
 import SubtitlesPanel from "./SubtitlesPanel";
+import TourGuide, { TourStep } from "./TourGuide";
 
 type Tab = "setup" | "edit" | "subs" | "export";
-const STEPS: [Tab, string][] = [["setup", "Видео и анализ"], ["edit", "Монтаж"], ["subs", "Субтитры"], ["export", "Экспорт"]];
 
 function NeedsPlan({ onGo }: { onGo: () => void }) {
+  const { lang } = useTranslation();
   return (
-    <div className="empty card"><Icon name="scissors" /><b>Сначала нужен черновой монтаж</b>
-      <span>Выберите видео и запустите анализ: программа найдёт паузы и предложит, что убрать.</span>
-      <button className="primary" onClick={onGo}>К анализу</button></div>
+    <div className="empty card">
+      <Icon name="scissors" />
+      <b>{lang === "ru" ? "Сначала нужен черновой монтаж" : "Analysis required first"}</b>
+      <span>
+        {lang === "ru"
+          ? "Выберите видео и запустите анализ: программа найдёт паузы и создаст монтажный план."
+          : "Select a video and run analysis to detect silences and create an edit plan."}
+      </span>
+      <button className="primary" onClick={onGo}>
+        {lang === "ru" ? "К анализу" : "Go to Analysis"}
+      </button>
+    </div>
   );
 }
 
 export default function ProjectView({ pid, onClose }: { pid: string; onClose: () => void }) {
+  const { t, lang } = useTranslation();
   const [project, setProject] = useState<Project | null>(null);
   const [payload, setPayload] = useState<PlanPayload | null>(null);
   const [scenes, setScenes] = useState<Scenes | null>(null);
@@ -29,7 +41,51 @@ export default function ProjectView({ pid, onClose }: { pid: string; onClose: ()
   const [tab, setTab] = useState<Tab>("setup");
   const [error, setError] = useState("");
   const [seekTo, setSeekTo] = useState<{ ms: number; n: number } | null>(null);
+  const [showTour, setShowTour] = useState(false);
   const firstLoad = useRef(true);
+
+  const steps: [Tab, string][] = [
+    ["setup", t("step.setup")],
+    ["edit", t("step.editor")],
+    ["subs", t("step.subtitles")],
+    ["export", t("step.export")],
+  ];
+
+  const projectSteps: TourStep[] = [
+    {
+      id: "step-pipeline",
+      targetSelector: '[data-tour="proj-stepper"]',
+      title: t("tour.project.step1.title"),
+      content: t("tour.project.step1.desc"),
+      placement: "bottom",
+    },
+    {
+      id: "step-edit-tab",
+      targetSelector: '[data-tour="step-edit"]',
+      title: t("tour.project.step2.title"),
+      content: t("tour.project.step2.desc"),
+      placement: "bottom",
+    },
+    {
+      id: "step-subs-tab",
+      targetSelector: '[data-tour="step-subs"]',
+      title: t("tour.project.step3.title"),
+      content: t("tour.project.step3.desc"),
+      placement: "bottom",
+    },
+    {
+      id: "step-export-tab",
+      targetSelector: '[data-tour="step-export"]',
+      title: t("tour.project.step4.title"),
+      content: t("tour.project.step4.desc"),
+      placement: "bottom",
+    },
+  ];
+
+  const finishTour = () => {
+    setShowTour(false);
+    try { localStorage.setItem("whisp_seen_project_tour", "true"); } catch { /* ignore */ }
+  };
 
   const loadAll = useCallback(async () => {
     try {
@@ -49,71 +105,143 @@ export default function ProjectView({ pid, onClose }: { pid: string; onClose: ()
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
-  // Опрос состояния текущей задачи.
+  // Опрос состояния текущей задачи
   useEffect(() => {
     if (!job || (job.status !== "QUEUED" && job.status !== "RUNNING")) return;
-    const t = setInterval(async () => {
+    const interval = setInterval(async () => {
       try {
         const j = await api.get<Job>(`/api/jobs/${job.id}`);
         setJob(j);
-        if (j.status !== "QUEUED" && j.status !== "RUNNING") { clearInterval(t); loadAll(); }
-      } catch { /* повторим на следующем тике */ }
+        if (j.status !== "QUEUED" && j.status !== "RUNNING") {
+          clearInterval(interval);
+          loadAll();
+        }
+      } catch { /* retry next tick */ }
     }, 800);
-    return () => clearInterval(t);
+    return () => clearInterval(interval);
   }, [job, loadAll]);
 
   const running = !!job && (job.status === "QUEUED" || job.status === "RUNNING");
 
-  if (error && !project) return <main className="page"><p className="error">{error}</p><button onClick={onClose}>К проектам</button></main>;
-  if (!project) return <main className="page"><p className="muted">Загрузка…</p></main>;
+  if (error && !project) {
+    return (
+      <main className="page">
+        <p className="error">{error}</p>
+        <button onClick={onClose}>{t("common.back")}</button>
+      </main>
+    );
+  }
+
+  if (!project) return <main className="page"><p className="muted">{t("common.loading")}</p></main>;
 
   const unreviewed = payload?.stats.unreviewed ?? 0;
-  const done: Record<Tab, boolean> = { setup: project.has_plan, edit: project.has_plan && unreviewed === 0, subs: project.has_subtitles, export: false };
-  const next = (t: Tab) => { setTab(t); window.scrollTo({ top: 0 }); };
+  const done: Record<Tab, boolean> = {
+    setup: project.has_plan,
+    edit: project.has_plan && unreviewed === 0,
+    subs: project.has_subtitles,
+    export: false,
+  };
+  const next = (targetTab: Tab) => { setTab(targetTab); window.scrollTo({ top: 0 }); };
 
   return (
     <div className="project">
       <header className="proj-head">
-        <button className="ghost" onClick={onClose}>← Проекты</button>
+        <button className="ghost" onClick={onClose}>
+          ← {t("nav.projects")}
+        </button>
         <span className="pname">{project.name}</span>
-        <nav className="stepper" aria-label="Шаги проекта">
-          {STEPS.map(([k, label], i) => (
-            <button key={k} className={`step ${tab === k ? "active" : ""} ${done[k] ? "done" : ""}`} onClick={() => setTab(k)} aria-current={tab === k ? "step" : undefined}>
-              <span className="n">{done[k] ? <Icon name="check" /> : i + 1}</span>{label}
+        {payload && (
+          <span className="badge" style={{ marginLeft: 8 }}>
+            {fmtTime(payload.stats.output_ms, false)} / {fmtTime(payload.stats.source_ms, false)}
+          </span>
+        )}
+        <nav className="stepper" aria-label="Steps" data-tour="proj-stepper">
+          {steps.map(([k, label], i) => (
+            <button
+              key={k}
+              data-tour={`step-${k}`}
+              className={`step ${tab === k ? "active" : ""} ${done[k] ? "done" : ""}`}
+              onClick={() => setTab(k)}
+              aria-current={tab === k ? "step" : undefined}
+            >
+              <span className="n">{done[k] ? <Icon name="check" /> : i + 1}</span>
+              {label}
             </button>
           ))}
         </nav>
+        <button className="ghost small" onClick={() => setShowTour(true)} title="Гайд по функциям проекта">
+          <Icon name="compass" /> {t("tour.btn")}
+        </button>
       </header>
+
       <main className="page">
-        {tab === "setup" && <SetupPanel project={project} payload={payload} busy={running} onJob={setJob} onChanged={loadAll} />}
-        {tab === "edit" && (payload ? (
-          <Editor pid={pid} project={project} payload={payload} onPayload={setPayload} scenes={scenes} wave={wave} cues={cues} busy={running} seekTo={seekTo} />
-        ) : <NeedsPlan onGo={() => setTab("setup")} />)}
-        {tab === "subs" && <SubtitlesPanel pid={pid} project={project} cues={cues} busy={running} onJob={setJob} onChanged={loadAll}
-          onJump={(ms) => { setSeekTo({ ms, n: Date.now() }); setTab("edit"); }} />}
-        {tab === "export" && (payload ? <ExportPanel pid={pid} project={project} payload={payload} busy={running} onJob={setJob} onPayload={setPayload} />
-          : <NeedsPlan onGo={() => setTab("setup")} />)}
+        {tab === "setup" && (
+          <SetupPanel project={project} payload={payload} busy={running} onJob={setJob} onChanged={loadAll} />
+        )}
+        {tab === "edit" && (
+          payload ? (
+            <Editor
+              pid={pid}
+              project={project}
+              payload={payload}
+              onPayload={setPayload}
+              scenes={scenes}
+              wave={wave}
+              cues={cues}
+              busy={running}
+              seekTo={seekTo}
+            />
+          ) : <NeedsPlan onGo={() => setTab("setup")} />
+        )}
+        {tab === "subs" && (
+          <SubtitlesPanel
+            pid={pid}
+            project={project}
+            cues={cues}
+            busy={running}
+            onJob={setJob}
+            onChanged={loadAll}
+            onJump={(ms) => { setSeekTo({ ms, n: Date.now() }); setTab("edit"); }}
+          />
+        )}
+        {tab === "export" && (
+          payload ? (
+            <ExportPanel
+              pid={pid}
+              project={project}
+              payload={payload}
+              busy={running}
+              onJob={setJob}
+              onPayload={setPayload}
+            />
+          ) : <NeedsPlan onGo={() => setTab("setup")} />
+        )}
 
         {tab === "setup" && project.has_plan && payload && (
           <div className="next-bar">
-            <span className="grow">Черновой монтаж готов: убрано <b>{fmtTime(payload.stats.removed_ms, false)}</b> из {fmtTime(payload.stats.source_ms, false)}.</span>
-            <button className="primary" onClick={() => next("edit")}>Проверить монтаж <Icon name="arrow" /></button>
-          </div>
-        )}
-        {tab === "edit" && payload && (
-          <div className="next-bar">
-            <span className="grow">{unreviewed > 0 ? <>Непроверенных решений: <b>{unreviewed}</b>. Можно перейти дальше и вернуться позже.</> : "Все решения проверены."}</span>
-            <button className="primary" onClick={() => next("subs")}>Дальше: субтитры <Icon name="arrow" /></button>
-          </div>
-        )}
-        {tab === "subs" && payload && (
-          <div className="next-bar">
-            <span className="grow">{project.has_subtitles ? "Субтитры готовы." : "Субтитры можно пропустить: рендер работает и без них."}</span>
-            <button className="primary" onClick={() => next("export")}>Дальше: экспорт <Icon name="arrow" /></button>
+            <span className="grow">
+              {lang === "ru"
+                ? `Черновой монтаж готов: убрано ${fmtTime(payload.stats.removed_ms, false)} из ${fmtTime(payload.stats.source_ms, false)}.`
+                : `Edit plan ready: removed ${fmtTime(payload.stats.removed_ms, false)} of ${fmtTime(payload.stats.source_ms, false)}.`}
+            </span>
+            <button className="primary" onClick={() => next("edit")}>
+              {lang === "ru" ? "Проверить монтаж" : "Review Cuts"} <Icon name="arrow" />
+            </button>
           </div>
         )}
       </main>
-      <JobDock job={job} onJob={setJob} onDone={loadAll} />
+
+      {running && job && <JobDock job={job} onJob={setJob} onDone={loadAll} />}
+
+      {showTour && (
+        <TourGuide
+          steps={projectSteps}
+          isOpen={showTour}
+          onClose={() => setShowTour(false)}
+          onComplete={finishTour}
+          lang={lang}
+        />
+      )}
     </div>
   );
 }

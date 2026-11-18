@@ -5,7 +5,7 @@ from pathlib import Path
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from pydantic import BaseModel
 
-from ..core import tasks
+from ..core import fsutil, tasks
 from ..editing import subtitles as subs
 from ..integrations import whisp
 from .deps import jobs, pm
@@ -27,11 +27,55 @@ class TranscribeBody(BaseModel):
     max_duration: float = 0.0
 
 
+class TranslateOnlyBody(BaseModel):
+    target_lang: str = "en"
+    source_lang: str = "auto"
+    device: str = "auto"
+
+
+class CueItem(BaseModel):
+    start_ms: int
+    end_ms: int
+    text: str
+
+
+class UpdateCuesBody(BaseModel):
+    cues: list[CueItem]
+    lang: str = "original"
+
+
 @router.get("")
 def get_cues(pid: str, request: Request):
     m = pm(request)
     cues = tasks.load_cues(m, pid)
-    return {"cues": [c.to_dict() for c in cues]}
+    translations: dict[str, list[dict]] = {}
+    sub_dir = m.dir(pid) / "subtitles"
+    if sub_dir.is_dir():
+        for f in sorted(sub_dir.glob("translated.*.srt")):
+            lang = f.stem.split(".", 1)[1]
+            try:
+                translations[lang] = [c.to_dict() for c in subs.load_subtitles(f)]
+            except Exception:
+                pass
+    return {
+        "cues": [c.to_dict() for c in cues],
+        "translations": translations,
+    }
+
+
+@router.put("")
+def update_cues(pid: str, body: UpdateCuesBody, request: Request):
+    m = pm(request)
+    cues_objs = [subs.Cue(c.start_ms, c.end_ms, c.text) for c in body.cues]
+    if body.lang == "original" or not body.lang:
+        tasks.save_cues(m, pid, cues_objs, "manual_edit")
+    else:
+        sub_dir = m.dir(pid) / "subtitles"
+        sub_dir.mkdir(exist_ok=True)
+        dst = sub_dir / f"translated.{body.lang}.srt"
+        fsutil.write_text_atomic(dst, subs.render_srt(cues_objs))
+        m.log_history(pid, "subtitles:edit_translation", f"{body.lang}: {len(cues_objs)}")
+    return {"ok": True, "count": len(cues_objs), "lang": body.lang}
 
 
 @router.post("/import")
@@ -64,6 +108,15 @@ def transcribe(pid: str, body: TranscribeBody, request: Request):
     if body.translate_to and body.task == "translate":
         raise HTTPException(422, "Выберите либо перевод Whisper на английский, либо машинный перевод")
     return jobs(request).submit(pid, "transcribe", body.model_dump())
+
+
+@router.post("/translate", status_code=202)
+def translate(pid: str, body: TranslateOnlyBody, request: Request):
+    """Отдельный быстрый перевод уже имеющихся субтитров."""
+    cues = tasks.load_cues(pm(request), pid)
+    if not cues:
+        raise HTTPException(400, "Сначала распознайте или загрузите субтитры")
+    return jobs(request).submit(pid, "translate_subtitles", body.model_dump())
 
 
 @router.get("/remapped")
