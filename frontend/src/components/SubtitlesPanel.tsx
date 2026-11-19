@@ -454,7 +454,7 @@ export default function SubtitlesPanel({ pid, project: _project, cues, busy, onJ
                         «{f.word}» ({fmtTime(f.start_ms, false)})
                       </span>
                     ))}
-                    {fillerMatches.length > 25 && <span className="muted small">+{fillerMatches.length - 25} ещё…</span>}
+                    {fillerMatches.length > 25 && <span className="muted small">+{fillerMatches.length - 25} {lang === "ru" ? "ещё…" : "more…"}</span>}
                   </div>
                 )}
               </div>
@@ -569,7 +569,7 @@ export default function SubtitlesPanel({ pid, project: _project, cues, busy, onJ
                       )}
                       {isTooLong && (
                         <span className="badge warn small" title={lang === "ru" ? "Строка длиннее 42 символов" : "Line longer than 42 characters"}>
-                          {c.text.length} симв.
+                          {c.text.length} {lang === "ru" ? "симв." : "chars"}
                         </span>
                       )}
                       {!isEditing && (
@@ -589,7 +589,7 @@ export default function SubtitlesPanel({ pid, project: _project, cues, busy, onJ
 
       <div className="stack">
         <div className="ptabs" role="tablist">
-          {([["whisp", "Распознавание речи"], ["import", "Перевод и импорт"]] as const).map(([k, label]) => (
+          {([["whisp", lang === "ru" ? "Распознавание речи" : "Speech recognition"], ["import", lang === "ru" ? "Перевод и импорт" : "Translation and import"]] as const).map(([k, label]) => (
             <button key={k} role="tab" aria-selected={stab === k} className={stab === k ? "active" : ""} onClick={() => setStab(k)}>{label}</button>
           ))}
         </div>
@@ -603,7 +603,7 @@ export default function SubtitlesPanel({ pid, project: _project, cues, busy, onJ
 
           {!whispOk && (
             <div className="notice warn">
-              <Icon name="alert" /> Whisp недоступен в этой копии программы. Импортируйте готовые субтитры ниже.
+              <Icon name="alert" /> {lang === "ru" ? "Whisp недоступен в этой копии программы. Импортируйте готовые субтитры ниже." : "Whisp is not available in this copy of the app. Import ready subtitles below."}
             </div>
           )}
 
@@ -616,7 +616,7 @@ export default function SubtitlesPanel({ pid, project: _project, cues, busy, onJ
           {wm && (<>
             <ModelCards compact models={wm.models.filter((m) => m.name === model)} selected={model} onSelect={setModel} onChanged={loadModels} onError={setError} />
             <details className="more">
-              <summary>Другие модели (точнее, но медленнее — или быстрее, но грубее)</summary>
+              <summary>{lang === "ru" ? "Другие модели (точнее, но медленнее — или быстрее, но грубее)" : "Other models (more accurate but slower, or faster but rougher)"}</summary>
               <ModelCards compact models={wm.models.filter((m) => m.name !== model)} selected={model} onSelect={setModel} onChanged={loadModels} onError={setError} />
             </details>
           </>)}

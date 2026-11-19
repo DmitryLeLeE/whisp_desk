@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import type { Job } from "../types";
+import { useTranslation } from "../i18n";
 import Icon from "./Icon";
 
-const KIND: Record<string, string> = { analyze: "Анализ", render: "Рендер", transcribe: "Расшифровка", compare: "Сравнение движков" };
-const STATUS: Record<string, string> = { QUEUED: "В очереди", RUNNING: "Выполняется", COMPLETED: "Готово", FAILED: "Ошибка", CANCELLED: "Отменено" };
+const KIND: Record<string, [string, string]> = { analyze: ["Анализ", "Analysis"], render: ["Рендер", "Render"], transcribe: ["Расшифровка", "Transcription"], compare: ["Сравнение движков", "Engine comparison"] };
+const STATUS: Record<string, [string, string]> = { QUEUED: ["В очереди", "Queued"], RUNNING: ["Выполняется", "Running"], COMPLETED: ["Готово", "Done"], FAILED: ["Ошибка", "Failed"], CANCELLED: ["Отменено", "Cancelled"] };
 
 function playCompletionChime() {
   try {
@@ -52,6 +53,8 @@ function playCompletionChime() {
 
 /** Плавающая панель текущей задачи: прогресс, отмена, повтор, журнал. */
 export default function JobDock({ job, onJob, onDone }: { job: Job | null; onJob: (j: Job | null) => void; onDone: () => void }) {
+  const { lang } = useTranslation();
+  const ru = lang === "ru";
   const [showLog, setShowLog] = useState(false);
   const prevStatusRef = useRef<string | null>(null);
 
@@ -76,21 +79,21 @@ export default function JobDock({ job, onJob, onDone }: { job: Job | null; onJob
   return (
     <aside className={`dock ${job.status.toLowerCase()}`} role="status">
       <div className="head">
-        <b>{KIND[job.kind] ?? job.kind}</b>
-        <span className={`badge ${job.status === "COMPLETED" ? "ok" : job.status === "FAILED" ? "bad" : "accent"}`}>{STATUS[job.status]}</span>
-        {!active && <button className="ghost" onClick={() => onJob(null)} aria-label="Скрыть"><Icon name="x" /></button>}
+        <b>{KIND[job.kind] ? KIND[job.kind][ru ? 0 : 1] : job.kind}</b>
+        <span className={`badge ${job.status === "COMPLETED" ? "ok" : job.status === "FAILED" ? "bad" : "accent"}`}>{STATUS[job.status][ru ? 0 : 1]}</span>
+        {!active && <button className="ghost" onClick={() => onJob(null)} aria-label={ru ? "Скрыть" : "Hide"}><Icon name="x" /></button>}
       </div>
       {active && <div className="bar" aria-hidden><i style={{ width: `${Math.max(2, Math.round(job.progress * 100))}%` }} /></div>}
-      <div className="muted">{job.message || job.stage}{active ? ` · ${Math.round(job.progress * 100)}% · ${job.elapsed_s ?? 0} с` : ""}</div>
+      <div className="muted">{job.message || job.stage}{active ? ` · ${Math.round(job.progress * 100)}% · ${job.elapsed_s ?? 0} ${ru ? "с" : "s"}` : ""}</div>
       {job.error && <div className="error">{job.error}</div>}
-      {job.status === "COMPLETED" && job.kind === "render" && typeof job.result?.output === "string" && <div className="ok">Готово: {String(job.result.output)}</div>}
+      {job.status === "COMPLETED" && job.kind === "render" && typeof job.result?.output === "string" && <div className="ok">{ru ? "Готово" : "Done"}: {String(job.result.output)}</div>}
       <div className="row">
-        {active && <button onClick={cancel}>Отменить</button>}
-        {(job.status === "FAILED" || job.status === "CANCELLED") && <button onClick={retry}>Повторить</button>}
+        {active && <button onClick={cancel}>{ru ? "Отменить" : "Cancel"}</button>}
+        {(job.status === "FAILED" || job.status === "CANCELLED") && <button onClick={retry}>{ru ? "Повторить" : "Retry"}</button>}
         <span className="grow" />
-        <button className="link" onClick={toggleLog}>{showLog ? "Скрыть журнал" : "Журнал"}</button>
+        <button className="link" onClick={toggleLog}>{showLog ? (ru ? "Скрыть журнал" : "Hide log") : (ru ? "Журнал" : "Log")}</button>
       </div>
-      {showLog && <pre className="log">{(job.log ?? []).join("\n") || "Журнал пуст"}</pre>}
+      {showLog && <pre className="log">{(job.log ?? []).join("\n") || (ru ? "Журнал пуст" : "Log is empty")}</pre>}
     </aside>
   );
 }

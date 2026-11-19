@@ -24,3 +24,8 @@ jobs:
         run: |
           npm ci
           npm run build
+      - name: UI smoke test
+        run: |
+          pip install playwright
+          python -m playwright install --with-deps chromium
+          python tools/smoke_ui.py

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, fmtSize } from "../api";
 import type { FsListing } from "../types";
+import { useTranslation } from "../i18n";
 import Icon from "./Icon";
 
 interface Place { name: string; path: string }
@@ -14,6 +15,8 @@ interface Props {
 
 /** Встроенный выбор файла или папки (когда нет окна приложения с системным диалогом). */
 export default function FileBrowser({ onPick, onPickMultiple, onClose, mode = "file" }: Props) {
+  const { lang } = useTranslation();
+  const ru = lang === "ru";
   const [listing, setListing] = useState<FsListing | null>(null);
   const [places, setPlaces] = useState<Place[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
@@ -32,10 +35,10 @@ export default function FileBrowser({ onPick, onPickMultiple, onClose, mode = "f
   return (
     <div className="modal" onClick={onClose}>
       <div className="dialog" onClick={(e) => e.stopPropagation()}>
-        <div className="row"><h2 className="grow">{mode === "dir" ? "Выберите папку" : "Выберите видео или аудио"}</h2><button className="ghost" onClick={onClose} aria-label="Закрыть"><Icon name="x" /></button></div>
+        <div className="row"><h2 className="grow">{mode === "dir" ? (ru ? "Выберите папку" : "Choose a folder") : (ru ? "Выберите видео или аудио" : "Choose a video or audio file")}</h2><button className="ghost" onClick={onClose} aria-label={ru ? "Закрыть" : "Close"}><Icon name="x" /></button></div>
         <div className="places">{places.map((p) => <button key={p.path} onClick={() => go(p.path)}>{p.name}</button>)}</div>
         <div className="crumbs">
-          <button className="ghost" onClick={() => go("")}>Диски</button>
+          <button className="ghost" onClick={() => go("")}>{ru ? "Диски" : "Drives"}</button>
           {crumbs.map((c, i) => <span key={i} className="row" style={{ gap: 4 }}>/<button className="ghost" onClick={() => go(pathAt(i))}>{c}</button></span>)}
         </div>
         {error && <p className="error">{error}</p>}
@@ -59,19 +62,19 @@ export default function FileBrowser({ onPick, onPickMultiple, onClose, mode = "f
               </button>
             </li>
           ))}
-          {listing && listing.entries.length === 0 && <li className="muted" style={{ padding: 14 }}>Здесь нет папок и медиафайлов.</li>}
+          {listing && listing.entries.length === 0 && <li className="muted" style={{ padding: 14 }}>{ru ? "Здесь нет папок и медиафайлов." : "No folders or media files here."}</li>}
         </ul>
         <div className="row">
-          <p className="muted grow">{mode === "dir" ? "Откройте нужную папку и нажмите «Выбрать эту папку»." : "Показаны папки и медиафайлы: MP4, MOV, MKV, AVI, MTS, MP3, WAV и другие."}</p>
+          <p className="muted grow">{mode === "dir" ? (ru ? "Откройте нужную папку и нажмите «Выбрать эту папку»." : "Open the folder and click \"Choose this folder\".") : (ru ? "Показаны папки и медиафайлы: MP4, MOV, MKV, AVI, MTS, MP3, WAV и другие." : "Folders and media files are shown: MP4, MOV, MKV, AVI, MTS, MP3, WAV and others.")}</p>
           {selected.length > 0 && mode === "file" && (
             <button
               className="primary"
               onClick={() => onPickMultiple ? onPickMultiple(selected) : onPick(selected[0])}
             >
-              Выбрать файлы ({selected.length})
+              {ru ? "Выбрать файлы" : "Choose files"} ({selected.length})
             </button>
           )}
-          {mode === "dir" && <button className="primary" disabled={!listing?.path} onClick={() => listing && onPick(listing.path)}>Выбрать эту папку</button>}
+          {mode === "dir" && <button className="primary" disabled={!listing?.path} onClick={() => listing && onPick(listing.path)}>{ru ? "Выбрать эту папку" : "Choose this folder"}</button>}
         </div>
       </div>
     </div>

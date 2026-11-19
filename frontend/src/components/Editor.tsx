@@ -13,6 +13,10 @@ interface Props {
   scenes: Scenes | null; wave: Waveform | null; cues: Cue[]; busy: boolean; seekTo: { ms: number; n: number } | null;
 }
 
+const REASONS_EN: Record<string, string> = {
+  long_silence: "long pause", low_volume: "low volume", manual_cut: "cut by hand", manual_keep: "kept by hand",
+  scene_boundary: "scene change", opening_trim: "silence at start", ending_trim: "silence at end", speech: "speech", opening: "start",
+};
 const REASONS: Record<string, string> = {
   long_silence: "длинная пауза", low_volume: "низкая громкость", manual_cut: "вручную удалено", manual_keep: "вручную оставлено",
   scene_boundary: "смена сцены", opening_trim: "тишина в начале", ending_trim: "тишина в конце", speech: "речь", opening: "начало",
@@ -417,7 +421,7 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
         await run({ op: "add_marker", time_ms: existing.time_ms, label: newLabel.trim(), color: existing.color });
       }
     } else {
-      await run({ op: "add_marker", time_ms: at, label: "Маркер", color: "cyan" });
+      await run({ op: "add_marker", time_ms: at, label: lang === "ru" ? "Маркер" : "Marker", color: "cyan" });
     }
   };
 
@@ -673,7 +677,7 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
               <button
                 className="nle-btn-ghost small"
                 onClick={() => setIsMuted(!isMuted)}
-                title={isMuted ? "Включить звук" : "Выключить звук"}
+                title={isMuted ? (lang === "ru" ? "Включить звук" : "Unmute") : (lang === "ru" ? "Выключить звук" : "Mute")}
               >
                 <Icon name={isMuted ? "volume-x" : "volume"} />
               </button>
@@ -689,14 +693,14 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
             </div>
 
             {/* Быстрые переключатели предпросмотра */}
-            <label className="nle-check-chip" title="Пропускать тишину и вырезанные участки">
+            <label className="nle-check-chip" title={(lang === "ru" ? "Пропускать тишину и вырезанные участки" : "Skip silence and cut parts")}>
               <input type="checkbox" checked={skipCuts} onChange={(e) => setSkipCuts(e.target.checked)} />
               <span>{lang === "ru" ? "Пропускать вырезанное" : "Skip cuts"}</span>
             </label>
             <details className="row-menu transport-more">
               <summary title={lang === "ru" ? "Ещё настройки предпросмотра" : "More preview options"}>⋯</summary>
               <div className="row-menu-pop">
-            <label className="nle-check-chip pop-check" title="Звук при покадровом шаге">
+            <label className="nle-check-chip pop-check" title={(lang === "ru" ? "Звук при покадровом шаге" : "Sound when stepping frame by frame")}>
               <input
                 type="checkbox"
                 checked={audioScrub}
@@ -750,7 +754,7 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
                     <Icon name="check" /> {t("editor.accept_next")}
                   </button>
                   {stats.unreviewed > 0 && (
-                    <button className="nle-btn-ghost small" onClick={acceptAll} disabled={busy} title="Принять всё">
+                    <button className="nle-btn-ghost small" onClick={acceptAll} disabled={busy} title={(lang === "ru" ? "Принять всё" : "Accept all")}>
                       {lang === "ru" ? `Принять всё (${stats.unreviewed})` : `Accept All (${stats.unreviewed})`}
                     </button>
                   )}
@@ -799,7 +803,7 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
                             </span>
                             {s.locked && <span className="badge small" style={{ marginLeft: 3 }}>LOCK</span>}
                           </td>
-                          <td className="reason-cell">{REASONS[s.reason] ?? s.reason}</td>
+                          <td className="reason-cell">{(lang === "ru" ? REASONS : REASONS_EN)[s.reason] ?? s.reason}</td>
                           <td className="actions" onClick={(e) => e.stopPropagation()}>
                             <button className="nle-btn-micro" title={lang === "ru" ? "Прослушать" : "Play"} onClick={() => playRange(s.source_start_ms, s.source_end_ms)}>▶</button>
                             <button
@@ -863,7 +867,7 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
                 </div>
               </div>
 
-              <div className="reviewbar" title={`Проверено ${stats.segments - stats.unreviewed} из ${stats.segments}`} style={{ margin: "10px 0" }}>
+              <div className="reviewbar" title={`${lang === "ru" ? "Проверено" : "Reviewed"} ${stats.segments - stats.unreviewed} ${lang === "ru" ? "из" : "of"} ${stats.segments}`} style={{ margin: "10px 0" }}>
                 <i style={{ width: `${stats.segments ? ((stats.segments - stats.unreviewed) / stats.segments) * 100 : 0}%` }} />
               </div>
 

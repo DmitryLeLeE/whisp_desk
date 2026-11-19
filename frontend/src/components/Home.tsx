@@ -7,7 +7,8 @@ import FileBrowser from "./FileBrowser";
 import Icon from "./Icon";
 import TourGuide, { TourStep } from "./TourGuide";
 import BatchModal from "./BatchModal";
-import StartDialog, { StartPreset } from "./StartDialog";
+import StartDialog, { START_PRESETS, StartPreset } from "./StartDialog";
+import HelpModal from "./HelpModal";
 
 const stem = (path: string) => (path.split(/[\\/]/).pop() ?? "").replace(/\.[^.]+$/, "");
 
@@ -22,6 +23,12 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
   const [showTour, setShowTour] = useState(false);
   const [batchOpen, setBatchOpen] = useState(false);
   const [pendingPath, setPendingPath] = useState<string | null>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const createDemo = async () => {
+    setError(""); setBusy(true);
+    try { const p = await api.post<ProjectRow>("/api/projects/demo"); onOpen(p.id); }
+    catch (e) { setError((e as Error).message); setBusy(false); }
+  };
   const [search, setSearch] = useState("");
   const [view, setView] = useState<"grid" | "list">(() => (localStorage.getItem("home.view") === "list" ? "list" : "grid"));
   const setViewMode = (v: "grid" | "list") => { setView(v); try { localStorage.setItem("home.view", v); } catch { /* ignore */ } };
@@ -110,7 +117,7 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
       });
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({ detail: res.statusText }));
-        throw new Error(errJson.detail || "Ошибка импорта архива .whisp");
+        throw new Error(errJson.detail || (lang === "ru" ? "Ошибка импорта архива .whisp" : "Failed to import the .whisp archive"));
       }
       const data = await res.json();
       await load();
@@ -123,7 +130,13 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
     }
   };
 
-  const start = (path: string) => { setError(""); setBrowse(false); setPendingPath(path); };
+  const start = (path: string) => {
+    setError(""); setBrowse(false);
+    let skip = false, id = "auto", language = "ru";
+    try { skip = localStorage.getItem("whisp_start_skip") === "1"; id = localStorage.getItem("whisp_start_preset") || "auto"; language = localStorage.getItem("whisp_start_lang") || "ru"; } catch { /* ignore */ }
+    const preset = START_PRESETS.find((x) => x.id === id);
+    if (skip && preset) create(path, preset, language); else setPendingPath(path);
+  };
 
   const create = async (path: string, preset: StartPreset, language: string) => {
     setError(""); setBusy(true); setPendingPath(null);
@@ -287,7 +300,7 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
             </>
           )}
 
-          <div className="view-toggle" role="group" aria-label="Вид">
+          <div className="view-toggle" role="group" aria-label={lang === "ru" ? "Вид" : "View"}>
             <button className={view === "grid" ? "active" : ""} onClick={() => setViewMode("grid")} title={lang === "ru" ? "Карточки" : "Grid"}>▦</button>
             <button className={view === "list" ? "active" : ""} onClick={() => setViewMode("list")} title={lang === "ru" ? "Список" : "List"}>☰</button>
           </div>
@@ -313,7 +326,7 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
             <Icon name="plus" /> {busy ? t("common.loading") : (lang === "ru" ? "Добавить видео" : "Add Video")}
           </button>
 
-          <button className="nle-btn-ghost small" onClick={() => setShowTour(true)} title="Краткий обзор программы">
+          <button className="nle-btn-ghost small" onClick={() => setHelpOpen(true)} title={lang === "ru" ? "Справка и частые вопросы" : "Help and FAQ"}>
             <Icon name="help" />
           </button>
         </div>
@@ -322,6 +335,7 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
       {error && <div className="notice bad" style={{ marginBottom: 16 }}>{error}</div>}
       {browse && <FileBrowser onPick={start} onPickMultiple={(paths) => startBatch(paths)} onClose={() => setBrowse(false)} />}
       {pendingPath && <StartDialog filename={pendingPath.split(/[\\/]/).pop() ?? pendingPath} busy={busy} onStart={(pr, l) => create(pendingPath, pr, l)} onClose={() => setPendingPath(null)} />}
+      {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} onTour={() => { setHelpOpen(false); setShowTour(true); }} />}
       {batchOpen && <BatchModal onClose={() => setBatchOpen(false)} onCreated={load} />}
 
       {/* Зона перетаскивания файлов */}
@@ -360,9 +374,14 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
               ? "Выберите файл видеозаписи выше, чтобы создать свой первый проект чернового монтажа."
               : "Select a video file above to create your first rough-cut project."}
           </p>
-          <button className="primary big" onClick={pick} disabled={busy}>
-            <Icon name="plus" /> {lang === "ru" ? "Создать первый проект" : "Create First Project"}
-          </button>
+          <div className="row" style={{ gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+            <button className="primary big" onClick={pick} disabled={busy}>
+              <Icon name="plus" /> {lang === "ru" ? "Создать первый проект" : "Create First Project"}
+            </button>
+            <button className="big" onClick={createDemo} disabled={busy} title={lang === "ru" ? "Короткий тестовый ролик с готовыми субтитрами" : "A short test clip with ready subtitles"}>
+              {lang === "ru" ? "Демо-проект" : "Demo project"}
+            </button>
+          </div>
         </div>
       ) : view === "list" ? (
         <table className="proj-table">
@@ -385,18 +404,18 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
                 <td className="mono">{r.duration_ms ? fmtTime(r.duration_ms, false) : "—"}</td>
                 <td className="mono">{r.removed_ms ? `-${fmtTime(r.removed_ms, false)}` : "—"}</td>
                 <td>
-                  {r.broken ? <span className="badge bad">Проект повреждён</span> : (
+                  {r.broken ? <span className="badge bad">{lang === "ru" ? "Проект повреждён" : "Project is damaged"}</span> : (
                     <span className="steps-mini">
-                      <span className={`badge ${r.has_plan ? "ok" : ""}`}>{r.has_plan ? "Монтаж готов" : "Ждёт анализа"}</span>
-                      {r.has_subtitles && <span className="badge ok">Субтитры</span>}
-                      {r.rendered && <span className="badge ok">Видео</span>}
+                      <span className={`badge ${r.has_plan ? "ok" : ""}`}>{r.has_plan ? (lang === "ru" ? "Монтаж готов" : "Edit ready") : (lang === "ru" ? "Ждёт анализа" : "Awaiting analysis")}</span>
+                      {r.has_subtitles && <span className="badge ok">{lang === "ru" ? "Субтитры" : "Subtitles"}</span>}
+                      {r.rendered && <span className="badge ok">{lang === "ru" ? "Видео" : "Video"}</span>}
                     </span>
                   )}
                 </td>
                 <td className="muted small">{new Date(r.updated).toLocaleDateString(lang === "ru" ? "ru-RU" : "en-US", { day: "numeric", month: "short", year: "numeric" })}</td>
                 <td className="pt-actions">
-                  <button className="nle-btn-micro" onClick={(e) => duplicate(r, e)} aria-label="Дублировать проект" title={lang === "ru" ? "Создать копию проекта" : "Duplicate Project"}><Icon name="copy" /></button>
-                  <button className="nle-btn-micro danger" onClick={(e) => remove(r, e)} aria-label="Удалить проект" title={t("common.delete")}><Icon name="trash" /></button>
+                  <button className="nle-btn-micro" onClick={(e) => duplicate(r, e)} aria-label={lang === "ru" ? "Дублировать проект" : "Duplicate project"} title={lang === "ru" ? "Создать копию проекта" : "Duplicate Project"}><Icon name="copy" /></button>
+                  <button className="nle-btn-micro danger" onClick={(e) => remove(r, e)} aria-label={lang === "ru" ? "Удалить проект" : "Delete project"} title={t("common.delete")}><Icon name="trash" /></button>
                 </td>
               </tr>
             ))}
@@ -418,21 +437,21 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
                 <span className="muted small file-sub" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                   {r.filename || (typesMap[r.type] ?? r.type)}
                 </span>
-                {r.broken ? <span className="badge bad">Проект повреждён</span> : (
+                {r.broken ? <span className="badge bad">{lang === "ru" ? "Проект повреждён" : "Project is damaged"}</span> : (
                   <div className="steps-mini">
-                    <span className={`badge ${r.has_plan ? "ok" : ""}`}>{r.has_plan ? "Монтаж готов" : "Ждёт анализа"}</span>
-                    {r.has_subtitles && <span className="badge ok">Есть субтитры</span>}
-                    {r.rendered && <span className="badge ok">Видео собрано</span>}
+                    <span className={`badge ${r.has_plan ? "ok" : ""}`}>{r.has_plan ? (lang === "ru" ? "Монтаж готов" : "Edit ready") : (lang === "ru" ? "Ждёт анализа" : "Awaiting analysis")}</span>
+                    {r.has_subtitles && <span className="badge ok">{lang === "ru" ? "Есть субтитры" : "Has subtitles"}</span>}
+                    {r.rendered && <span className="badge ok">{lang === "ru" ? "Видео собрано" : "Video rendered"}</span>}
                   </div>
                 )}
                 <div className="row" style={{ alignItems: "center", gap: 6, marginTop: "auto", paddingTop: 8, borderTop: "1px solid var(--line)" }}>
                   <span className="muted small grow">
                     {new Date(r.updated).toLocaleDateString(lang === "ru" ? "ru-RU" : "en-US", { month: "short", day: "numeric" })}
                   </span>
-                  <button className="nle-btn-micro" onClick={(e) => duplicate(r, e)} aria-label="Дублировать проект" title={lang === "ru" ? "Создать копию проекта" : "Duplicate Project"}>
+                  <button className="nle-btn-micro" onClick={(e) => duplicate(r, e)} aria-label={lang === "ru" ? "Дублировать проект" : "Duplicate project"} title={lang === "ru" ? "Создать копию проекта" : "Duplicate Project"}>
                     <Icon name="copy" />
                   </button>
-                  <button className="nle-btn-micro danger" onClick={(e) => remove(r, e)} aria-label="Удалить проект" title={t("common.delete")}>
+                  <button className="nle-btn-micro danger" onClick={(e) => remove(r, e)} aria-label={lang === "ru" ? "Удалить проект" : "Delete project"} title={t("common.delete")}>
                     <Icon name="trash" />
                   </button>
                 </div>

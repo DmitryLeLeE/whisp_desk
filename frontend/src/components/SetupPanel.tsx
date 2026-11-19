@@ -107,7 +107,7 @@ export default function SetupPanel({ project, payload: _payload, busy, onJob, on
                 <p className="muted small">{path}</p>
                 {meta && (
                   <p className="muted small">
-                    {fmtTime(meta.duration_ms, false)} · {meta.video ? `${meta.video.width}×${meta.video.height}` : "Аудио"} · {fmtSize(meta.size_bytes)}
+                    {fmtTime(meta.duration_ms, false)} · {meta.video ? `${meta.video.width}×${meta.video.height}` : (lang === "ru" ? "Аудио" : "Audio")} · {fmtSize(meta.size_bytes)}
                   </p>
                 )}
               </div>
@@ -146,9 +146,9 @@ export default function SetupPanel({ project, payload: _payload, busy, onJob, on
             <label>
               {lang === "ru" ? "Движок поиска пауз" : "Silence Detection Engine"}
               <select value={engine} onChange={(e) => setEngine(e.target.value)}>
-                <option value="builtin">Встроенный (FFmpeg silencedetect)</option>
+                <option value="builtin">{lang === "ru" ? "Встроенный (FFmpeg silencedetect)" : "Built-in (FFmpeg silencedetect)"}</option>
                 <option value="auto_editor" disabled={!ae?.available}>
-                  Auto-Editor{ae?.available ? "" : " (не установлен)"}
+                  Auto-Editor{ae?.available ? "" : (lang === "ru" ? " (не установлен)" : " (not installed)")}
                 </option>
               </select>
             </label>
@@ -197,7 +197,7 @@ export default function SetupPanel({ project, payload: _payload, busy, onJob, on
                 </div>
                 <span className="muted small" style={{ lineHeight: 1.45 }}>{profText[k]}</span>
                 <span className="tags">
-                  <span className="badge">≥ {sec(p.min_pause_s)} с</span>
+                  <span className="badge">≥ {sec(p.min_pause_s)} {lang === "ru" ? "с" : "s"}</span>
                   <span className="badge">{p.noise_db} dBFS</span>
                 </span>
               </label>
@@ -232,7 +232,7 @@ export default function SetupPanel({ project, payload: _payload, busy, onJob, on
               <Icon name="scissors" /> {project.has_plan ? (lang === "ru" ? "Пересчитать монтаж" : "Re-analyze") : (lang === "ru" ? "Найти паузы и начать монтаж" : "Detect Pauses & Edit")}
             </button>
             {ae?.available && (
-              <button onClick={compare} disabled={busy || !project.has_plan} title="Сравнить с Auto-Editor">
+              <button onClick={compare} disabled={busy || !project.has_plan} title={lang === "ru" ? "Сравнить с Auto-Editor" : "Compare with Auto-Editor"}>
                 {t("setup.btn.compare")}
               </button>
             )}

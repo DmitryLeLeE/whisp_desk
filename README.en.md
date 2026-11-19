@@ -97,7 +97,17 @@ Build the exe with `build.bat` (downloads FFmpeg and Auto-Editor, produces `dist
 
 Flags: `--browser`, `--no-window`, `--port 8765`. External tools are looked up in `tools/<name>/` next to the exe, then in `PATH`.
 
+## Data and privacy
+
+Everything runs on your computer: audio analysis, speech recognition, rendering. Your videos, subtitles and projects are
+never uploaded, the app collects no statistics and needs no account. The internet is used only to download models (on the
+first transcription or translation) and to check for updates when you click the button in Settings. The source video is
+never copied or modified. Projects are stored in the `projects` folder next to the program; delete the folder to remove them.
+
+The report for a GitHub issue (Settings, "Copy report") contains the app version, the status of the built-in tools and
+system information, never your files or their names.
+
 ## Licenses
 
-The app is [MIT](LICENSE). The build includes Whisp 1.2.2 and faster-whisper (MIT), FFmpeg (GPL build), Auto-Editor (Unlicense),
+The app is [MIT](LICENSE). Full list of third-party components: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). The build includes Whisp 1.2.2 and faster-whisper (MIT), FFmpeg (GPL build), Auto-Editor (Unlicense),
 FastAPI, React and other libraries. The NLLB-200 translation model is CC-BY-NC-4.0: non-commercial use only.

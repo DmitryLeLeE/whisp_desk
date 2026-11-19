@@ -226,7 +226,7 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
     {
       id: "otio",
       name: "OpenTimelineIO",
-      software: "Универсальный стандарт",
+      software: lang === "ru" ? "Универсальный стандарт" : "Universal standard",
       icon: "film",
       badge: ".otio",
       desc: lang === "ru"
@@ -303,7 +303,7 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
                 type="button"
                 className="ghost platform-preset-btn"
                 onClick={() => applyPlatformPreset("telegram")}
-                title="720p, быстрый рендер, малый вес"
+                title={(lang === "ru" ? "720p, быстрый рендер, малый вес" : "720p, fast render, small size")}
               >
                 <div className="row" style={{ gap: 6, alignItems: "center" }}>
                   <Icon name="send" />
@@ -315,7 +315,7 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
                 type="button"
                 className="ghost platform-preset-btn"
                 onClick={() => applyPlatformPreset("youtube")}
-                title="1080p, нормализация -14 LUFS, фильтр чёткости"
+                title={(lang === "ru" ? "1080p, нормализация -14 LUFS, фильтр чёткости" : "1080p, -14 LUFS normalisation, clarity filter")}
               >
                 <div className="row" style={{ gap: 6, alignItems: "center" }}>
                   <Icon name="video" />
@@ -327,25 +327,25 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
                 type="button"
                 className="ghost platform-preset-btn"
                 onClick={() => applyPlatformPreset("shorts")}
-                title="9:16 вертикальный кроп, караоке-субтитры"
+                title={(lang === "ru" ? "9:16 вертикальный кроп, караоке-субтитры" : "9:16 vertical crop, karaoke subtitles")}
               >
                 <div className="row" style={{ gap: 6, alignItems: "center" }}>
                   <Icon name="smartphone" />
                   <b>Shorts / Reels</b>
                 </div>
-                <span className="muted small">9:16 + Караоке</span>
+                <span className="muted small">{lang === "ru" ? "9:16 + Караоке" : "9:16 + Karaoke"}</span>
               </button>
               <button
                 type="button"
                 className="ghost platform-preset-btn"
                 onClick={() => applyPlatformPreset("podcast")}
-                title="Только аудио MP3 192k, -16 LUFS, теплый тембр"
+                title={(lang === "ru" ? "Только аудио MP3 192k, -16 LUFS, тёплый тембр" : "Audio-only MP3 192k, -16 LUFS, warm tone")}
               >
                 <div className="row" style={{ gap: 6, alignItems: "center" }}>
                   <Icon name="mic" />
-                  <b>Подкаст</b>
+                  <b>{lang === "ru" ? "Подкаст" : "Podcast"}</b>
                 </div>
-                <span className="muted small">MP3 Аудио</span>
+                <span className="muted small">{lang === "ru" ? "MP3 Аудио" : "MP3 audio"}</span>
               </button>
             </div>
           </div>
@@ -406,8 +406,8 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
             <label>
               {lang === "ru" ? "Движок рендеринга" : "Render Engine"}
               <select value={engine} onChange={(e) => { setEngine(e.target.value); if (e.target.value === "auto-editor") setBurn(false); }}>
-                <option value="ffmpeg">FFmpeg — шаблоны, субтитры, нормализация звука</option>
-                <option value="auto-editor" disabled={!aeOk}>Auto-Editor{aeOk ? "" : " (не установлен)"}</option>
+                <option value="ffmpeg">{lang === "ru" ? "FFmpeg — шаблоны, субтитры, нормализация звука" : "FFmpeg — templates, subtitles, loudness normalisation"}</option>
+                <option value="auto-editor" disabled={!aeOk}>Auto-Editor{aeOk ? "" : (lang === "ru" ? " (не установлен)" : " (not installed)")}</option>
               </select>
             </label>
 
@@ -457,8 +457,8 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
                 <span className="muted small">{lang === "ru" ? "Целевой стандарт:" : "Target Standard:"}</span>
                 <select value={targetLufs} onChange={(e) => setTargetLufs(Number(e.target.value))}>
                   <option value={-14}>-14 LUFS (YouTube, Shorts, TikTok, Reels)</option>
-                  <option value={-16}>-16 LUFS (Подкасты, Spotify, Apple Podcasts)</option>
-                  <option value={-23}>-23 LUFS (ТВ / Европейский стандарт EBU R128)</option>
+                  <option value={-16}>-16 LUFS {lang === "ru" ? "(Подкасты, Spotify, Apple Podcasts)" : "(Podcasts, Spotify, Apple Podcasts)"}</option>
+                  <option value={-23}>-23 LUFS {lang === "ru" ? "(ТВ / Европейский стандарт EBU R128)" : "(TV / European EBU R128 standard)"}</option>
                 </select>
               </div>
             )}
@@ -653,7 +653,7 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
 
       <div className="stack">
         <div className="ptabs" role="tablist">
-          {([["nle", "Монтажные программы"], ["extras", "Главы и обложка"], ["versions", "Версии монтажа"]] as const).map(([k, label]) => (
+          {([["nle", lang === "ru" ? "Монтажные программы" : "Editing software"], ["extras", lang === "ru" ? "Главы и обложка" : "Chapters and cover"], ["versions", lang === "ru" ? "Версии монтажа" : "Edit versions"]] as const).map(([k, label]) => (
             <button key={k} role="tab" aria-selected={rtab === k} className={rtab === k ? "active" : ""} onClick={() => setRtab(k)}>{label}</button>
           ))}
         </div>

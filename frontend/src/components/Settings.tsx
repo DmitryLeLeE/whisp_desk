@@ -17,6 +17,7 @@ interface UpdateCheck {
 }
 
 function ToolRow({ name, info, hint }: { name: string; info: ToolInfo; hint: string }) {
+  const { lang } = useTranslation();
   return (
     <tr>
       <td style={{ paddingRight: 20 }}>
@@ -24,7 +25,7 @@ function ToolRow({ name, info, hint }: { name: string; info: ToolInfo; hint: str
       </td>
       <td>
         {info.available ? (
-          <span className="muted">{info.version ?? (info.mode === "embedded" ? "встроен" : info.path)}</span>
+          <span className="muted">{info.version ?? (info.mode === "embedded" ? (lang === "ru" ? "встроен" : "built in") : info.path)}</span>
         ) : (
           <span className="error">{hint}</span>
         )}
@@ -41,6 +42,7 @@ export default function Settings() {
   const [browse, setBrowse] = useState(false);
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
+  const [askStart, setAskStart] = useState(() => { try { return localStorage.getItem("whisp_start_skip") !== "1"; } catch { return true; } });
   const [update, setUpdate] = useState<UpdateCheck | null>(null);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [cacheInfo, setCacheInfo] = useState<{ files_count: number; total_bytes: number; formatted: string } | null>(null);
@@ -139,6 +141,17 @@ export default function Settings() {
       </div>
 
       <div className="stack">
+        <section className="card">
+          <div className="card-title">
+            <h2>{lang === "ru" ? "Быстрый старт" : "Quick start"}</h2>
+          </div>
+          <label className="check">
+            <input type="checkbox" checked={askStart} onChange={(e) => { setAskStart(e.target.checked); try { if (e.target.checked) localStorage.removeItem("whisp_start_skip"); else localStorage.setItem("whisp_start_skip", "1"); } catch { /* ignore */ } }} />
+            <span>{lang === "ru" ? "Спрашивать, как обработать видео, при каждом добавлении" : "Ask how to process the video every time one is added"}</span>
+          </label>
+          <p className="muted small">{lang === "ru" ? "Если выключить, будет использоваться последний выбранный профиль." : "When off, the last chosen profile is used."}</p>
+        </section>
+
         <section className="card">
           <div className="card-title">
             <span className="num"><Icon name="cpu" /></span>

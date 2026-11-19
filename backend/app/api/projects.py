@@ -102,6 +102,42 @@ def create_batch(body: BatchProjectCreate, request: Request):
     return {"created": created, "count": len(created)}
 
 
+DEMO_SRT = (
+    "1\n00:00:00,400 --> 00:00:03,000\nЗдравствуйте! Это демонстрационный проект.\n\n"
+    "2\n00:00:07,200 --> 00:00:10,800\nЗелёное на таймлайне остаётся, красное вырезается.\n\n"
+    "3\n00:00:13,200 --> 00:00:16,800\nСубтитры уже готовы: попробуйте экспорт.\n"
+)
+
+
+@router.post("/demo", status_code=201)
+def create_demo(request: Request):
+    """Учебный проект: короткий тестовый ролик с паузами и готовые субтитры. Нужен, чтобы попробовать программу без своих файлов."""
+    import subprocess
+    from ..core import tasks
+    from ..editing import subtitles as subs
+    m = pm(request)
+    p = m.create("Демо: попробуйте программу", "lecture", "Тестовый ролик с паузами. Можно безопасно удалить.")
+    pid = p["id"]
+    src = m.dir(pid) / "demo.mp4"
+    try:
+        subprocess.run([
+            require_tool("ffmpeg"), "-y", "-v", "error",
+            "-f", "lavfi", "-i", "testsrc2=s=1280x720:r=25:d=20",
+            "-f", "lavfi", "-i", "sine=f=440:r=48000:d=20,volume='if(between(t,3,7)+between(t,12,13)+between(t,17,20),0.0,0.5)':eval=frame",
+            "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest", str(src),
+        ], check=True, timeout=120, capture_output=True)
+        m.set_source(pid, str(src))
+        srt = m.dir(pid) / "demo.srt"
+        srt.write_text(DEMO_SRT, encoding="utf-8")
+        tasks.save_cues(m, pid, subs.load_subtitles(srt), "demo.srt", DEMO_SRT.encode("utf-8"))
+        srt.unlink(missing_ok=True)
+        jobs(request).submit(pid, "analyze", {"profile": "standard"})
+    except Exception as exc:  # noqa: BLE001
+        m.delete(pid)
+        raise HTTPException(500, f"Не удалось создать демо-проект: {exc}") from exc
+    return m.get(pid)
+
+
 @router.post("/rescan")
 def rescan(request: Request):
     return {"added": pm(request).rescan()}

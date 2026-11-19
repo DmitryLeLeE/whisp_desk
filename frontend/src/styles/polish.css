@@ -1,0 +1,81 @@
+/* ===== Полировка: отклик, фокус, прокрутка, выпадающие списки ===== */
+* { scrollbar-width: thin; scrollbar-color: var(--raised) transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--raised); border-radius: 6px; border: 2px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); background-clip: content-box; border: 2px solid transparent; }
+::-webkit-scrollbar-track { background: transparent; }
+
+button, select, input, textarea, summary, .nle-card, .profile, .model, .nle-proj-card, .proj-table tbody tr {
+  transition: background-color .12s ease, border-color .12s ease, color .12s ease, box-shadow .12s ease;
+}
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 3px; }
+input[type=checkbox], input[type=radio], input[type=range] { accent-color: var(--accent); }
+
+button { cursor: pointer; }
+button:disabled { opacity: .45; cursor: default; }
+button.primary { box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 1px 2px rgba(0,0,0,.25); font-weight: 600; }
+button.primary:hover:not(:disabled) { filter: brightness(1.08); }
+button.primary:active:not(:disabled) { filter: brightness(.94); }
+button:not(.primary):hover:not(:disabled) { border-color: var(--muted); }
+
+select {
+  appearance: none; -webkit-appearance: none; padding-right: 28px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238b8f98' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center;
+}
+input[type=text], input[type=search], input[type=number], select, textarea { transition: border-color .12s, box-shadow .12s; }
+input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); outline: none; }
+
+/* карточки и панели: мягче и ровнее */
+.card { border-radius: 6px; }
+.card-title h2 { letter-spacing: .06em; }
+.nle-proj-card:hover { border-color: var(--accent); }
+.profile:hover, .model.pick-able:hover, .nle-card:hover { border-color: var(--muted); }
+.profile.on, .model.on, .nle-card.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+
+/* страница проектов: читаемая ширина по центру */
+main:has(> .nle-manager-toolbar) { max-width: 1280px; margin: 0 auto; padding-left: 24px; padding-right: 24px; }
+.nle-manager-toolbar { align-items: flex-end; margin-bottom: 16px; }
+.nle-drop-banner { border-radius: 6px; padding: 14px 18px; }
+.nle-drop-banner:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 6%, transparent); }
+
+/* страницы-экраны: те же поля везде */
+.grid2 { gap: 16px; align-items: start; }
+.stack { gap: 16px; }
+
+/* таблицы решений: ровнее строки */
+.nle-table td, .nle-table th { padding-top: 7px; padding-bottom: 7px; }
+.nle-table tbody tr { transition: background-color .1s; }
+.nle-table tbody tr:hover { background: var(--panel2); }
+.nle-table tbody tr.sel { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+main:has(> .nle-manager-toolbar) { max-width: 1400px; }
+.nle-manager-toolbar { flex-wrap: nowrap; justify-content: space-between; gap: 16px; }
+.nle-manager-actions { flex-wrap: nowrap; }
+.nle-manager-actions .nle-search-input { width: 180px; }
+
+/* Монтаж: меньше элементов в панелях */
+.nle-rate-select { height: 26px; min-height: 26px; width: 66px; padding: 0 22px 0 8px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.transport-more .row-menu-pop { top: auto; bottom: 30px; right: 0; min-width: 170px; padding: 8px 10px; }
+.pop-check { margin: 0; white-space: nowrap; }
+.nle-range-display { display: inline-flex; align-items: center; gap: 6px; font-family: ui-monospace, monospace; font-size: 11.5px; color: var(--muted); padding: 0 6px; }
+.nle-hotkey-cheatsheet { align-items: center; gap: 14px; }
+.nle-tool-btn { height: 26px; min-height: 26px; }
+.nle-timeline-toolbar { gap: 10px; padding-top: 5px; padding-bottom: 5px; }
+
+/* Диалог «Как обработать видео?» */
+.start-dialog { width: min(680px, 94vw); }
+.start-grid { display: flex; flex-direction: column; gap: 8px; }
+.start-card { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); cursor: pointer; }
+.start-card input { position: absolute; opacity: 0; pointer-events: none; }
+.start-card:hover { border-color: var(--muted); }
+.start-card.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; background: color-mix(in srgb, var(--accent) 8%, var(--panel)); }
+.start-lang { display: flex; flex-direction: column; gap: 4px; margin-top: 14px; }
+.auto-banner { position: fixed; left: 50%; transform: translateX(-50%); bottom: 64px; z-index: 40; display: flex; align-items: center; gap: 10px; padding: 9px 16px; background: var(--raised); border: 1px solid var(--accent); border-radius: 4px; box-shadow: 0 6px 24px rgba(0,0,0,.4); font-size: 13px; }
+.start-dialog .modal-footer { display: flex; justify-content: flex-end; gap: 8px; }
+.start-dialog .modal-body { max-height: 70vh; overflow-y: auto; }
+.auto-banner.bad { border-color: var(--cut, #e5484d); max-width: min(720px, 92vw); }
+.help-dialog { width: min(720px, 94vw); }
+.help-body { max-height: 65vh; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.auto-banner button { height: 24px; min-height: 24px; padding: 0 10px; font-size: 12px; }
+.modal-footer { display: flex; justify-content: flex-end; gap: 8px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }

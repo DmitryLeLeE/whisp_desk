@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { fmtTime } from "../api";
 import type { Cue, Segment, TimelineMarker, Waveform } from "../types";
+import { useTranslation } from "../i18n";
 import Icon from "./Icon";
 
 interface Props {
@@ -29,6 +30,8 @@ const tickStep = (pps: number): number => {
 };
 
 export default function Timeline(p: Props) {
+  const { lang } = useTranslation();
+  const ru = lang === "ru";
   const inner = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<{ id: string; ms: number } | null>(null);
   const [hoverMs, setHoverMs] = useState<number | null>(null);
@@ -127,7 +130,7 @@ export default function Timeline(p: Props) {
               <div key={s.id}
                 className={`seg ${s.action.toLowerCase()} ${s.manual ? "manual" : ""} ${!s.reviewed ? "unrev" : ""} ${s.locked ? "locked" : ""} ${p.selectedId === s.id ? "sel" : ""}`}
                 style={{ left: x(s.source_start_ms), width: Math.max(1, x(s.source_end_ms - s.source_start_ms)) }}
-                title={`${fmtTime(s.source_start_ms)} – ${fmtTime(s.source_end_ms)} · ${s.action} · ${s.reason}${s.reviewed ? "" : " · не проверено"}`}
+                title={`${fmtTime(s.source_start_ms)} – ${fmtTime(s.source_end_ms)} · ${s.action} · ${s.reason}${s.reviewed ? "" : (ru ? " · не проверено" : " · not reviewed")}`}
                 onPointerDown={(e) => { if (e.button === 0) { p.onSelect(s.id); } }}>
                 {i < p.segments.length - 1 && (
                   <div className="handle"
@@ -138,7 +141,7 @@ export default function Timeline(p: Props) {
               </div>
             ))}
           </div>
-          {p.sceneMs.map((ms) => <div key={ms} className="scene" style={{ left: x(ms) }} title={`Смена сцены ${fmtTime(ms)}`} />)}
+          {p.sceneMs.map((ms) => <div key={ms} className="scene" style={{ left: x(ms) }} title={`${ru ? "Смена сцены" : "Scene change"} ${fmtTime(ms)}`} />)}
           {p.markIn != null && <div className="mark in" style={{ left: x(p.markIn) }} />}
           {p.markOut != null && <div className="mark out" style={{ left: x(p.markOut) }} />}
           {p.cues && p.cues.length > 0 && (
@@ -167,7 +170,7 @@ export default function Timeline(p: Props) {
               key={m.id}
               className={`tl-user-marker ${m.color || "cyan"}`}
               style={{ left: x(m.time_ms) }}
-              title={`${fmtTime(m.time_ms)} · ${m.label || "Маркер"}`}
+              title={`${fmtTime(m.time_ms)} · ${m.label || (ru ? "Маркер" : "Marker")}`}
               onClick={(e) => { e.stopPropagation(); p.onSeek(m.time_ms); }}
             >
               <div className="marker-pin">◆</div>

@@ -55,6 +55,7 @@ export default function ProjectView({ pid, onClose, sys, theme, onToggleTheme, o
   const [nameVal, setNameVal] = useState("");
   const firstLoad = useRef(true);
   const autoRan = useRef(false);
+  const autoAbort = useRef(false);
   const [autoNote, setAutoNote] = useState("");
 
   const saveName = async () => {
@@ -146,6 +147,7 @@ export default function ProjectView({ pid, onClose, sys, theme, onToggleTheme, o
       setJob(j);
       let cur = j;
       while (cur.status === "QUEUED" || cur.status === "RUNNING") {
+        if (autoAbort.current) { try { await api.post(`/api/jobs/${cur.id}/cancel`); } catch { /* ignore */ } }
         await new Promise((r) => setTimeout(r, 800));
         cur = await api.get<Job>(`/api/jobs/${cur.id}`);
         setJob(cur);
@@ -154,19 +156,20 @@ export default function ProjectView({ pid, onClose, sys, theme, onToggleTheme, o
     };
     (async () => {
       try {
-        setAutoNote(plan.transcribe ? "Шаг 1 из 2: ищем паузы…" : "Ищем паузы…");
+        setAutoNote(lang === "ru" ? (plan.transcribe ? "Шаг 1 из 2: ищем паузы…" : "Ищем паузы…") : (plan.transcribe ? "Step 1 of 2: finding pauses…" : "Finding pauses…"));
         const a = await wait(await api.post<Job>(`/api/projects/${pid}/analyze`, {
           profile: plan.profile, overrides: {}, audio_stream: project.settings.audio_stream, detect_scenes: true, engine: "builtin", auto_threshold: true, denoise: false,
         }));
-        if (a.status !== "COMPLETED") { setError(a.error || "Не удалось найти паузы"); setAutoNote(""); await loadAll(); return; }
+        if (autoAbort.current) { setAutoNote(""); await loadAll(); return; }
+        if (a.status !== "COMPLETED") { setError(a.error || (lang === "ru" ? "Не удалось найти паузы" : "Could not detect pauses")); setAutoNote(""); await loadAll(); return; }
         await loadAll();
         setTab("edit");
-        if (plan.transcribe) {
-          setAutoNote("Шаг 2 из 2: распознаём речь (при первом запуске скачивается модель)…");
+        if (plan.transcribe && !autoAbort.current) {
+          setAutoNote(lang === "ru" ? "Шаг 2 из 2: распознаём речь (при первом запуске скачивается модель)…" : "Step 2 of 2: transcribing speech (a model downloads on first run)…");
           const tr = await wait(await api.post<Job>(`/api/projects/${pid}/subtitles/transcribe`, {
             model: "turbo", language: plan.language, device: "auto", overwrite: false, translate_to: "", task: "transcribe", max_line_chars: 0, vad: true, initial_prompt: "",
           }));
-          if (tr.status !== "COMPLETED") setError((tr.error || "Не удалось распознать речь") + ". Паузы уже найдены; расшифровку можно запустить на шаге «Субтитры».");
+          if (tr.status !== "COMPLETED") setError((tr.error || (lang === "ru" ? "Не удалось распознать речь" : "Transcription failed")) + (lang === "ru" ? ". Паузы уже найдены; расшифровку можно запустить на шаге «Субтитры»." : ". Pauses are already found; you can run transcription on the Subtitles step."));
         }
         setAutoNote("");
         await loadAll();
@@ -305,7 +308,7 @@ export default function ProjectView({ pid, onClose, sys, theme, onToggleTheme, o
           >
             <Icon name="download" /> <span>.whisp</span>
           </a>
-          <button className="nle-btn-ghost small" onClick={() => setShowTour(true)} title="Гайд">
+          <button className="nle-btn-ghost small" onClick={() => setShowTour(true)} title={lang === "ru" ? "Обзор программы" : "App tour"}>
             <Icon name="compass" />
           </button>
           {onOpenShortcuts && (
@@ -314,7 +317,7 @@ export default function ProjectView({ pid, onClose, sys, theme, onToggleTheme, o
             </button>
           )}
           {onToggleTheme && (
-            <button className="nle-btn-ghost small" onClick={onToggleTheme} title="Тема">
+            <button className="nle-btn-ghost small" onClick={onToggleTheme} title={lang === "ru" ? "Тема" : "Theme"}>
               <Icon name={theme === "dark" ? "sun" : "moon"} />
             </button>
           )}
@@ -386,8 +389,8 @@ export default function ProjectView({ pid, onClose, sys, theme, onToggleTheme, o
         )}
       </main>
 
-      {autoNote && <div className="auto-banner" role="status"><span className="spinner" /> {autoNote}</div>}
-      {error && !autoNote && <div className="auto-banner bad" role="alert"><span>{error}</span><button className="btn-icon" onClick={() => setError("")} aria-label="Закрыть">✕</button></div>}
+      {autoNote && <div className="auto-banner" role="status"><span className="spinner" /> {autoNote}<button onClick={() => { autoAbort.current = true; setAutoNote(lang === "ru" ? "Останавливаем…" : "Stopping…"); }}>{lang === "ru" ? "Остановить" : "Stop"}</button></div>}
+      {error && !autoNote && <div className="auto-banner bad" role="alert"><span>{error}</span><button className="btn-icon" onClick={() => setError("")} aria-label={lang === "ru" ? "Закрыть" : "Close"}>✕</button></div>}
       {running && job && <JobDock job={job} onJob={setJob} onDone={loadAll} />}
 
       {showTour && (
