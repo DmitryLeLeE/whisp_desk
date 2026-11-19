@@ -21,7 +21,7 @@ hidden = ["uvicorn.logging", "uvicorn.loops.auto", "uvicorn.protocols.http.auto"
 
 # Пакеты распознавания речи тянут данные и нативные библиотеки (VAD-модель, ctranslate2, onnxruntime).
 for pkg in ("faster_whisper", "ctranslate2", "onnxruntime", "av", "sentencepiece", "huggingface_hub", "tokenizers",
-            "ffmpeg", "webview"):
+            "ffmpeg", "webview", "cv2"):
     try:
         d, b, h = collect_all(pkg)
     except Exception as e:  # пакет необязателен (webview нет на Linux)

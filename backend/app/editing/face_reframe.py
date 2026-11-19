@@ -11,13 +11,20 @@ import numpy as np
 
 class FaceReframe:
     def __init__(self):
-        cascade_path = os.path.join(cv2.data.haarcascades, "haarcascade_frontalface_default.xml")
-        if not os.path.exists(cascade_path):
-            raise FileNotFoundError(f"Файл каскада Хаара не найден: {cascade_path}")
-        self.cascade = cv2.CascadeClassifier(cascade_path)
+        self.cascade = None
+        try:
+            cascade_dir = getattr(cv2, "data", None) and getattr(cv2.data, "haarcascades", None)
+            if cascade_dir:
+                cascade_path = os.path.join(cascade_dir, "haarcascade_frontalface_default.xml")
+                if os.path.exists(cascade_path):
+                    self.cascade = cv2.CascadeClassifier(cascade_path)
+        except Exception:
+            self.cascade = None
 
     def detect_face_center_x(self, frame_bgr: np.ndarray) -> int | None:
         """Находит центр самого крупного лица в кадре по горизонтали (X)."""
+        if self.cascade is None:
+            return None
         gray = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
         faces = self.cascade.detectMultiScale(
             gray,
