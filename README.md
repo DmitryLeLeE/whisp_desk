@@ -16,7 +16,7 @@
   <img src="https://img.shields.io/badge/Privacy-100%25%20Offline-10b981?style=flat-square&logo=shield" alt="100% Offline">
   <a href="https://github.com/DmitryLeLeE/whisp"><img src="https://img.shields.io/badge/AI-Whisp%201.2.2-f59e0b?style=flat-square" alt="Whisp"></a>
   <img src="https://img.shields.io/badge/Video-FFmpeg%20Pro-007808?style=flat-square&logo=ffmpeg&logoColor=white" alt="FFmpeg">
-  <img src="https://img.shields.io/badge/Tests-94%20passed-success?style=flat-square" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-91%20passed-success?style=flat-square" alt="Tests">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="License"></a>
 </p>
 
