@@ -285,160 +285,13 @@ export default function SubtitlesPanel({ pid, project: _project, cues, busy, onJ
   };
 
   const chosen = wm?.models.find((m) => m.name === model);
+  const [stab, setStab] = useState<"whisp" | "import">("whisp");
   const whispOk = wm?.info.available ?? true;
   const langs = wm ? Object.entries(wm.languages).filter(([k]) => k !== "auto") : [];
 
   return (
-    <div className="grid2">
+    <div className="grid2 subs-layout">
       <div className="stack">
-        {/* Whisp распознавание речи */}
-        <section className="card">
-          <div className="card-title">
-            <span className="num"><Icon name="mic" /></span>
-            <h2>{t("subs.whisp_title")}</h2>
-          </div>
-
-          {!whispOk && (
-            <div className="notice warn">
-              <Icon name="alert" /> Whisp недоступен в этой копии программы. Импортируйте готовые субтитры ниже.
-            </div>
-          )}
-
-          <p className="muted small">
-            {lang === "ru"
-              ? "Распознавание идёт на вашем компьютере. Выберите модель: чем больше, тем точнее и медленнее. Нужная модель скачается сама при первом запуске, заранее её можно скачать в «Настройки и модели»."
-              : "On-device AI speech transcription. Turbo model is recommended for high accuracy and speed."}
-          </p>
-
-          {wm && <ModelCards compact models={wm.models} selected={model} onSelect={setModel} onChanged={loadModels} onError={setError} />}
-
-          <div className="fields">
-            <label>
-              {lang === "ru" ? "Язык исходной речи" : "Spoken Language"}
-              <select value={language} onChange={(e) => setLanguage(e.target.value)}>
-                <option value="auto">{lang === "ru" ? "Определить автоматически" : "Auto detect"}</option>
-                {langs.map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-              </select>
-            </label>
-            <label>
-              {lang === "ru" ? "Устройство" : "Compute Device"}
-              <select value={device} onChange={(e) => setDevice(e.target.value)}>
-                <option value="auto">{lang === "ru" ? "Авто (NVIDIA GPU / CPU)" : "Auto (NVIDIA GPU / CPU)"}</option>
-                <option value="cpu">CPU</option>
-                <option value="cuda">NVIDIA GPU (CUDA)</option>
-              </select>
-            </label>
-          </div>
-
-          <details className="more">
-            <summary>{lang === "ru" ? "Параметры перевода и форматирования" : "Translation & Formatting Options"}</summary>
-            <div className="fields">
-              <label>
-                {lang === "ru" ? "Символов в строке (0 — авто)" : "Max characters per line"}
-                <input type="number" min={0} max={120} value={lineChars} onChange={(e) => setLineChars(Math.max(0, Number(e.target.value)))} />
-              </label>
-              <label>
-                {lang === "ru" ? "Сразу перевести на язык (NLLB-200)" : "Translate to language (NLLB-200)"}
-                <select value={translateTo} onChange={(e) => { setTranslateTo(e.target.value); if (e.target.value) setToEnglish(false); }}>
-                  <option value="">{lang === "ru" ? "Не переводить" : "Do not translate"}</option>
-                  {langs.map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                </select>
-              </label>
-            </div>
-            <label className="check">
-              <input type="checkbox" checked={vad} onChange={(e) => setVad(e.target.checked)} />
-              {lang === "ru" ? "Фильтр VAD (пропуск пауз и тишины при распознавании)" : "VAD speech filter (suppress background silence)"}
-            </label>
-            <label className="check">
-              <input type="checkbox" checked={toEnglish} disabled={!!translateTo} onChange={(e) => setToEnglish(e.target.checked)} />
-              {lang === "ru" ? "Переводить сразу на английский средствами Whisper" : "Direct translate to English via Whisper"}
-            </label>
-            <div style={{ marginTop: 10 }}>
-              <label>
-                {lang === "ru" ? "Словарь терминов и имён (Initial Prompt)" : "Custom Vocabulary & Terms (Initial Prompt)"}
-                <input
-                  type="text"
-                  placeholder={lang === "ru" ? "Whisp, DaVinci, Premiere Pro, FastAPI, FFmpeg, редкие термины..." : "Whisp, DaVinci, Premiere Pro, FastAPI, names, acronyms..."}
-                  value={initialPrompt}
-                  onChange={(e) => setInitialPrompt(e.target.value)}
-                  style={{ width: "100%", marginTop: 4 }}
-                />
-              </label>
-              <span className="small muted" style={{ display: "block", marginTop: 3 }}>
-                {lang === "ru"
-                  ? "Задайте через запятую сложные слова, бренды и имена: Whisper использует их как контекст и пишет без ошибок."
-                  : "Comma-separated technical terms, names, and brands to guide the AI decoder."}
-              </span>
-            </div>
-          </details>
-
-          <div className="row wrap">
-            <button className="primary big" onClick={transcribe} disabled={busy || !whispOk || !model}>
-              <Icon name="mic" /> {t("subs.btn.transcribe")}
-            </button>
-            {chosen && chosen.downloaded === false && (
-              <span className="muted small">
-                {lang === "ru" ? `Модель «${chosen.name}» скачается автоматически.` : `Model "${chosen.name}" will be downloaded first.`}
-              </span>
-            )}
-          </div>
-        </section>
-
-        {/* Быстрый перевод готовых субтитров и импорт */}
-        <section className="card">
-          <div className="card-title">
-            <span className="num"><Icon name="globe" /></span>
-            <h2>{lang === "ru" ? "Перевод и импорт файлов" : "Translation & File Import"}</h2>
-          </div>
-
-          {cues.length > 0 && (
-            <div className="col" style={{ padding: "12px 14px", background: "var(--panel2)", borderRadius: 10, border: "1px solid var(--line)" }}>
-              <b>{lang === "ru" ? "Машинный перевод имеющихся субтитров" : "Translate Current Subtitles"}</b>
-              <p className="muted small">
-                {lang === "ru"
-                  ? "Переводит текст реплик без повторной долгой обработки звука."
-                  : "Translates subtitle cues directly without re-processing audio."}
-              </p>
-              <div className="row wrap">
-                <select value={quickTargetLang} onChange={(e) => setQuickTargetLang(e.target.value)} style={{ minWidth: 160 }}>
-                  {langs.map(([k, v]) => <option key={k} value={k}>{v} ({k})</option>)}
-                </select>
-                <button onClick={translateSubtitles} disabled={busy || !whispOk}>
-                  <Icon name="globe" /> {t("subs.btn.translate_only")}
-                </button>
-              </div>
-            </div>
-          )}
-
-          <div className="row wrap" style={{ marginTop: 4 }}>
-            <input ref={file} type="file" accept=".srt,.vtt,.ass,.ssa,.txt,.json" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) importFile(f); e.target.value = ""; }} />
-            <button onClick={() => file.current?.click()}>
-              <Icon name="file" /> {t("subs.import_btn")}
-            </button>
-            <span className="muted small">SRT, VTT, ASS, TXT, JSON</span>
-          </div>
-
-          <div style={{ marginTop: 14, padding: "10px 12px", background: "var(--panel2)", borderRadius: 8, border: "1px solid var(--line)" }}>
-            <span className="small muted" style={{ display: "block", marginBottom: 6, fontWeight: 600 }}>
-              {lang === "ru" ? "Стили оформления субтитров для рендера (Hardsub):" : "Hardsub Style Presets:"}
-            </span>
-            <div className="row wrap" style={{ gap: 6 }}>
-              <span className="badge">Accent Bold (Жёлтый)</span>
-              <span className="badge">Cyber Neon (Циан)</span>
-              <span className="badge">Minimal (Белый)</span>
-              <span className="badge">Классический</span>
-            </div>
-            <p className="small muted" style={{ margin: "6px 0 0", fontSize: 11 }}>
-              {lang === "ru"
-                ? "Шаблон оформления выбирается во вкладке Экспорт перед запуском финального рендера."
-                : "Choose your desired visual template in the Export tab before rendering."}
-            </p>
-          </div>
-
-          {msg && <p className="ok">{msg}</p>}
-          {error && <p className="error">{error}</p>}
-        </section>
-      </div>
 
       {/* Список и предпросмотр реплик */}
       <section className="card" data-tour="subs-table">
@@ -732,6 +585,166 @@ export default function SubtitlesPanel({ pid, project: _project, cues, busy, onJ
           </>
         )}
       </section>
+      </div>
+
+      <div className="stack">
+        <div className="ptabs" role="tablist">
+          {([["whisp", "Распознавание речи"], ["import", "Перевод и импорт"]] as const).map(([k, label]) => (
+            <button key={k} role="tab" aria-selected={stab === k} className={stab === k ? "active" : ""} onClick={() => setStab(k)}>{label}</button>
+          ))}
+        </div>
+        {stab === "whisp" && (<>
+        {/* Whisp распознавание речи */}
+        <section className="card">
+          <div className="card-title">
+            <span className="num"><Icon name="mic" /></span>
+            <h2>{t("subs.whisp_title")}</h2>
+          </div>
+
+          {!whispOk && (
+            <div className="notice warn">
+              <Icon name="alert" /> Whisp недоступен в этой копии программы. Импортируйте готовые субтитры ниже.
+            </div>
+          )}
+
+          <p className="muted small">
+            {lang === "ru"
+              ? "Распознавание идёт на вашем компьютере. Выберите модель: чем больше, тем точнее и медленнее. Нужная модель скачается сама при первом запуске, заранее её можно скачать в «Настройки и модели»."
+              : "On-device AI speech transcription. Turbo model is recommended for high accuracy and speed."}
+          </p>
+
+          {wm && <ModelCards compact models={wm.models} selected={model} onSelect={setModel} onChanged={loadModels} onError={setError} />}
+
+          <div className="fields">
+            <label>
+              {lang === "ru" ? "Язык исходной речи" : "Spoken Language"}
+              <select value={language} onChange={(e) => setLanguage(e.target.value)}>
+                <option value="auto">{lang === "ru" ? "Определить автоматически" : "Auto detect"}</option>
+                {langs.map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+            </label>
+            <label>
+              {lang === "ru" ? "Устройство" : "Compute Device"}
+              <select value={device} onChange={(e) => setDevice(e.target.value)}>
+                <option value="auto">{lang === "ru" ? "Авто (NVIDIA GPU / CPU)" : "Auto (NVIDIA GPU / CPU)"}</option>
+                <option value="cpu">CPU</option>
+                <option value="cuda">NVIDIA GPU (CUDA)</option>
+              </select>
+            </label>
+          </div>
+
+          <details className="more">
+            <summary>{lang === "ru" ? "Параметры перевода и форматирования" : "Translation & Formatting Options"}</summary>
+            <div className="fields">
+              <label>
+                {lang === "ru" ? "Символов в строке (0 — авто)" : "Max characters per line"}
+                <input type="number" min={0} max={120} value={lineChars} onChange={(e) => setLineChars(Math.max(0, Number(e.target.value)))} />
+              </label>
+              <label>
+                {lang === "ru" ? "Сразу перевести на язык (NLLB-200)" : "Translate to language (NLLB-200)"}
+                <select value={translateTo} onChange={(e) => { setTranslateTo(e.target.value); if (e.target.value) setToEnglish(false); }}>
+                  <option value="">{lang === "ru" ? "Не переводить" : "Do not translate"}</option>
+                  {langs.map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </select>
+              </label>
+            </div>
+            <label className="check">
+              <input type="checkbox" checked={vad} onChange={(e) => setVad(e.target.checked)} />
+              {lang === "ru" ? "Фильтр VAD (пропуск пауз и тишины при распознавании)" : "VAD speech filter (suppress background silence)"}
+            </label>
+            <label className="check">
+              <input type="checkbox" checked={toEnglish} disabled={!!translateTo} onChange={(e) => setToEnglish(e.target.checked)} />
+              {lang === "ru" ? "Переводить сразу на английский средствами Whisper" : "Direct translate to English via Whisper"}
+            </label>
+            <div style={{ marginTop: 10 }}>
+              <label>
+                {lang === "ru" ? "Словарь терминов и имён (Initial Prompt)" : "Custom Vocabulary & Terms (Initial Prompt)"}
+                <input
+                  type="text"
+                  placeholder={lang === "ru" ? "Whisp, DaVinci, Premiere Pro, FastAPI, FFmpeg, редкие термины..." : "Whisp, DaVinci, Premiere Pro, FastAPI, names, acronyms..."}
+                  value={initialPrompt}
+                  onChange={(e) => setInitialPrompt(e.target.value)}
+                  style={{ width: "100%", marginTop: 4 }}
+                />
+              </label>
+              <span className="small muted" style={{ display: "block", marginTop: 3 }}>
+                {lang === "ru"
+                  ? "Задайте через запятую сложные слова, бренды и имена: Whisper использует их как контекст и пишет без ошибок."
+                  : "Comma-separated technical terms, names, and brands to guide the AI decoder."}
+              </span>
+            </div>
+          </details>
+
+          <div className="row wrap">
+            <button className="primary big" onClick={transcribe} disabled={busy || !whispOk || !model}>
+              <Icon name="mic" /> {t("subs.btn.transcribe")}
+            </button>
+            {chosen && chosen.downloaded === false && (
+              <span className="muted small">
+                {lang === "ru" ? `Модель «${chosen.name}» скачается автоматически.` : `Model "${chosen.name}" will be downloaded first.`}
+              </span>
+            )}
+          </div>
+        </section>
+
+        </>)}
+        {stab === "import" && (<>
+        {/* Быстрый перевод готовых субтитров и импорт */}
+        <section className="card">
+          <div className="card-title">
+            <span className="num"><Icon name="globe" /></span>
+            <h2>{lang === "ru" ? "Перевод и импорт файлов" : "Translation & File Import"}</h2>
+          </div>
+
+          {cues.length > 0 && (
+            <div className="col" style={{ padding: "12px 14px", background: "var(--panel2)", borderRadius: 10, border: "1px solid var(--line)" }}>
+              <b>{lang === "ru" ? "Машинный перевод имеющихся субтитров" : "Translate Current Subtitles"}</b>
+              <p className="muted small">
+                {lang === "ru"
+                  ? "Переводит текст реплик без повторной долгой обработки звука."
+                  : "Translates subtitle cues directly without re-processing audio."}
+              </p>
+              <div className="row wrap">
+                <select value={quickTargetLang} onChange={(e) => setQuickTargetLang(e.target.value)} style={{ minWidth: 160 }}>
+                  {langs.map(([k, v]) => <option key={k} value={k}>{v} ({k})</option>)}
+                </select>
+                <button onClick={translateSubtitles} disabled={busy || !whispOk}>
+                  <Icon name="globe" /> {t("subs.btn.translate_only")}
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="row wrap" style={{ marginTop: 4 }}>
+            <input ref={file} type="file" accept=".srt,.vtt,.ass,.ssa,.txt,.json" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) importFile(f); e.target.value = ""; }} />
+            <button onClick={() => file.current?.click()}>
+              <Icon name="file" /> {t("subs.import_btn")}
+            </button>
+            <span className="muted small">SRT, VTT, ASS, TXT, JSON</span>
+          </div>
+
+          <div style={{ marginTop: 14, padding: "10px 12px", background: "var(--panel2)", borderRadius: 8, border: "1px solid var(--line)" }}>
+            <span className="small muted" style={{ display: "block", marginBottom: 6, fontWeight: 600 }}>
+              {lang === "ru" ? "Стили оформления субтитров для рендера (Hardsub):" : "Hardsub Style Presets:"}
+            </span>
+            <div className="row wrap" style={{ gap: 6 }}>
+              <span className="badge">Accent Bold (Жёлтый)</span>
+              <span className="badge">Cyber Neon (Циан)</span>
+              <span className="badge">Minimal (Белый)</span>
+              <span className="badge">Классический</span>
+            </div>
+            <p className="small muted" style={{ margin: "6px 0 0", fontSize: 11 }}>
+              {lang === "ru"
+                ? "Шаблон оформления выбирается во вкладке Экспорт перед запуском финального рендера."
+                : "Choose your desired visual template in the Export tab before rendering."}
+            </p>
+          </div>
+
+          {msg && <p className="ok">{msg}</p>}
+          {error && <p className="error">{error}</p>}
+        </section>
+        </>)}
+      </div>
     </div>
   );
 }

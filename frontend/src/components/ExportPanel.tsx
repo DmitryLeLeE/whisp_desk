@@ -269,6 +269,7 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
     ["v3", lang === "ru" ? "Auto-Editor .v3 проект" : "Auto-Editor .v3 project"],
   ];
 
+  const [rtab, setRtab] = useState<"nle" | "extras" | "versions">("nle");
   const hasOut = files.some((f) => f.name.endsWith(".mp4"));
 
   return (
@@ -634,87 +635,15 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
           )}
         </section>
 
-        {/* Умные главы (YouTube Chapters) */}
-        <section className="card">
-          <div className="card-title" style={{ justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
-            <div className="row">
-              <span className="num"><Icon name="captions" /></span>
-              <h2>{t("chapters.title")}</h2>
-            </div>
-            <div className="row" style={{ gap: 8 }}>
-              <button className="primary small" onClick={generateChapters} disabled={loadingChapters || busy} title="Сгенерировать смысловые главы по тексту и паузам">
-                <Icon name="sparkles" /> {loadingChapters ? t("common.loading") : t("chapters.generate")}
-              </button>
-              {chapters.length > 0 && (
-                <button className="ghost small" onClick={copyChapters} title={t("chapters.copy_desc")}>
-                  <Icon name="file" /> {t("chapters.copy_desc")}
-                </button>
-              )}
-            </div>
-          </div>
-          <p className="muted small">{t("chapters.hint")}</p>
-
-          {chapters.length > 0 && (
-            <ul className="list" style={{ maxHeight: 220, overflow: "auto" }}>
-              {chapters.map((ch, idx) => {
-                const s = Math.floor(ch.time_ms / 1000);
-                const m = Math.floor(s / 60);
-                const sec = s % 60;
-                const h = Math.floor(m / 60);
-                const min = m % 60;
-                const ts = h > 0 ? `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}` : `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
-                return (
-                  <li key={idx} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 10px" }}>
-                    <code style={{ minWidth: 65, color: "var(--accent)", fontWeight: 700 }}>{ts}</code>
-                    <input
-                      className="grow"
-                      value={ch.title}
-                      onChange={(e) => {
-                        const updated = [...chapters];
-                        updated[idx] = { ...updated[idx], title: e.target.value };
-                        setChapters(updated);
-                        api.put(`/api/projects/${pid}/chapters`, { chapters: updated }).catch(() => undefined);
-                      }}
-                    />
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </section>
-
-        {/* Стоп-кадр / Обложка */}
-        <section className="card">
-          <div className="card-title" style={{ justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
-            <div className="row">
-              <span className="num"><Icon name="image" /></span>
-              <h2>{lang === "ru" ? "Обложка видео (Стоп-кадр)" : "Video Thumbnail (Cover Art)"}</h2>
-            </div>
-            <button className="primary small" onClick={downloadThumbnail}>
-              <Icon name="download" /> {lang === "ru" ? "Скачать стоп-кадр (HD)" : "Download HD Frame"}
-            </button>
-          </div>
-          <p className="muted small">
-            {lang === "ru"
-              ? "Захват кадра в оригинальном качестве без пережатия для превью на YouTube или в соцсетях."
-              : "Capture full-resolution video frame for YouTube or social media cover art."}
-          </p>
-          <div style={{ marginTop: 8, display: "flex", gap: 16, alignItems: "center" }}>
-            <img
-              src={`/api/projects/${pid}/frame?time_ms=1000`}
-              alt="Thumbnail preview"
-              style={{ width: 160, height: 90, objectFit: "cover", borderRadius: 6, border: "1px solid var(--line)" }}
-            />
-            <div className="small muted">
-              {lang === "ru"
-                ? "Вы также можете сохранить любой конкретный момент прямо в окне Монтажа кнопкой «Стоп-кадр»."
-                : "You can also capture any specific moment directly in the Editor timeline."}
-            </div>
-          </div>
-        </section>
       </div>
 
       <div className="stack">
+        <div className="ptabs" role="tablist">
+          {([["nle", "Монтажные программы"], ["extras", "Главы и обложка"], ["versions", "Версии монтажа"]] as const).map(([k, label]) => (
+            <button key={k} role="tab" aria-selected={rtab === k} className={rtab === k ? "active" : ""} onClick={() => setRtab(k)}>{label}</button>
+          ))}
+        </div>
+        {rtab === "nle" && (<>
         {/* Экспорт проекта во внешние монтажные программы */}
         <section className="card">
           <div className="card-title">
@@ -796,6 +725,88 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
           </div>
         </section>
 
+        </>)}
+        {rtab === "extras" && (<>
+        {/* Умные главы (YouTube Chapters) */}
+        <section className="card">
+          <div className="card-title" style={{ justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+            <div className="row">
+              <span className="num"><Icon name="captions" /></span>
+              <h2>{t("chapters.title")}</h2>
+            </div>
+            <div className="row" style={{ gap: 8 }}>
+              <button className="primary small" onClick={generateChapters} disabled={loadingChapters || busy} title="Сгенерировать смысловые главы по тексту и паузам">
+                <Icon name="sparkles" /> {loadingChapters ? t("common.loading") : t("chapters.generate")}
+              </button>
+              {chapters.length > 0 && (
+                <button className="ghost small" onClick={copyChapters} title={t("chapters.copy_desc")}>
+                  <Icon name="file" /> {t("chapters.copy_desc")}
+                </button>
+              )}
+            </div>
+          </div>
+          <p className="muted small">{t("chapters.hint")}</p>
+
+          {chapters.length > 0 && (
+            <ul className="list" style={{ maxHeight: 220, overflow: "auto" }}>
+              {chapters.map((ch, idx) => {
+                const s = Math.floor(ch.time_ms / 1000);
+                const m = Math.floor(s / 60);
+                const sec = s % 60;
+                const h = Math.floor(m / 60);
+                const min = m % 60;
+                const ts = h > 0 ? `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}` : `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+                return (
+                  <li key={idx} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 10px" }}>
+                    <code style={{ minWidth: 65, color: "var(--accent)", fontWeight: 700 }}>{ts}</code>
+                    <input
+                      className="grow"
+                      value={ch.title}
+                      onChange={(e) => {
+                        const updated = [...chapters];
+                        updated[idx] = { ...updated[idx], title: e.target.value };
+                        setChapters(updated);
+                        api.put(`/api/projects/${pid}/chapters`, { chapters: updated }).catch(() => undefined);
+                      }}
+                    />
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+
+        {/* Стоп-кадр / Обложка */}
+        <section className="card">
+          <div className="card-title" style={{ justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+            <div className="row">
+              <span className="num"><Icon name="image" /></span>
+              <h2>{lang === "ru" ? "Обложка видео (Стоп-кадр)" : "Video Thumbnail (Cover Art)"}</h2>
+            </div>
+            <button className="primary small" onClick={downloadThumbnail}>
+              <Icon name="download" /> {lang === "ru" ? "Скачать стоп-кадр (HD)" : "Download HD Frame"}
+            </button>
+          </div>
+          <p className="muted small">
+            {lang === "ru"
+              ? "Захват кадра в оригинальном качестве без пережатия для превью на YouTube или в соцсетях."
+              : "Capture full-resolution video frame for YouTube or social media cover art."}
+          </p>
+          <div style={{ marginTop: 8, display: "flex", gap: 16, alignItems: "center" }}>
+            <img
+              src={`/api/projects/${pid}/frame?time_ms=1000`}
+              alt="Thumbnail preview"
+              style={{ width: 160, height: 90, objectFit: "cover", borderRadius: 6, border: "1px solid var(--line)" }}
+            />
+            <div className="small muted">
+              {lang === "ru"
+                ? "Вы также можете сохранить любой конкретный момент прямо в окне Монтажа кнопкой «Стоп-кадр»."
+                : "You can also capture any specific moment directly in the Editor timeline."}
+            </div>
+          </div>
+        </section>
+        </>)}
+        {rtab === "versions" && (<>
         {/* Версии монтажа */}
         <section className="card">
           <div className="card-title">
@@ -834,6 +845,7 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
             </ul>
           )}
         </section>
+        </>)}
       </div>
 
       {showNotesOpen && <ShowNotesModal pid={pid} onClose={() => setShowNotesOpen(false)} />}

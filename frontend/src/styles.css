@@ -1691,3 +1691,14 @@ button.small { min-height: 24px; }
 .nle-transport-bar { gap: 12px; }
 .card-title h2 { white-space: nowrap; }
 .nle-help-box { margin-top: 14px !important; } .nle-grid { margin-bottom: 4px; }
+
+/* Панели со вкладками, как в Premiere: полоса вкладок над содержимым */
+.ptabs { display: flex; gap: 0; border-bottom: 1px solid var(--line); margin-bottom: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 3px; overflow: hidden; }
+.ptabs > button {
+  flex: 1; height: 32px; border: none; border-radius: 0; background: none; color: var(--muted); font-weight: 500;
+  border-bottom: 2px solid transparent; border-right: 1px solid var(--line); padding: 0 10px;
+}
+.ptabs > button:last-child { border-right: none; }
+.ptabs > button:hover { background: var(--panel2); color: var(--text); }
+.ptabs > button.active { background: var(--panel2); color: var(--text); font-weight: 600; border-bottom-color: var(--accent); }
+.subs-layout { grid-template-columns: minmax(380px, 1.15fr) minmax(360px, 1fr); }
