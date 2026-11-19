@@ -217,7 +217,7 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
 
   return (
     <main
-      className="page"
+      className="nle-manager-page"
       onDragOver={(e) => {
         e.preventDefault();
         if (!drag) setDrag(true);
@@ -230,23 +230,10 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
             if (e.currentTarget === e.target) setDrag(false);
           }}
           onDrop={onDrop}
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(9, 9, 11, 0.88)",
-            backdropFilter: "blur(8px)",
-            zIndex: 9999,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            border: "2px dashed var(--accent, #38bdf8)",
-            margin: 12,
-            borderRadius: 8,
-          }}
+          className="nle-drag-overlay"
         >
-          <Icon name="upload" style={{ width: 44, height: 44, color: "var(--accent)", marginBottom: 12 }} />
-          <h2 style={{ margin: "0 0 6px", fontSize: 20 }}>
+          <Icon name="upload" style={{ width: 48, height: 48, color: "var(--accent)", marginBottom: 12 }} />
+          <h2 style={{ margin: "0 0 6px", fontSize: 22, fontWeight: 700 }}>
             {lang === "ru" ? "Отпустите видеофайл для создания проекта" : "Drop video file to create project"}
           </h2>
           <p className="muted" style={{ margin: 0, fontSize: 13 }}>
@@ -254,19 +241,20 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
           </p>
         </div>
       )}
-      {/* Верхняя панель управления */}
-      <div className="page-head" style={{ alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
-        <div>
+
+      {/* Верхняя панель управления Project Manager */}
+      <div className="nle-manager-toolbar">
+        <div className="nle-manager-title-wrap">
           <div className="row" style={{ gap: 8, alignItems: "center" }}>
-            <h1 style={{ margin: 0 }}>{t("home.title")}</h1>
+            <h1 className="nle-page-title">{t("home.title")}</h1>
             {rows && rows.length > 0 && (
-              <span className="badge" style={{ fontSize: 12, padding: "2px 8px" }}>{rows.length}</span>
+              <span className="nle-counter-badge">{rows.length}</span>
             )}
           </div>
-          <p className="muted" style={{ marginTop: 2 }}>{t("home.subtitle")}</p>
+          <p className="muted small" style={{ marginTop: 2 }}>{t("home.subtitle")}</p>
         </div>
 
-        <div className="row wrap" style={{ gap: 8, alignItems: "center" }}>
+        <div className="nle-manager-actions">
           {rows && rows.length > 0 && (
             <>
               <input
@@ -274,12 +262,12 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={lang === "ru" ? "Поиск проектов…" : "Search projects…"}
-                style={{ width: 180, padding: "7px 11px", fontSize: 13 }}
+                className="nle-search-input"
               />
               <select
                 value={sortKey}
                 onChange={(e) => setSortKey(e.target.value as any)}
-                style={{ padding: "7px 10px", fontSize: 13 }}
+                className="nle-select"
               >
                 <option value="updated_desc">{lang === "ru" ? "Сначала новые" : "Recently updated"}</option>
                 <option value="updated_asc">{lang === "ru" ? "Сначала старые" : "Oldest first"}</option>
@@ -291,58 +279,65 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
           )}
 
           <button
-            className="ghost"
-            style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+            className="nle-btn-ghost"
             onClick={() => setBatchOpen(true)}
             title={lang === "ru" ? "Пакетная обработка нескольких видео" : "Batch process multiple videos"}
           >
             <Icon name="folder" /> <span>{lang === "ru" ? "Пакетная очередь" : "Batch Queue"}</span>
           </button>
 
-          <label className="button ghost" style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", margin: 0 }} title={lang === "ru" ? "Импортировать проект из архива .whisp" : "Import project from .whisp bundle"}>
-            <Icon name="folder" /> <span>{lang === "ru" ? "Импорт .whisp" : "Import .whisp"}</span>
+          <label
+            className="nle-btn-ghost"
+            style={{ cursor: "pointer", margin: 0 }}
+            title={lang === "ru" ? "Импортировать проект из архива .whisp" : "Import project from .whisp bundle"}
+          >
+            <Icon name="download" /> <span>{lang === "ru" ? "Импорт .whisp" : "Import .whisp"}</span>
             <input type="file" accept=".whisp,.zip" style={{ display: "none" }} onChange={handleImportBundle} />
           </label>
 
           <button className="primary" onClick={pick} disabled={busy} data-tour="hero-upload">
-            <Icon name="plus" /> {busy ? t("common.loading") : (lang === "ru" ? "Выбрать видео" : "Add Video")}
+            <Icon name="plus" /> {busy ? t("common.loading") : (lang === "ru" ? "Добавить видео" : "Add Video")}
           </button>
 
-          <button className="ghost" onClick={() => setShowTour(true)} title="Краткий обзор программы">
+          <button className="nle-btn-ghost small" onClick={() => setShowTour(true)} title="Краткий обзор программы">
             <Icon name="help" />
           </button>
         </div>
       </div>
 
-      {error && <p className="error">{error}</p>}
+      {error && <div className="notice bad" style={{ marginBottom: 16 }}>{error}</div>}
       {browse && <FileBrowser onPick={start} onPickMultiple={(paths) => startBatch(paths)} onClose={() => setBrowse(false)} />}
       {batchOpen && <BatchModal onClose={() => setBatchOpen(false)} onCreated={load} />}
 
       {/* Зона перетаскивания файлов */}
       <div
-        className={`hero ${drag ? "drag" : ""}`}
+        className={`nle-drop-banner ${drag ? "drag" : ""}`}
         onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
         onDragLeave={() => setDrag(false)}
         onDrop={onDrop}
-        style={{ padding: "16px 20px", marginBottom: 20, cursor: "pointer" }}
         onClick={pick}
       >
-        <Icon name="upload" className="icon-big" style={{ width: 28, height: 28 }} />
+        <div className="nle-drop-icon-box">
+          <Icon name="upload" style={{ width: 28, height: 28, color: "var(--accent)" }} />
+        </div>
         <div className="grow">
-          <b style={{ fontSize: 14 }}>{lang === "ru" ? "Перетащите видеофайл сюда или нажмите для выбора" : "Drag and drop video here or click to browse"}</b>
+          <b style={{ fontSize: 14 }}>{lang === "ru" ? "Перетащите видеофайл сюда или кликните для выбора" : "Drag and drop video here or click to browse"}</b>
           <p className="muted small" style={{ margin: "2px 0 0" }}>
             {lang === "ru"
-              ? "MP4, MOV, MKV, WebM • Анализ пауз, тишины и генерация субтитров"
+              ? "MP4, MOV, MKV, WebM • Автоматическое распознавание пауз, речи Whisper и смены сцен"
               : "MP4, MOV, MKV, WebM • Audio silence analysis & subtitle sync"}
           </p>
         </div>
+        <button className="nle-btn-ghost small" onClick={(e) => { e.stopPropagation(); pick(); }} style={{ pointerEvents: "auto" }}>
+          <Icon name="folder" /> {lang === "ru" ? "Выбрать на диске" : "Browse"}
+        </button>
       </div>
 
       {/* Сетка проектов */}
       {filteredRows === null ? (
-        <p className="muted">{t("common.loading")}</p>
+        <div className="empty" style={{ padding: 60 }}><p className="muted">{t("common.loading")}</p></div>
       ) : filteredRows.length === 0 ? (
-        <div className="empty card" style={{ padding: "60px 20px" }}>
+        <div className="empty card nle-panel-card" style={{ padding: "60px 20px", maxWidth: 520, margin: "40px auto" }}>
           <Icon name="film" style={{ width: 44, height: 44, opacity: 0.3 }} />
           <b>{search ? (lang === "ru" ? "Ничего не найдено по запросу" : "No projects match your search") : (lang === "ru" ? "У вас пока нет проектов" : "No projects yet")}</b>
           <p className="muted small" style={{ maxWidth: 400, textAlign: "center" }}>
@@ -350,43 +345,41 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
               ? "Выберите файл видеозаписи выше, чтобы создать свой первый проект чернового монтажа."
               : "Select a video file above to create your first rough-cut project."}
           </p>
-          <button className="primary" onClick={pick} disabled={busy}>
+          <button className="primary big" onClick={pick} disabled={busy}>
             <Icon name="plus" /> {lang === "ru" ? "Создать первый проект" : "Create First Project"}
           </button>
         </div>
       ) : (
-        <div className="proj-grid">
+        <div className="nle-proj-grid">
           {filteredRows.map((r) => (
-            <a key={r.id} className="proj" href={`#/p/${r.id}`}>
+            <a key={r.id} className="nle-proj-card" href={`#/p/${r.id}`}>
               <div className="thumb">
                 {r.thumb ? <img src={r.thumb} alt="" loading="lazy" /> : <Icon name="film" style={{ width: 36, height: 36, opacity: 0.4 }} />}
                 {r.duration_ms ? <span className="dur">{fmtTime(r.duration_ms, false)}</span> : null}
+                {r.removed_ms ? <span className="saved-badge">-{fmtTime(r.removed_ms, false)}</span> : null}
               </div>
               <div className="body">
                 <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
-                  <b style={{ lineHeight: 1.3 }}>{r.name}</b>
+                  <b className="pname-text">{r.name}</b>
                 </div>
-                <span className="muted small" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                <span className="muted small file-sub" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                   {r.filename || (typesMap[r.type] ?? r.type)}
                 </span>
                 {r.broken ? <span className="badge bad">Проект повреждён</span> : (
                   <div className="steps-mini">
-                    {r.removed_ms ? (
-                      <span className="badge ok">-{fmtTime(r.removed_ms, false)}</span>
-                    ) : null}
                     <span className={`badge ${r.has_plan ? "ok" : ""}`}>{r.has_plan ? "Монтаж" : "Ждёт анализа"}</span>
                     {r.has_subtitles && <span className="badge ok">Субтитры</span>}
                     {r.rendered && <span className="badge ok">Готово</span>}
                   </div>
                 )}
-                <div className="row" style={{ alignItems: "center", gap: 6, marginTop: 4 }}>
+                <div className="row" style={{ alignItems: "center", gap: 6, marginTop: "auto", paddingTop: 8, borderTop: "1px solid var(--line)" }}>
                   <span className="muted small grow">
                     {new Date(r.updated).toLocaleDateString(lang === "ru" ? "ru-RU" : "en-US", { month: "short", day: "numeric" })}
                   </span>
-                  <button className="ghost small" onClick={(e) => duplicate(r, e)} aria-label="Дублировать проект" title={lang === "ru" ? "Создать копию проекта" : "Duplicate Project"}>
+                  <button className="nle-btn-micro" onClick={(e) => duplicate(r, e)} aria-label="Дублировать проект" title={lang === "ru" ? "Создать копию проекта" : "Duplicate Project"}>
                     <Icon name="copy" />
                   </button>
-                  <button className="ghost danger small" onClick={(e) => remove(r, e)} aria-label="Удалить проект" title={t("common.delete")}>
+                  <button className="nle-btn-micro danger" onClick={(e) => remove(r, e)} aria-label="Удалить проект" title={t("common.delete")}>
                     <Icon name="trash" />
                   </button>
                 </div>

@@ -164,7 +164,6 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
   const [isMuted, setIsMuted] = useState(false);
   const [msg, setMsg] = useState("");
   const [thumbs, setThumbs] = useState<Thumbs | null>(null);
-  const [showScenes, setShowScenes] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showInsights, setShowInsights] = useState(false);
   const [showPatterns, setShowPatterns] = useState(false);
@@ -176,6 +175,7 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
   });
   const [editingTc, setEditingTc] = useState(false);
   const [tcInput, setTcInput] = useState("");
+  const [inspectorTab, setInspectorTab] = useState<"decisions" | "params" | "scenes">("decisions");
 
   const rangeEnd = useRef<number | null>(null);
   const segsRef = useRef(segs);
@@ -362,7 +362,6 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
     }
   };
 
-  const selected = segs.find((s) => s.id === selectedId) ?? null;
   const here = segAt(current);
   const frameMs = 1000 / fps;
   const snapMs = (ms: number) => Math.round(Math.round(ms / frameMs) * frameMs);
@@ -543,35 +542,36 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
   const cutPercent = Math.round((stats.removed_ms / (stats.source_ms || 1)) * 100);
 
   return (
-    <div className="editor">
-      <div className="player-row">
-        <div className={`monitor-panel ${isFullscreenMonitor ? "fullscreen-monitor" : ""}`}>
+    <div className="nle-editor-layout">
+      {/* Верхняя часть: Видеомонитор + Инспектор решений */}
+      <div className="nle-upper-deck">
+        {/* Программный видеомонитор */}
+        <div className={`nle-monitor-panel ${isFullscreenMonitor ? "fullscreen-monitor" : ""}`}>
           <div className="studio-panel-bar">
             <span className="studio-panel-title">
-              <Icon name="film" /> {lang === "ru" ? "МОНИТОР ПРОГРАММЫ" : "PROGRAM MONITOR"}
+              <span className="rec-indicator" /> {lang === "ru" ? "ПРОГРАММНЫЙ МОНИТОР" : "PROGRAM MONITOR"}
             </span>
             <div className="row" style={{ gap: 6, marginLeft: "auto", alignItems: "center" }}>
               <span className="badge small" style={{ background: "rgba(255,255,255,0.06)", fontSize: 10, padding: "2px 6px" }}>
                 {project.metadata?.video ? `${project.metadata.video.width}×${project.metadata.video.height}` : "1080p"}
               </span>
               <button
-                className="ghost small"
+                className="nle-btn-ghost small"
                 onClick={captureFrame}
                 title={lang === "ru" ? "Сохранить HD стоп-кадр" : "Capture HD Frame"}
-                style={{ padding: "2px 7px", fontSize: 11 }}
               >
                 <Icon name="image" /> HD
               </button>
               <button
-                className="ghost small"
+                className="nle-btn-ghost small"
                 onClick={() => setIsFullscreenMonitor(!isFullscreenMonitor)}
                 title={lang === "ru" ? "Во весь экран (~ / F11)" : "Fullscreen toggle (~ / F11)"}
-                style={{ padding: "2px 7px", fontSize: 11 }}
               >
                 <Icon name={isFullscreenMonitor ? "minimize" : "maximize"} /> {isFullscreenMonitor ? (lang === "ru" ? "Выход" : "Exit") : (lang === "ru" ? "Экран" : "Full")}
               </button>
             </div>
           </div>
+
           <div className="player">
             {project.has_proxy ? (
               <>
@@ -595,84 +595,94 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
               <div className="cutflag">{lang === "ru" ? "вырезается" : "cut"}</div>
             )}
           </div>
-        </div>
 
-        <div className="side">
-          <div className="studio-panel-bar" style={{ marginBottom: 2 }}>
-            <span className="studio-panel-title">
-              <Icon name="sliders" /> {lang === "ru" ? "Параметры монтажа" : "Edit Decisions"}
-            </span>
-            <button
-              className="ghost small"
-              onClick={() => setShowPatterns(true)}
-              title={lang === "ru" ? "Умные шаблоны авто-монтажа" : "Smart Assembly Templates"}
-              style={{ fontWeight: 600, color: "var(--accent)" }}
-            >
-              <Icon name="zap" /> {lang === "ru" ? "Шаблоны сборки" : "Templates"}
-            </button>
-          </div>
-
-          <div className="stats">
-            <div>
-              <span>{t("editor.stats.source")}</span>
-              <b>{fmtTime(stats.source_ms, false)}</b>
-            </div>
-            <div>
-              <span>{t("editor.stats.output")}</span>
-              <b>{fmtTime(stats.output_ms, false)}</b>
-            </div>
-            <div>
-              <span>{t("editor.stats.saved")}</span>
-              <b style={{ color: "var(--keep)" }}>-{cutPercent}%</b>
-            </div>
-            <div>
-              <span>{t("editor.stats.unreviewed")}</span>
-              <b style={{ color: stats.unreviewed > 0 ? "var(--warn)" : "var(--ok)" }}>{stats.unreviewed}</b>
-            </div>
-          </div>
-
-          <div className="reviewbar" title={`Проверено ${stats.segments - stats.unreviewed} из ${stats.segments}`}>
-            <i style={{ width: `${stats.segments ? ((stats.segments - stats.unreviewed) / stats.segments) * 100 : 0}%` }} />
-          </div>
-
-          {msg && <p className="ok">{msg}</p>}
-
-          <div className="row wrap">
-            <button className="primary" onClick={() => reviewNext(true)} disabled={busy || stats.unreviewed === 0} title="Enter">
-              <Icon name="check" /> {t("editor.accept_next")}
-            </button>
-            <button onClick={() => reviewNext(false)} disabled={stats.unreviewed === 0} title="N">
-              {t("editor.next_unreviewed")}
-            </button>
-            {stats.unreviewed > 0 && (
-              <button className="ghost small" onClick={acceptAll} disabled={busy} title="Принять все предложения авто-монтажа">
-                <Icon name="check" /> {lang === "ru" ? `Принять всё (${stats.unreviewed})` : `Accept All (${stats.unreviewed})`}
+          {/* Интегрированная транспортная панель монитора */}
+          <div className="nle-transport-bar">
+            <div className="nle-transport-controls">
+              <button
+                className="nle-btn-ctrl"
+                onClick={() => {
+                  const tNext = Math.max(0, current - frameMs);
+                  seek(tNext);
+                  if (!playing && audioScrub) playScrubBurst(tNext);
+                }}
+                title={lang === "ru" ? "Кадр назад (←)" : "Step 1 frame backward (←)"}
+              >
+                ◀
               </button>
-            )}
-            <button onClick={() => history("undo")} disabled={!payload.can_undo || busy} title="Ctrl+Z">
-              {t("editor.undo")}
-            </button>
-            <button onClick={() => history("redo")} disabled={!payload.can_redo || busy} title="Ctrl+Shift+Z">
-              {t("editor.redo")}
-            </button>
-          </div>
+              <button
+                className={`nle-btn-play ${playing ? "active" : ""}`}
+                onClick={togglePlay}
+                title={playing ? (lang === "ru" ? "Пауза (Space)" : "Pause (Space)") : (lang === "ru" ? "Воспроизведение (Space)" : "Play (Space)")}
+              >
+                <Icon name={playing ? "pause" : "play"} />
+              </button>
+              <button
+                className="nle-btn-ctrl"
+                onClick={() => {
+                  const tNext = Math.min(plan.duration_ms, current + frameMs);
+                  seek(tNext);
+                  if (!playing && audioScrub) playScrubBurst(tNext);
+                }}
+                title={lang === "ru" ? "Кадр вперёд (→)" : "Step 1 frame forward (→)"}
+              >
+                ▶
+              </button>
+            </div>
 
-          <form className="row" onSubmit={(e) => { e.preventDefault(); const ms = parseTime(jump); if (ms != null) seek(ms); }}>
-            <input value={jump} onChange={(e) => setJump(e.target.value)} placeholder="01:23.500" style={{ maxWidth: 160 }} />
-            <button>{lang === "ru" ? "Перейти" : "Jump"}</button>
-          </form>
+            {/* Дисплей таймкода с мгновенным переходом */}
+            <div className="nle-tc-display-wrap">
+              {editingTc ? (
+                <input
+                  autoFocus
+                  value={tcInput}
+                  onChange={(e) => setTcInput(e.target.value)}
+                  onBlur={() => {
+                    const ms = parseTime(tcInput);
+                    if (ms != null) seek(ms);
+                    setEditingTc(false);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      const ms = parseTime(tcInput);
+                      if (ms != null) seek(ms);
+                      setEditingTc(false);
+                    }
+                    if (e.key === "Escape") setEditingTc(false);
+                  }}
+                  className="tc nle-tc-input"
+                />
+              ) : (
+                <span
+                  className="tc nle-tc-readout"
+                  onClick={() => { setTcInput(fmtTime(current)); setEditingTc(true); }}
+                  title={lang === "ru" ? "Кликните для ввода точного таймкода" : "Click to edit timecode"}
+                >
+                  {fmtTime(current)}
+                </span>
+              )}
+            </div>
 
-          {/* Скорость и звук */}
-          <div className="row wrap">
-            <div className="tabs">
+            {/* Скорость воспроизведения */}
+            <div className="nle-speed-chips">
               {[0.75, 1, 1.25, 1.5, 2].map((r) => (
-                <button key={r} className={`tab-btn ${rate === r ? "active" : ""}`} onClick={() => setRate(r)}>
+                <button
+                  key={r}
+                  className={`nle-speed-chip ${rate === r ? "active" : ""}`}
+                  onClick={() => setRate(r)}
+                >
                   {r}×
                 </button>
               ))}
             </div>
-            <div className="row" style={{ marginLeft: "auto" }}>
-              <button className="ghost" onClick={() => setIsMuted(!isMuted)} title={isMuted ? "Включить звук" : "Выключить звук"}>
+
+            {/* Громкость */}
+            <div className="nle-volume-wrap">
+              <button
+                className="nle-btn-ghost small"
+                onClick={() => setIsMuted(!isMuted)}
+                title={isMuted ? "Включить звук" : "Выключить звук"}
+              >
                 <Icon name={isMuted ? "volume-x" : "volume"} />
               </button>
               <input
@@ -682,175 +692,335 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
                 step={0.05}
                 value={isMuted ? 0 : volume}
                 onChange={(e) => { setVolume(Number(e.target.value)); setIsMuted(false); }}
-                style={{ width: 80 }}
+                className="nle-vol-slider"
               />
             </div>
+
+            {/* Быстрые переключатели предпросмотра */}
+            <label className="nle-check-chip" title="Пропускать тишину и вырезанные участки">
+              <input type="checkbox" checked={skipCuts} onChange={(e) => setSkipCuts(e.target.checked)} />
+              <span>{lang === "ru" ? "Без пауз" : "Skip cuts"}</span>
+            </label>
+            <label className="nle-check-chip" title="Звук при покадровом шаге">
+              <input
+                type="checkbox"
+                checked={audioScrub}
+                onChange={(e) => {
+                  setAudioScrub(e.target.checked);
+                  try { localStorage.setItem("whisp_audio_scrub", e.target.checked.toString()); } catch {}
+                }}
+              />
+              <span>{lang === "ru" ? "Скраббинг" : "Scrub"}</span>
+            </label>
+          </div>
+        </div>
+
+        {/* Правая панель: Инспектор решений монтажа */}
+        <div className="nle-inspector-panel">
+          {/* Вкладки инспектора */}
+          <div className="nle-inspector-tabs">
+            <button
+              className={`nle-insp-tab ${inspectorTab === "decisions" ? "active" : ""}`}
+              onClick={() => setInspectorTab("decisions")}
+            >
+              <Icon name="scissors" /> <span>{lang === "ru" ? "Решения" : "Cuts"} ({rows.length})</span>
+            </button>
+            <button
+              className={`nle-insp-tab ${inspectorTab === "params" ? "active" : ""}`}
+              onClick={() => setInspectorTab("params")}
+            >
+              <Icon name="sliders" /> <span>{lang === "ru" ? "Параметры" : "Inspector"}</span>
+            </button>
+            <button
+              className={`nle-insp-tab ${inspectorTab === "scenes" ? "active" : ""}`}
+              onClick={() => setInspectorTab("scenes")}
+            >
+              <Icon name="film" /> <span>{lang === "ru" ? "Сцены" : "Scenes"} ({thumbs?.files.length ?? 0})</span>
+            </button>
           </div>
 
-          <label className="check">
-            <input type="checkbox" checked={skipCuts} onChange={(e) => setSkipCuts(e.target.checked)} />
-            {lang === "ru" ? "Предпросмотр результата (пропускать вырезаемое)" : "Preview final result (skip cuts)"}
-          </label>
-          <label className="check" style={{ marginTop: 2 }}>
-            <input
-              type="checkbox"
-              checked={audioScrub}
-              onChange={(e) => {
-                setAudioScrub(e.target.checked);
-                try { localStorage.setItem("whisp_audio_scrub", e.target.checked.toString()); } catch {}
-              }}
-            />
-            {lang === "ru" ? "Аудио-скраббинг (звук при покадровом шаге)" : "Audio Scrubbing on frame step"}
-          </label>
+          {/* Вкладка 1: Таблица решений монтажа */}
+          {inspectorTab === "decisions" && (
+            <div className="nle-tab-content decisions-content">
+              {/* Верхняя микро-панель управления списком */}
+              <div className="nle-decisions-toolbar">
+                <label className="check" style={{ fontSize: 12, margin: 0 }}>
+                  <input type="checkbox" checked={onlyUnreviewed} onChange={(e) => setOnlyUnreviewed(e.target.checked)} />
+                  <span>{lang === "ru" ? "только непроверенные" : "unreviewed only"}</span>
+                </label>
+                <div className="row" style={{ gap: 4, marginLeft: "auto", alignItems: "center" }}>
+                  <button className="primary small" onClick={() => reviewNext(true)} disabled={busy || stats.unreviewed === 0} title="Enter">
+                    <Icon name="check" /> {t("editor.accept_next")}
+                  </button>
+                  {stats.unreviewed > 0 && (
+                    <button className="nle-btn-ghost small" onClick={acceptAll} disabled={busy} title="Принять всё">
+                      {lang === "ru" ? `Принять всё (${stats.unreviewed})` : `Accept All (${stats.unreviewed})`}
+                    </button>
+                  )}
+                  <button className="nle-btn-ghost small" onClick={() => history("undo")} disabled={!payload.can_undo || busy} title="Ctrl+Z">
+                    <Icon name="arrow-left" />
+                  </button>
+                  <button className="nle-btn-ghost small" onClick={() => history("redo")} disabled={!payload.can_redo || busy} title="Ctrl+Shift+Z">
+                    <Icon name="arrow" />
+                  </button>
+                </div>
+              </div>
+
+              {msg && <div className="notice ok small" style={{ margin: "4px 8px" }}>{msg}</div>}
+              {error && <div className="notice bad small" style={{ margin: "4px 8px" }}>{error}</div>}
+
+              {/* Таблица сегментов */}
+              <div className="nle-seglist-wrap">
+                <table className="nle-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: 34 }}>#</th>
+                      <th>{lang === "ru" ? "Начало" : "Start"}</th>
+                      <th>{lang === "ru" ? "Длит." : "Dur."}</th>
+                      <th>{lang === "ru" ? "Действие" : "Action"}</th>
+                      <th>{lang === "ru" ? "Причина" : "Reason"}</th>
+                      <th style={{ textAlign: "right" }}>{lang === "ru" ? "Опции" : "Controls"}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((s) => {
+                      const idx = segs.indexOf(s);
+                      const next = segs[idx + 1];
+                      const isSel = selectedId === s.id;
+                      return (
+                        <tr
+                          key={s.id}
+                          className={`${s.action.toLowerCase()} ${isSel ? "sel" : ""}`}
+                          onClick={() => { setSelectedId(s.id); seek(s.source_start_ms); }}
+                        >
+                          <td className="idx">{idx + 1}</td>
+                          <td className="tc-cell">{fmtTime(s.source_start_ms)}</td>
+                          <td className="dur-cell">{((s.source_end_ms - s.source_start_ms) / 1000).toFixed(2)}s</td>
+                          <td>
+                            <span className={`badge ${s.action === "KEEP" ? "ok" : "bad"}`} style={{ fontSize: 10 }}>
+                              {s.action === "KEEP" ? (lang === "ru" ? "Оставить" : "Keep") : (lang === "ru" ? "Вырезать" : "Cut")}
+                            </span>
+                            {s.locked && <span className="badge small" style={{ marginLeft: 3 }}>LOCK</span>}
+                          </td>
+                          <td className="reason-cell">{REASONS[s.reason] ?? s.reason}</td>
+                          <td className="actions" onClick={(e) => e.stopPropagation()}>
+                            <button className="nle-btn-micro" title="Play" onClick={() => playRange(s.source_start_ms, s.source_end_ms)}>▶</button>
+                            <button
+                              className="nle-btn-micro"
+                              disabled={busy}
+                              title={s.action === "KEEP" ? (lang === "ru" ? "Вырезать" : "Cut") : (lang === "ru" ? "Оставить" : "Keep")}
+                              onClick={() => run({ op: "set_action", id: s.id, action: s.action === "KEEP" ? "CUT" : "KEEP" })}
+                            >
+                              {s.action === "KEEP" ? "✂" : "✓"}
+                            </button>
+                            <button
+                              className="nle-btn-micro"
+                              disabled={busy}
+                              title={s.locked ? "Unlock" : "Lock"}
+                              onClick={() => run({ op: "lock", id: s.id, locked: !s.locked })}
+                            >
+                              <Icon name={s.locked ? "unlock" : "lock"} style={{ width: 10, height: 10 }} />
+                            </button>
+                            <button
+                              className="nle-btn-micro"
+                              disabled={busy}
+                              title="Reviewed toggle"
+                              onClick={() => run({ op: "review", ids: [s.id], reviewed: !s.reviewed })}
+                            >
+                              {s.reviewed ? "✓" : "—"}
+                            </button>
+                            {next && (
+                              <button
+                                className="nle-btn-micro"
+                                disabled={busy}
+                                title="Merge with next"
+                                onClick={() => run({ op: "merge", id: s.id, second_id: next.id, action: s.action })}
+                              >
+                                ⇆
+                              </button>
+                            )}
+                            {s.action === "KEEP" && (
+                              <>
+                                <button className="nle-btn-micro" disabled={busy} title="Move up" onClick={() => moveSequence(s.id, "up")}>▲</button>
+                                <button className="nle-btn-micro" disabled={busy} title="Move down" onClick={() => moveSequence(s.id, "down")}>▼</button>
+                              </>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Вкладка 2: Параметры, статистика и шаблоны */}
+          {inspectorTab === "params" && (
+            <div className="nle-tab-content params-content">
+              <div className="stats" style={{ gridTemplateColumns: "repeat(2, 1fr)" }}>
+                <div>
+                  <span>{t("editor.stats.source")}</span>
+                  <b>{fmtTime(stats.source_ms, false)}</b>
+                </div>
+                <div>
+                  <span>{t("editor.stats.output")}</span>
+                  <b>{fmtTime(stats.output_ms, false)}</b>
+                </div>
+                <div>
+                  <span>{t("editor.stats.saved")}</span>
+                  <b style={{ color: "var(--keep)" }}>-{cutPercent}%</b>
+                </div>
+                <div>
+                  <span>{t("editor.stats.unreviewed")}</span>
+                  <b style={{ color: stats.unreviewed > 0 ? "var(--warn)" : "var(--ok)" }}>{stats.unreviewed}</b>
+                </div>
+              </div>
+
+              <div className="reviewbar" title={`Проверено ${stats.segments - stats.unreviewed} из ${stats.segments}`} style={{ margin: "10px 0" }}>
+                <i style={{ width: `${stats.segments ? ((stats.segments - stats.unreviewed) / stats.segments) * 100 : 0}%` }} />
+              </div>
+
+              <div className="col" style={{ gap: 8, marginTop: 12 }}>
+                <button className="primary" onClick={() => setShowPatterns(true)} style={{ width: "100%", justifyContent: "center" }}>
+                  <Icon name="zap" /> {lang === "ru" ? "Умные шаблоны сборки (Shorts, Подкаст)" : "Smart Assembly Presets"}
+                </button>
+                <button onClick={() => setShowInsights(true)} style={{ width: "100%", justifyContent: "center" }}>
+                  <Icon name="sliders" /> {lang === "ru" ? "Аналитика пауз и речи" : "Speech & Pause Insights"}
+                </button>
+              </div>
+
+              <div className="col" style={{ gap: 8, marginTop: 16 }}>
+                <span className="muted small" style={{ fontWeight: 600 }}>{lang === "ru" ? "БЫСТРЫЙ ПЕРЕХОД ПО ТАЙМКОДУ" : "JUMP TO TIMECODE"}</span>
+                <form className="row" onSubmit={(e) => { e.preventDefault(); const ms = parseTime(jump); if (ms != null) seek(ms); }}>
+                  <input value={jump} onChange={(e) => setJump(e.target.value)} placeholder="01:23.500" style={{ flex: 1 }} />
+                  <button>{lang === "ru" ? "Перейти" : "Jump"}</button>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Вкладка 3: Сцены */}
+          {inspectorTab === "scenes" && (
+            <div className="nle-tab-content scenes-content">
+              {thumbs && thumbs.files.length > 0 ? (
+                <div className="nle-scene-grid">
+                  {thumbs.files.map((f, i) => (
+                    <figure key={f} className="nle-scene-card" onClick={() => seek(thumbs.times_ms[i])}>
+                      <img src={`/api/projects/${pid}/thumbnails/${f}`} alt="" loading="lazy" />
+                      <figcaption>{fmtTime(thumbs.times_ms[i], false)}</figcaption>
+                    </figure>
+                  ))}
+                </div>
+              ) : (
+                <div className="empty" style={{ padding: "40px 10px" }}>
+                  <Icon name="film" style={{ opacity: 0.3, width: 32, height: 32 }} />
+                  <span className="muted small">{lang === "ru" ? "Сцены не обнаружены или анализ ещё выполняется" : "No scene cuts found"}</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Панель инструментов таймлайна */}
-      <div className="toolbar" style={{ marginTop: 12 }}>
-        <div className="row" style={{ gap: 4 }}>
+      {/* Тулбар монтажного таймлайна */}
+      <div className="nle-timeline-toolbar">
+        <div className="row" style={{ gap: 4, alignItems: "center" }}>
           <button
-            className="ghost small"
-            onClick={() => {
-              const tNext = Math.max(0, current - frameMs);
-              seek(tNext);
-              if (!playing && audioScrub) playScrubBurst(tNext);
-            }}
-            title={lang === "ru" ? "Шаг на 1 кадр назад (←)" : "Step 1 frame backward (←)"}
-            style={{ padding: "6px 9px", fontSize: 13, minWidth: 32 }}
+            className="nle-tool-btn"
+            disabled={!here || busy}
+            onClick={razorCut}
+            title={lang === "ru" ? "Лезвие: разрезать фрагмент по курсору (C)" : "Razor tool: split at playhead (C)"}
           >
-            ◀
-          </button>
-          <button onClick={togglePlay} className="primary" style={{ minWidth: 96 }}>
-            <Icon name={playing ? "pause" : "play"} /> {playing ? (lang === "ru" ? "Пауза" : "Pause") : (lang === "ru" ? "Старт" : "Play")}
+            <Icon name="scissors" /> <span>{lang === "ru" ? "Лезвие (C)" : "Razor (C)"}</span>
           </button>
           <button
-            className="ghost small"
-            onClick={() => {
-              const tNext = Math.min(plan.duration_ms, current + frameMs);
-              seek(tNext);
-              if (!playing && audioScrub) playScrubBurst(tNext);
-            }}
-            title={lang === "ru" ? "Шаг на 1 кадр вперёд (→)" : "Step 1 frame forward (→)"}
-            style={{ padding: "6px 9px", fontSize: 13, minWidth: 32 }}
+            className="nle-tool-btn"
+            onClick={() => setMarkIn(snapMs(current))}
+            title={lang === "ru" ? "Установить точку входа [In (I)" : "Mark In (I)"}
           >
-            ▶
+            [ In
+          </button>
+          <button
+            className="nle-tool-btn"
+            onClick={() => setMarkOut(snapMs(current))}
+            title={lang === "ru" ? "Установить точку выхода Out] (O)" : "Mark Out (O)"}
+          >
+            Out ]
+          </button>
+          <span className="nle-range-display">
+            {markIn != null ? fmtTime(markIn) : "—"} → {markOut != null ? fmtTime(markOut) : "—"}
+          </span>
+
+          {rangeOk && (
+            <>
+              <button className="nle-tool-btn active" onClick={() => playRange(markIn!, markOut!)}>
+                ▶ {lang === "ru" ? "Интервал" : "Range"}
+              </button>
+              <button className="nle-tool-btn danger" disabled={busy} onClick={() => run({ op: "set_range", start_ms: markIn, end_ms: markOut, action: "CUT" })}>
+                {t("editor.cut")}
+              </button>
+              <button className="nle-tool-btn success" disabled={busy} onClick={() => run({ op: "set_range", start_ms: markIn, end_ms: markOut, action: "KEEP" })}>
+                {t("editor.keep")}
+              </button>
+              <button
+                className="nle-tool-btn"
+                disabled={exportingRange || busy}
+                onClick={exportRange}
+                title={lang === "ru" ? "Быстрый рендер выделенного отрезка" : "Export range"}
+              >
+                <Icon name="download" /> {lang === "ru" ? "Экспорт отрезка" : "Export"}
+              </button>
+            </>
+          )}
+
+          <button
+            className="nle-tool-btn"
+            disabled={busy}
+            onClick={addMarkerAtCurrent}
+            title={lang === "ru" ? "Поставить маркер на таймлайне (M)" : "Add marker (M)"}
+          >
+            <Icon name="bookmark" /> <span>{lang === "ru" ? "Маркер" : "Marker"}</span>
           </button>
         </div>
-        {editingTc ? (
-          <input
-            autoFocus
-            value={tcInput}
-            onChange={(e) => setTcInput(e.target.value)}
-            onBlur={() => {
-              const ms = parseTime(tcInput);
-              if (ms != null) seek(ms);
-              setEditingTc(false);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                const ms = parseTime(tcInput);
-                if (ms != null) seek(ms);
-                setEditingTc(false);
-              }
-              if (e.key === "Escape") setEditingTc(false);
-            }}
-            className="tc"
-            style={{ width: 115, padding: "3px 8px" }}
-          />
-        ) : (
-          <span
-            className="tc"
-            onClick={() => { setTcInput(fmtTime(current)); setEditingTc(true); }}
-            title={lang === "ru" ? "Кликните для ввода точного таймкода" : "Click to edit timecode"}
-            style={{ cursor: "text" }}
-          >
-            {fmtTime(current)}
-          </span>
-        )}
 
-        <button onClick={() => setMarkIn(snapMs(current))}>[ In</button>
-        <button onClick={() => setMarkOut(snapMs(current))}>Out ]</button>
-        <span className="muted small">
-          {markIn != null ? fmtTime(markIn) : "—"} → {markOut != null ? fmtTime(markOut) : "—"}
-        </span>
-
-        {rangeOk && (
-          <>
-            <button onClick={() => playRange(markIn!, markOut!)}>▶ {lang === "ru" ? "Интервал" : "Range"}</button>
-            <button disabled={busy} onClick={() => run({ op: "set_range", start_ms: markIn, end_ms: markOut, action: "CUT" })}>
-              {t("editor.cut")}
-            </button>
-            <button disabled={busy} onClick={() => run({ op: "set_range", start_ms: markIn, end_ms: markOut, action: "KEEP" })}>
-              {t("editor.keep")}
-            </button>
-            <button
-              className="ghost small"
-              disabled={exportingRange || busy}
-              onClick={exportRange}
-              title={lang === "ru" ? "Быстрый рендер выделенного отрезка [In ... Out] в отдельный MP4" : "Quick render selected range [In ... Out] to MP4"}
-              style={{ color: "var(--accent)" }}
-            >
-              <Icon name="download" /> {lang === "ru" ? "Экспорт отрезка" : "Export Range"}
-            </button>
-          </>
-        )}
-
-        <button disabled={!here || busy} onClick={razorCut} title={lang === "ru" ? "Лезвие: разрезать фрагмент по курсору (C)" : "Razor tool: split at playhead (C)"}>
-          <Icon name="scissors" /> {lang === "ru" ? "Лезвие (C)" : "Razor (C)"}
-        </button>
-        <button
-          className="ghost small"
-          disabled={busy}
-          onClick={addMarkerAtCurrent}
-          title={lang === "ru" ? "Поставить маркер на таймлайне (M)" : "Add marker at playhead (M)"}
-        >
-          <Icon name="bookmark" /> {lang === "ru" ? "Маркер" : "Marker"}
-        </button>
-
-        <button onClick={captureFrame} title={lang === "ru" ? "Сохранить текущий стоп-кадр в HD (1080p)" : "Capture current frame in HD"}>
-          <Icon name="image" /> {lang === "ru" ? "Стоп-кадр" : "Frame"}
-        </button>
-        <button className="ghost" onClick={() => setShowInsights(true)} title={lang === "ru" ? "Аналитика речи и монтажа" : "Speech & Editing Insights"}>
-          <Icon name="sliders" /> {lang === "ru" ? "Аналитика" : "Insights"}
-        </button>
-        <button
-          className="btn-pattern"
-          onClick={() => setShowPatterns(true)}
-          title={lang === "ru" ? "Готовые шаблоны монтажа (Shorts, Подкаст, Лекция, Дубли)" : "Assembly Presets"}
-        >
-          <Icon name="sliders" /> {lang === "ru" ? "Шаблоны" : "Presets"}
-        </button>
-
-        <span className="grow" />
-
-        {/* Масштабирование */}
-        <div className="row" style={{ alignItems: "center" }}>
-          <span className="badge small accent" style={{ fontWeight: 700, letterSpacing: "0.03em" }}>
+        <div className="row" style={{ gap: 6, marginLeft: "auto", alignItems: "center" }}>
+          <span className="nle-badge-fps">
             {fps.toFixed(0)} FPS
           </span>
-          <button className="ghost" onClick={() => setPps((p) => Math.max(0.5, p * 0.75))} title={t("editor.zoom_out")}>
+          <button className="nle-btn-ghost small" onClick={() => setPps((p) => Math.max(0.5, p * 0.75))} title={t("editor.zoom_out")}>
             <Icon name="zoom-out" />
           </button>
-          <input type="range" min={0.5} max={300} step={0.5} value={pps} onChange={(e) => setPps(Number(e.target.value))} style={{ width: 100 }} />
-          <button className="ghost" onClick={() => setPps((p) => Math.min(300, p * 1.33))} title={t("editor.zoom_in")}>
+          <input
+            type="range"
+            min={0.5}
+            max={300}
+            step={0.5}
+            value={pps}
+            onChange={(e) => setPps(Number(e.target.value))}
+            className="nle-zoom-slider"
+          />
+          <button className="nle-btn-ghost small" onClick={() => setPps((p) => Math.min(300, p * 1.33))} title={t("editor.zoom_in")}>
             <Icon name="zoom-in" />
           </button>
-          <button onClick={fit}>{t("editor.zoom_fit")}</button>
+          <button className="nle-btn-ghost small" onClick={fit} title={t("editor.zoom_fit")}>
+            {t("editor.zoom_fit")}
+          </button>
           <button
-            className={`small ${followPlayhead ? "primary" : "ghost"}`}
+            className={`nle-btn-ghost small ${followPlayhead ? "active" : ""}`}
             onClick={() => setFollowPlayhead(!followPlayhead)}
             title={t("editor.autoscroll.title")}
           >
-            <Icon name="compass" /> {t("editor.autoscroll")}
+            <Icon name="compass" />
           </button>
-          <button className="ghost" onClick={() => setShowHelp(true)} title={t("common.help")}>
+          <button className="nle-btn-ghost small" onClick={() => setShowHelp(true)} title={t("common.help")}>
             <Icon name="help" />
           </button>
         </div>
       </div>
 
-      {/* Таймлайн */}
-      <div data-tour="timeline-area">
+      {/* Полноэкранная дорожка таймлайна */}
+      <div className="nle-timeline-deck" data-tour="timeline-area">
         <Timeline
           durationMs={plan.duration_ms}
           fps={fps}
@@ -872,141 +1042,24 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
         />
       </div>
 
-      <div className="legend">
-        <span className="sw keep" /> {lang === "ru" ? "оставить" : "keep"}
-        <span className="sw cut" /> {lang === "ru" ? "удалить" : "cut"}
-        <span className="sw manual" /> {lang === "ru" ? "изменено вручную" : "manual"}
-        <span className="sw unrev" /> {lang === "ru" ? "не проверено" : "unreviewed"}
-        <span className="sw scene" /> {lang === "ru" ? "смена сцены" : "scene change"}
-        <span className="muted"> · {lang === "ru" ? "границы фрагментов можно перетаскивать мышью" : "drag fragment boundaries to adjust"}</span>
-      </div>
-
-      {/* Быстрая панель подсказок по управлению */}
-      <div className="editor-hint-bar">
-        <Icon name="lightbulb" style={{ color: "var(--accent)" }} />
-        <span>
-          {lang === "ru"
-            ? "Клик по фрагменту переключает его статус (Оставить / Вырезать)."
-            : "Click segment to toggle Keep / Cut."}
-        </span>
-        <div className="pills" style={{ marginLeft: "auto" }}>
-          <span><kbd>Space</kbd> Play/Pause</span>
-          <span><kbd>J / K / L</kbd> Seek</span>
-          <span><kbd>S</kbd> Split</span>
-          <span><kbd>K</kbd> / <kbd>C</kbd> Keep/Cut</span>
+      {/* Нижняя информационная панель (статус и горячие клавиши) */}
+      <footer className="nle-editor-footer">
+        <div className="nle-legend-row">
+          <span className="sw keep" /> {lang === "ru" ? "Оставить" : "Keep"}
+          <span className="sw cut" /> {lang === "ru" ? "Удалить" : "Cut"}
+          <span className="sw manual" /> {lang === "ru" ? "Вручную" : "Manual"}
+          <span className="sw unrev" /> {lang === "ru" ? "Не проверено" : "Unreviewed"}
+          <span className="sw scene" /> {lang === "ru" ? "Смена сцены" : "Scene change"}
+        </div>
+        <div className="nle-hotkey-cheatsheet">
+          <span><kbd>Space</kbd> Play</span>
+          <span><kbd>J / K / L</kbd> Shuttle</span>
+          <span><kbd>C</kbd> Razor</span>
+          <span><kbd>X</kbd> Toggle Cut</span>
           <span><kbd>Ctrl+Z</kbd> Undo</span>
         </div>
-      </div>
+      </footer>
 
-      {error && <p className="error">{error}</p>}
-
-      {thumbs && thumbs.files.length > 0 && (
-        <div className="scenes">
-          <button className="link" onClick={() => setShowScenes(!showScenes)}>
-            {showScenes ? "▾" : "▸"} {lang === "ru" ? "Сцены" : "Scenes"} ({thumbs.files.length})
-          </button>
-          {showScenes && (
-            <div className="strip">
-              {thumbs.files.map((f, i) => (
-                <figure key={f} onClick={() => seek(thumbs.times_ms[i])}>
-                  <img src={`/api/projects/${pid}/thumbnails/${f}`} alt="" loading="lazy" />
-                  <figcaption>{fmtTime(thumbs.times_ms[i], false)}</figcaption>
-                </figure>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Список фрагментов */}
-      <div className="row" style={{ marginTop: 14 }}>
-        <h3 className="grow">{lang === "ru" ? "Список решений" : "Edit Decisions"} ({rows.length})</h3>
-        <label className="check">
-          <input type="checkbox" checked={onlyUnreviewed} onChange={(e) => setOnlyUnreviewed(e.target.checked)} />
-          {lang === "ru" ? "только непроверенные" : "unreviewed only"}
-        </label>
-        <button disabled={busy || stats.unreviewed === 0} onClick={() => run({ op: "review", reviewed: true })}>
-          {lang === "ru" ? "Отметить всё проверенным" : "Mark all as reviewed"}
-        </button>
-      </div>
-
-      <div className="seglist">
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>{lang === "ru" ? "Начало" : "Start"}</th>
-              <th>{lang === "ru" ? "Конец" : "End"}</th>
-              <th>{lang === "ru" ? "Длит." : "Dur."}</th>
-              <th>{lang === "ru" ? "Решение" : "Action"}</th>
-              <th>{lang === "ru" ? "Причина" : "Reason"}</th>
-              <th>{lang === "ru" ? "Статус" : "Status"}</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((s) => {
-              const idx = segs.indexOf(s);
-              const next = segs[idx + 1];
-              return (
-                <tr
-                  key={s.id}
-                  className={`${s.action.toLowerCase()} ${selectedId === s.id ? "sel" : ""}`}
-                  onClick={() => { setSelectedId(s.id); seek(s.source_start_ms); }}
-                >
-                  <td>{idx + 1}</td>
-                  <td>{fmtTime(s.source_start_ms)}</td>
-                  <td>{fmtTime(s.source_end_ms)}</td>
-                  <td>{((s.source_end_ms - s.source_start_ms) / 1000).toFixed(2)} с</td>
-                  <td>
-                    <span className={`badge ${s.action === "KEEP" ? "ok" : "bad"}`} style={{ fontSize: 11 }}>
-                      {s.action === "KEEP" ? (lang === "ru" ? "Оставить" : "Keep") : (lang === "ru" ? "Удалить" : "Cut")}
-                    </span>
-                    {s.locked ? " [Lock]" : ""}
-                  </td>
-                  <td>{REASONS[s.reason] ?? s.reason}</td>
-                  <td>
-                    <span className={`badge ${s.manual ? "accent" : s.reviewed ? "ok" : "muted"}`} style={{ fontSize: 11, background: "transparent" }}>
-                      {s.manual ? (lang === "ru" ? "вручную" : "manual")
-                        : s.reviewed ? (lang === "ru" ? "проверено" : "reviewed")
-                        : (lang === "ru" ? "не проверено" : "unreviewed")}
-                    </span>
-                  </td>
-                  <td className="actions" onClick={(e) => e.stopPropagation()}>
-                    <button title="Play" onClick={() => playRange(s.source_start_ms, s.source_end_ms)}>▶</button>
-                    <button disabled={busy} onClick={() => run({ op: "set_action", id: s.id, action: s.action === "KEEP" ? "CUT" : "KEEP" })}>
-                      {s.action === "KEEP" ? (lang === "ru" ? "Удалить" : "Cut") : (lang === "ru" ? "Вернуть" : "Keep")}
-                    </button>
-                    <button disabled={busy} title={s.locked ? "Unlock" : "Lock"} onClick={() => run({ op: "lock", id: s.id, locked: !s.locked })}>
-                      <Icon name={s.locked ? "unlock" : "lock"} style={{ width: 12, height: 12 }} />
-                    </button>
-                    <button disabled={busy} title="Review" onClick={() => run({ op: "review", ids: [s.id], reviewed: !s.reviewed })}>
-                      {s.reviewed ? "✓" : "—"}
-                    </button>
-                    {next && (
-                      <button disabled={busy} title="Merge" onClick={() => run({ op: "merge", id: s.id, second_id: next.id, action: s.action })}>
-                        ⇆
-                      </button>
-                    )}
-                    {s.action === "KEEP" && (
-                      <>
-                        <button disabled={busy} title={lang === "ru" ? "Сдвинуть блок раньше (Storyboarding)" : "Move up"} onClick={() => moveSequence(s.id, "up")}>
-                          ▲
-                        </button>
-                        <button disabled={busy} title={lang === "ru" ? "Сдвинуть блок позже (Storyboarding)" : "Move down"} onClick={() => moveSequence(s.id, "down")}>
-                          ▼
-                        </button>
-                      </>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {selected && <p className="muted small" style={{ marginTop: 6 }}>{lang === "ru" ? "Выбран сегмент" : "Selected segment"}: {selected.id}</p>}
       {showHelp && <ShortcutsModal onClose={() => setShowHelp(false)} />}
       {showInsights && <InsightsModal pid={pid} onClose={() => setShowInsights(false)} />}
       {showPatterns && <AutoPatternModal pid={pid} onClose={() => setShowPatterns(false)} onPayload={onPayload} />}

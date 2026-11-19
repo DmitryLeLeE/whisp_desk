@@ -44,10 +44,10 @@ const DICT: Record<Language, Record<string, string>> = {
     "home.modal.create": "Создать",
 
     // Steps
-    "step.setup": "Источник и анализ",
-    "step.editor": "Монтаж",
-    "step.subtitles": "Субтитры",
-    "step.export": "Экспорт",
+    "step.setup": "1. Исходники",
+    "step.editor": "2. Черновой монтаж",
+    "step.subtitles": "3. Субтитры",
+    "step.export": "4. Экспорт (Deliver)",
 
     // Setup Panel
     "setup.source_file": "Исходный медиафайл",
@@ -223,10 +223,10 @@ const DICT: Record<Language, Record<string, string>> = {
     "home.modal.create": "Create",
 
     // Steps
-    "step.setup": "Source & Analysis",
-    "step.editor": "Editor",
-    "step.subtitles": "Subtitles",
-    "step.export": "Export",
+    "step.setup": "1. Media Setup",
+    "step.editor": "2. Cut & Edit",
+    "step.subtitles": "3. Subtitles",
+    "step.export": "4. Deliver",
 
     // Setup Panel
     "setup.source_file": "Source Media File",

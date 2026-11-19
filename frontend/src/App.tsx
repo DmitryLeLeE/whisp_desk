@@ -19,7 +19,13 @@ const readRoute = (): Route => {
 export default function App() {
   const [route, setRoute] = useState<Route>(readRoute());
   const [sys, setSys] = useState<SettingsData | null>(null);
-  const [theme, setTheme] = useState<string>(() => { try { return localStorage.getItem("theme") ?? "dark"; } catch { return "dark"; } });
+  const [theme, setTheme] = useState<string>(() => {
+    try {
+      return localStorage.getItem("theme") ?? "dark";
+    } catch {
+      return "dark";
+    }
+  });
   const [showShortcuts, setShowShortcuts] = useState(false);
   const { lang, setLanguage, t } = useTranslation();
 
@@ -39,59 +45,104 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  useEffect(() => { api.get<SettingsData>("/api/settings").then(setSys).catch(() => setSys(null)); }, [route.name]);
+  useEffect(() => {
+    api.get<SettingsData>("/api/settings").then(setSys).catch(() => setSys(null));
+  }, [route.name]);
+
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
-    try { localStorage.setItem("theme", theme); } catch { /* хранилище недоступно */ }
+    try {
+      localStorage.setItem("theme", theme);
+    } catch {
+      /* storage unavailable */
+    }
   }, [theme]);
 
-  const open = useCallback((id: string | null) => { location.hash = id ? `#/p/${id}` : "#/"; }, []);
+  const open = useCallback((id: string | null) => {
+    location.hash = id ? `#/p/${id}` : "#/";
+  }, []);
+
   const tTools = sys?.tools;
 
   return (
-    <div className="shell">
-      <nav className="side-nav">
-        <a className="brand" href="#/">
-          <img src="/favicon.png" alt="" />
-          <span>{t("brand.title")}<small>{t("brand.sub")}</small></span>
-        </a>
-        <a className={`nav-item ${route.name === "home" || route.name === "project" ? "active" : ""}`} href="#/">
-          <Icon name="film" /> {t("nav.projects")}
-        </a>
-        <a className={`nav-item ${route.name === "settings" ? "active" : ""}`} href="#/settings">
-          <Icon name="settings" /> {t("nav.settings")}
-        </a>
+    <div className={`nle-app ${route.name === "project" ? "in-project" : "in-manager"}`}>
+      {route.name !== "project" && (
+        <header className="nle-manager-header">
+          <div className="nle-header-brand">
+            <a className="brand-logo" href="#/">
+              <img src="/favicon.png" alt="" />
+              <div className="brand-text">
+                <span className="brand-title">{t("brand.title")} {t("brand.sub")}</span>
+                <span className="brand-badge">PRO NLE 2.0</span>
+              </div>
+            </a>
+          </div>
 
-        <div className="nav-bottom">
-          {tTools && (
-            <div data-tour="nav-status">
-              <span className="sysline"><span className={`dot ${tTools.ffmpeg.available ? "on" : "off"}`} /> FFmpeg</span>
-              <span className="sysline"><span className={`dot ${tTools.whisp.available ? "on" : "off"}`} /> Whisp</span>
-              <span className="sysline"><span className={`dot ${tTools.auto_editor.available ? "on" : ""}`} /> Auto-Editor</span>
-            </div>
-          )}
-          <div className="row" style={{ marginTop: 4 }}>
-            <button className="ghost grow" onClick={() => setLanguage(lang === "ru" ? "en" : "ru")} title="Сменить язык интерфейса / Switch language">
-              <Icon name="globe" /> {lang.toUpperCase()}
+          <nav className="nle-manager-tabs">
+            <a className={`nle-tab ${route.name === "home" ? "active" : ""}`} href="#/">
+              <Icon name="film" /> <span>{t("nav.projects")}</span>
+            </a>
+            <a className={`nle-tab ${route.name === "settings" ? "active" : ""}`} href="#/settings">
+              <Icon name="settings" /> <span>{t("nav.settings")}</span>
+            </a>
+          </nav>
+
+          <div className="nle-header-tools">
+            {tTools && (
+              <div className="nle-engine-status" data-tour="nav-status">
+                <span className="engine-pill" title={`FFmpeg: ${tTools.ffmpeg.available ? "OK" : "Missing"}`}>
+                  <span className={`dot ${tTools.ffmpeg.available ? "on" : "off"}`} /> FFmpeg
+                </span>
+                <span className="engine-pill" title={`Whisp: ${tTools.whisp.available ? "OK" : "Missing"}`}>
+                  <span className={`dot ${tTools.whisp.available ? "on" : "off"}`} /> Whisp
+                </span>
+                <span className="engine-pill" title={`Auto-Editor: ${tTools.auto_editor.available ? "OK" : "Optional"}`}>
+                  <span className={`dot ${tTools.auto_editor.available ? "on" : ""}`} /> Auto-Editor
+                </span>
+              </div>
+            )}
+            <button
+              className="nle-btn-ghost small"
+              onClick={() => setLanguage(lang === "ru" ? "en" : "ru")}
+              title="Язык / Language"
+            >
+              <Icon name="globe" /> <span>{lang.toUpperCase()}</span>
             </button>
-            <button className="ghost" onClick={() => setShowShortcuts(true)} data-tour="shortcuts-btn" title={t("common.help")}>
+            <button
+              className="nle-btn-ghost small"
+              onClick={() => setShowShortcuts(true)}
+              data-tour="shortcuts-btn"
+              title={t("common.help")}
+            >
               <Icon name="help" />
             </button>
+            <button
+              className="nle-btn-ghost small"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              title={theme === "dark" ? t("nav.theme.light") : t("nav.theme.dark")}
+            >
+              <Icon name={theme === "dark" ? "sun" : "moon"} />
+            </button>
           </div>
-          <button className="ghost" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
-            <Icon name={theme === "dark" ? "sun" : "moon"} /> {theme === "dark" ? t("nav.theme.light") : t("nav.theme.dark")}
-          </button>
-        </div>
-      </nav>
+        </header>
+      )}
 
-      <div className="content">
+      <div className="nle-content-viewport">
         {tTools && !tTools.ffmpeg.available && (
-          <div className="notice bad" style={{ margin: "16px 36px 0" }}>
+          <div className="notice bad" style={{ margin: "12px 24px 0" }}>
             <Icon name="alert" /> FFmpeg не найден. Положите ffmpeg.exe и ffprobe.exe в папку tools рядом с программой или добавьте их в PATH.
           </div>
         )}
         {route.name === "project" ? (
-          <ProjectView key={route.pid} pid={route.pid} onClose={() => open(null)} />
+          <ProjectView
+            key={route.pid}
+            pid={route.pid}
+            onClose={() => open(null)}
+            sys={sys}
+            theme={theme}
+            onToggleTheme={() => setTheme(theme === "dark" ? "light" : "dark")}
+            onOpenShortcuts={() => setShowShortcuts(true)}
+          />
         ) : route.name === "settings" ? (
           <Settings />
         ) : (

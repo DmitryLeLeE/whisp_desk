@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, fmtTime } from "../api";
 import { useTranslation } from "../i18n";
-import type { Cue, Job, PlanPayload, Project, Scenes, Waveform } from "../types";
+import type { Cue, Job, PlanPayload, Project, Scenes, SettingsData, Waveform } from "../types";
 import Editor from "./Editor";
 import ExportPanel from "./ExportPanel";
 import Icon from "./Icon";
@@ -12,25 +12,34 @@ import TourGuide, { TourStep } from "./TourGuide";
 
 type Tab = "setup" | "edit" | "subs" | "export";
 
+interface Props {
+  pid: string;
+  onClose: () => void;
+  sys?: SettingsData | null;
+  theme?: string;
+  onToggleTheme?: () => void;
+  onOpenShortcuts?: () => void;
+}
+
 function NeedsPlan({ onGo }: { onGo: () => void }) {
   const { lang } = useTranslation();
   return (
-    <div className="empty card">
-      <Icon name="scissors" />
-      <b>{lang === "ru" ? "Сначала нужен черновой монтаж" : "Analysis required first"}</b>
-      <span>
+    <div className="empty card nle-panel-card" style={{ maxWidth: 540, margin: "60px auto" }}>
+      <Icon name="scissors" style={{ width: 44, height: 44, color: "var(--accent)" }} />
+      <b style={{ fontSize: 16 }}>{lang === "ru" ? "Сначала нужен черновой монтаж" : "Analysis required first"}</b>
+      <span className="muted" style={{ textAlign: "center" }}>
         {lang === "ru"
           ? "Выберите видео и запустите анализ: программа найдёт паузы и создаст монтажный план."
           : "Select a video and run analysis to detect silences and create an edit plan."}
       </span>
-      <button className="primary" onClick={onGo}>
-        {lang === "ru" ? "К анализу" : "Go to Analysis"}
+      <button className="primary big" onClick={onGo} style={{ marginTop: 8 }}>
+        {lang === "ru" ? "К анализу и исходникам" : "Go to Media Setup"}
       </button>
     </div>
   );
 }
 
-export default function ProjectView({ pid, onClose }: { pid: string; onClose: () => void }) {
+export default function ProjectView({ pid, onClose, sys, theme, onToggleTheme, onOpenShortcuts }: Props) {
   const { t, lang } = useTranslation();
   const [project, setProject] = useState<Project | null>(null);
   const [payload, setPayload] = useState<PlanPayload | null>(null);
@@ -138,7 +147,7 @@ export default function ProjectView({ pid, onClose }: { pid: string; onClose: ()
     return () => clearInterval(interval);
   }, [job, loadAll]);
 
-  // Защита от случайного закрытия окна при активной задаче (рендеринг, анализ, транскрипция)
+  // Защита от случайного закрытия окна при активной задаче
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (job && (job.status === "QUEUED" || job.status === "RUNNING")) {
@@ -151,6 +160,7 @@ export default function ProjectView({ pid, onClose }: { pid: string; onClose: ()
   }, [job]);
 
   const running = !!job && (job.status === "QUEUED" || job.status === "RUNNING");
+  const tTools = sys?.tools;
 
   if (error && !project) {
     return (
@@ -161,7 +171,7 @@ export default function ProjectView({ pid, onClose }: { pid: string; onClose: ()
     );
   }
 
-  if (!project) return <main className="page"><p className="muted">{t("common.loading")}</p></main>;
+  if (!project) return <div className="nle-workstation" style={{ display: "grid", placeItems: "center" }}><p className="muted">{t("common.loading")}</p></div>;
 
   const unreviewed = payload?.stats.unreviewed ?? 0;
   const done: Record<Tab, boolean> = {
@@ -173,77 +183,106 @@ export default function ProjectView({ pid, onClose }: { pid: string; onClose: ()
   const next = (targetTab: Tab) => { setTab(targetTab); window.scrollTo({ top: 0 }); };
 
   return (
-    <div className="project">
-      <header className="proj-head">
-        <button className="ghost" onClick={onClose}>
-          ← {t("nav.projects")}
-        </button>
-        {editingName ? (
-          <input
-            autoFocus
-            style={{ fontWeight: 700, fontSize: 16, padding: "4px 8px", width: 220 }}
-            value={nameVal}
-            onChange={(e) => setNameVal(e.target.value)}
-            onBlur={saveName}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") saveName();
-              if (e.key === "Escape") setEditingName(false);
-            }}
-          />
-        ) : (
-          <span
-            className="pname"
-            onClick={() => { setNameVal(project.name); setEditingName(true); }}
-            title={lang === "ru" ? "Кликните, чтобы переименовать проект" : "Click to rename project"}
-            style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}
-          >
-            {project.name}
-            <Icon name="edit" style={{ opacity: 0.5, fontSize: "0.85em" }} />
-          </span>
-        )}
-        {payload && (
-          <div className="row" style={{ marginLeft: 6, gap: 6, alignItems: "center" }}>
-            <span className="badge" title={lang === "ru" ? "Итоговый хронометраж" : "Output duration"}>
-              {fmtTime(payload.stats.output_ms, false)}
-            </span>
-            {payload.stats.source_ms > payload.stats.output_ms && (
-              <span className="badge ok" title={lang === "ru" ? "Сокращение хронометража" : "Time saved"}>
-                -{Math.round(((payload.stats.source_ms - payload.stats.output_ms) / payload.stats.source_ms) * 100)}%
+    <div className="nle-workstation">
+      <header className="nle-header">
+        <div className="nle-header-left">
+          <button className="nle-back-btn" onClick={onClose} title={t("nav.projects")}>
+            <Icon name="arrow-left" /> <span>{t("nav.projects")}</span>
+          </button>
+          <div className="nle-proj-title-wrap">
+            {editingName ? (
+              <input
+                autoFocus
+                className="nle-name-input"
+                value={nameVal}
+                onChange={(e) => setNameVal(e.target.value)}
+                onBlur={saveName}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") saveName();
+                  if (e.key === "Escape") setEditingName(false);
+                }}
+              />
+            ) : (
+              <span
+                className="nle-pname"
+                onClick={() => { setNameVal(project.name); setEditingName(true); }}
+                title={lang === "ru" ? "Кликните для переименования проекта" : "Click to rename project"}
+              >
+                {project.name}
+                <Icon name="edit" className="edit-ico" />
               </span>
             )}
+            {payload && (
+              <div className="nle-stats-pill-group">
+                <span className="nle-badge-dur" title={lang === "ru" ? "Итоговый хронометраж" : "Output duration"}>
+                  {fmtTime(payload.stats.output_ms, false)}
+                </span>
+                {payload.stats.source_ms > payload.stats.output_ms && (
+                  <span className="nle-badge-saved" title={lang === "ru" ? "Сокращение хронометража" : "Time saved"}>
+                    -{Math.round(((payload.stats.source_ms - payload.stats.output_ms) / payload.stats.source_ms) * 100)}%
+                  </span>
+                )}
+              </div>
+            )}
           </div>
-        )}
-        <nav className="stepper" aria-label="Steps" data-tour="proj-stepper">
+        </div>
+
+        {/* DaVinci Resolve Iconic Workspace Switcher */}
+        <nav className="nle-workspaces" aria-label="Workspaces" data-tour="proj-stepper">
           {steps.map(([k, label, icon]) => (
             <button
               key={k}
               data-tour={`step-${k}`}
-              className={`step ${tab === k ? "active" : ""} ${done[k] ? "done" : ""}`}
+              className={`nle-workspace-tab ${tab === k ? "active" : ""} ${done[k] ? "done" : ""}`}
               onClick={() => setTab(k)}
               aria-current={tab === k ? "step" : undefined}
             >
-              <span className="n">{done[k] ? <Icon name="check" /> : <Icon name={icon} />}</span>
-              {label}
+              <Icon name={done[k] ? "check" : icon} />
+              <span>{label}</span>
             </button>
           ))}
         </nav>
-        <a
-          href={`/api/projects/${pid}/bundle`}
-          download={`${pid}.whisp`}
-          className="button ghost small"
-          title={lang === "ru" ? "Экспорт компактного переносимого архива проекта (.whisp)" : "Export portable project archive (.whisp)"}
-          style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}
-        >
-          <Icon name="download" /> {lang === "ru" ? "Архив .whisp" : ".whisp Bundle"}
-        </a>
-        <button className="ghost small" onClick={() => setShowTour(true)} title="Гайд по функциям проекта">
-          <Icon name="compass" /> {t("tour.btn")}
-        </button>
+
+        <div className="nle-header-right">
+          {tTools && (
+            <div className="nle-engine-status mini">
+              <span className="engine-pill" title={`FFmpeg: ${tTools.ffmpeg.available ? "OK" : "Missing"}`}>
+                <span className={`dot ${tTools.ffmpeg.available ? "on" : "off"}`} /> FFmpeg
+              </span>
+              <span className="engine-pill" title={`Whisp: ${tTools.whisp.available ? "OK" : "Missing"}`}>
+                <span className={`dot ${tTools.whisp.available ? "on" : "off"}`} /> Whisp
+              </span>
+            </div>
+          )}
+          <a
+            href={`/api/projects/${pid}/bundle`}
+            download={`${pid}.whisp`}
+            className="nle-btn-ghost small"
+            title={lang === "ru" ? "Экспорт компактного переносимого архива проекта (.whisp)" : "Export portable project archive (.whisp)"}
+          >
+            <Icon name="download" /> <span>.whisp</span>
+          </a>
+          <button className="nle-btn-ghost small" onClick={() => setShowTour(true)} title="Гайд">
+            <Icon name="compass" />
+          </button>
+          {onOpenShortcuts && (
+            <button className="nle-btn-ghost small" onClick={onOpenShortcuts} title={t("common.help")}>
+              <Icon name="help" />
+            </button>
+          )}
+          {onToggleTheme && (
+            <button className="nle-btn-ghost small" onClick={onToggleTheme} title="Тема">
+              <Icon name={theme === "dark" ? "sun" : "moon"} />
+            </button>
+          )}
+        </div>
       </header>
 
-      <main className="page">
+      <main className={`nle-workspace-body ${tab === "edit" ? "editor-full" : "panel-scrollable"}`}>
         {tab === "setup" && (
-          <SetupPanel project={project} payload={payload} busy={running} onJob={setJob} onChanged={loadAll} />
+          <div className="nle-centered-pane">
+            <SetupPanel project={project} payload={payload} busy={running} onJob={setJob} onChanged={loadAll} />
+          </div>
         )}
         {tab === "edit" && (
           payload ? (
@@ -261,40 +300,44 @@ export default function ProjectView({ pid, onClose }: { pid: string; onClose: ()
           ) : <NeedsPlan onGo={() => setTab("setup")} />
         )}
         {tab === "subs" && (
-          <SubtitlesPanel
-            pid={pid}
-            project={project}
-            cues={cues}
-            busy={running}
-            onJob={setJob}
-            onChanged={loadAll}
-            onJump={(ms) => { setSeekTo({ ms, n: Date.now() }); setTab("edit"); }}
-            payload={payload}
-            onPayload={setPayload}
-          />
-        )}
-        {tab === "export" && (
-          payload ? (
-            <ExportPanel
+          <div className="nle-centered-pane" style={{ maxWidth: 1600 }}>
+            <SubtitlesPanel
               pid={pid}
               project={project}
-              payload={payload}
+              cues={cues}
               busy={running}
               onJob={setJob}
+              onChanged={loadAll}
+              onJump={(ms) => { setSeekTo({ ms, n: Date.now() }); setTab("edit"); }}
+              payload={payload}
               onPayload={setPayload}
             />
-          ) : <NeedsPlan onGo={() => setTab("setup")} />
+          </div>
+        )}
+        {tab === "export" && (
+          <div className="nle-centered-pane">
+            {payload ? (
+              <ExportPanel
+                pid={pid}
+                project={project}
+                payload={payload}
+                busy={running}
+                onJob={setJob}
+                onPayload={setPayload}
+              />
+            ) : <NeedsPlan onGo={() => setTab("setup")} />}
+          </div>
         )}
 
         {tab === "setup" && project.has_plan && payload && (
-          <div className="next-bar">
+          <div className="next-bar nle-next-bar">
             <span className="grow">
               {lang === "ru"
                 ? `Черновой монтаж готов: убрано ${fmtTime(payload.stats.removed_ms, false)} из ${fmtTime(payload.stats.source_ms, false)}.`
                 : `Edit plan ready: removed ${fmtTime(payload.stats.removed_ms, false)} of ${fmtTime(payload.stats.source_ms, false)}.`}
             </span>
             <button className="primary" onClick={() => next("edit")}>
-              {lang === "ru" ? "Проверить монтаж" : "Review Cuts"} <Icon name="arrow" />
+              {lang === "ru" ? "Перейти к монтажу" : "Proceed to Edit"} <Icon name="arrow" />
             </button>
           </div>
         )}
