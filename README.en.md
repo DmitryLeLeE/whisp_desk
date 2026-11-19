@@ -104,6 +104,11 @@ Projects, configurations, and logs are stored alongside the executable: `project
 
 Launch flags: `--browser` (open in default browser instead of window), `--no-window` (server-only mode), `--port 8765`.
 
+> [!NOTE]
+> **Windows SmartScreen First Launch**:
+> Since this is an independent open-source project distributed without an expensive corporate Microsoft EV code signing certificate, Windows Defender SmartScreen might show a blue pop-up on first launch (*"Windows protected your PC"*).
+> To run: click **«More info»** ➔ **«Run anyway»**.
+
 ### From Source
 
 Requires Python 3.11+, Node.js 18+ (only for building frontend), and FFmpeg.

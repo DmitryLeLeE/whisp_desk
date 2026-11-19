@@ -138,6 +138,18 @@ export default function ProjectView({ pid, onClose }: { pid: string; onClose: ()
     return () => clearInterval(interval);
   }, [job, loadAll]);
 
+  // Защита от случайного закрытия окна при активной задаче (рендеринг, анализ, транскрипция)
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (job && (job.status === "QUEUED" || job.status === "RUNNING")) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [job]);
+
   const running = !!job && (job.status === "QUEUED" || job.status === "RUNNING");
 
   if (error && !project) {

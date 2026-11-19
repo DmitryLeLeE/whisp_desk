@@ -144,3 +144,32 @@ def clean_cache():
         "freed_bytes": freed_bytes,
         "formatted": f"{mb:.1f} МБ" if mb >= 1 else f"{freed_bytes / 1024:.0f} КБ",
     }
+
+
+@router.get("/diagnostics")
+def get_diagnostics():
+    """Формирует готовый Markdown-отчет для прикрепления к тикетам на GitHub."""
+    from pathlib import Path
+    log_tail = []
+    log_file = config.LOGS_DIR / "desk.log"
+    if log_file.is_file():
+        try:
+            lines = log_file.read_text(encoding="utf-8", errors="replace").splitlines()
+            log_tail = lines[-35:]
+        except Exception:
+            pass
+
+    home_str = str(Path.home())
+    safe_logs = "\n".join(log_tail).replace(home_str, "~")
+
+    md = (
+        f"- **App Version**: v{config.VERSION} (Frozen EXE: {config.FROZEN})\n"
+        f"- **OS**: {platform.platform()} ({platform.machine()})\n"
+        f"- **Python**: {platform.python_version()}\n"
+        f"- **FFmpeg**: {'Available' if config.find_tool('ffmpeg') else 'Not Found'}\n"
+        f"- **FFprobe**: {'Available' if config.find_tool('ffprobe') else 'Not Found'}\n"
+        f"- **Auto-Editor**: {'Available' if config.find_tool('auto-editor') else 'Not Found'}\n"
+        f"- **Host**: {config.HOST}\n\n"
+        f"**Recent Logs:**\n```\n{safe_logs or 'Log file is empty.'}\n```"
+    )
+    return {"markdown": md}

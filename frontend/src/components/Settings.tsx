@@ -45,6 +45,19 @@ export default function Settings() {
   const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [cacheInfo, setCacheInfo] = useState<{ files_count: number; total_bytes: number; formatted: string } | null>(null);
   const [cleaning, setCleaning] = useState(false);
+  const [copiedDiag, setCopiedDiag] = useState(false);
+
+  const copyDiagnostics = async () => {
+    try {
+      const res = await api.get<{ markdown: string }>("/api/system/diagnostics");
+      await navigator.clipboard.writeText(res.markdown);
+      setCopiedDiag(true);
+      setMsg(lang === "ru" ? "Системный отчёт скопирован в буфер обмена!" : "System diagnostic report copied to clipboard!");
+      setTimeout(() => setCopiedDiag(false), 3000);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
 
   const loadCache = useCallback(() => {
     api.get<{ files_count: number; total_bytes: number; formatted: string }>("/api/system/cache")
@@ -152,7 +165,16 @@ export default function Settings() {
               </tbody>
             </table>
           )}
-          {s && <p className="muted small">v{s.version} · {s.root}</p>}
+          <div className="row wrap" style={{ alignItems: "center", justifyContent: "space-between", marginTop: 8 }}>
+            {s && <p className="muted small" style={{ margin: 0 }}>v{s.version} · {s.root}</p>}
+            <button
+              className="ghost small"
+              onClick={copyDiagnostics}
+              title={lang === "ru" ? "Скопировать отчёт об окружении и логах для баг-репорта на GitHub" : "Copy environment and log details for GitHub issue"}
+            >
+              <Icon name="copy" /> {copiedDiag ? (lang === "ru" ? "Скопировано!" : "Copied!") : (lang === "ru" ? "Скопировать отчёт для GitHub" : "Copy Diagnostic Report")}
+            </button>
+          </div>
         </section>
 
         <section className="card">
