@@ -16,7 +16,7 @@
   <img src="https://img.shields.io/badge/Privacy-100%25%20Offline-10b981?style=flat-square&logo=shield" alt="100% Offline">
   <a href="https://github.com/DmitryLeLeE/whisp"><img src="https://img.shields.io/badge/AI-Whisp%201.2.2-f59e0b?style=flat-square" alt="Whisp"></a>
   <img src="https://img.shields.io/badge/Video-FFmpeg%20Pro-007808?style=flat-square&logo=ffmpeg&logoColor=white" alt="FFmpeg">
-  <img src="https://img.shields.io/badge/Tests-89%20passed-success?style=flat-square" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-94%20passed-success?style=flat-square" alt="Tests">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="License"></a>
 </p>
 
@@ -60,11 +60,15 @@ graph LR
 | ![Субтитры](docs/04-subtitles.png) | ![Экспорт](docs/05-export.png) |
 
 <details>
-<summary><b>Развернуть остальные экраны (Проекты, Анализ, Настройки моделей)</b></summary>
+<summary><b>Развернуть остальные экраны (Светлая тема, Проекты, Анализ, Модели)</b></summary>
 
-| Список проектов, поиск и быстрый старт | Настройка и профили анализа |
+| Тёмная студийная тема (Slate) | Светлая студийная тема (Canvas) |
 |:---:|:---:|
-| ![Проекты](docs/01-projects.png) | ![Анализ](docs/02-setup.png) |
+| ![Тёмная тема](docs/01-projects.png) | ![Светлая тема](docs/07-light-theme.png) |
+
+| Монтаж в светлой теме (Высокий контраст) | Настройка и профили анализа |
+|:---:|:---:|
+| ![Монтаж в светлой теме](docs/08-editor-light.png) | ![Анализ](docs/02-setup.png) |
 
 | Управление локальными моделями Whisp |
 |:---:|

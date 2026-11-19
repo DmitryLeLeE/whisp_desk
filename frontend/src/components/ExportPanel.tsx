@@ -447,7 +447,7 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
             )}
 
             {/* Фоновая музыка и Auto-Ducking */}
-            <div style={{ borderTop: "1px solid var(--border)", paddingTop: 12, marginTop: 12 }}>
+            <div style={{ borderTop: "1px solid var(--line)", paddingTop: 12, marginTop: 12 }}>
               <label style={{ fontWeight: 600 }}>
                 🎵 {lang === "ru" ? "Фоновая музыка (BGM)" : "Background Music (BGM)"}
                 <input
@@ -459,7 +459,7 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
                 />
               </label>
               {bgmPath && (
-                <div style={{ marginTop: 8, padding: "8px 12px", background: "var(--bg-subtle, rgba(255,255,255,0.03))", borderRadius: 6 }}>
+                <div style={{ marginTop: 8, padding: "8px 12px", background: "var(--panel2)", borderRadius: 6, border: "1px solid var(--line)" }}>
                   <label>
                     {lang === "ru" ? `Громкость музыки: ${Math.round(bgmVolume * 100)}%` : `Music volume: ${Math.round(bgmVolume * 100)}%`}
                     <input type="range" min="0.02" max="0.5" step="0.01" value={bgmVolume} onChange={(e) => setBgmVolume(Number(e.target.value))} />

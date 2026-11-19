@@ -171,6 +171,18 @@ def main() -> None:
             page.wait_for_timeout(1500)
             page.screenshot(path=str(out / "06-settings.png"))
 
+            # 7. Светлая тема (Light theme - демонстрация эргономики 2026)
+            page.goto(BASE)
+            page.wait_for_timeout(1000)
+            page.get_by_text("Светлая тема").first.click()
+            page.wait_for_timeout(800)
+            page.screenshot(path=str(out / "07-light-theme.png"))
+
+            # Открываем редактор в светлой теме
+            page.get_by_text("Лекция: стерильность").first.click()
+            page.wait_for_timeout(1500)
+            page.screenshot(path=str(out / "08-editor-light.png"))
+
             browser.close()
 
         print("Successfully saved:", sorted(p.name for p in out.glob("*.png")))

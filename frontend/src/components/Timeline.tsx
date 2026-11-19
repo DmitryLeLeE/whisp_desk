@@ -88,7 +88,7 @@ export default function Timeline(p: Props) {
         </div>
         {p.cues && p.cues.length > 0 && (
           <div className="th-cell th-t1" title="Subtitle / Text Track 1">
-            <span className="th-badge" style={{ background: "rgba(168, 85, 247, 0.2)", color: "#c084fc", borderColor: "rgba(168, 85, 247, 0.4)" }}>T1</span>
+            <span className="th-badge th-badge-t1">T1</span>
             <span className="th-icon" style={{ fontSize: 10 }}>💬</span>
           </div>
         )}

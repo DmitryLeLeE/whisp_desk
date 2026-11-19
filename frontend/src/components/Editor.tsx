@@ -597,7 +597,7 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
               disabled={exportingRange || busy}
               onClick={exportRange}
               title={lang === "ru" ? "Быстрый рендер выделенного отрезка [In ... Out] в отдельный MP4" : "Quick render selected range [In ... Out] to MP4"}
-              style={{ color: "var(--accent)", borderColor: "rgba(56, 189, 248, 0.4)" }}
+              style={{ color: "var(--accent)" }}
             >
               <Icon name="download" /> {lang === "ru" ? "Экспорт отрезка" : "Export Range"}
             </button>
@@ -634,7 +634,7 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
 
         {/* Масштабирование */}
         <div className="row" style={{ alignItems: "center" }}>
-          <span className="badge small" style={{ background: "rgba(56, 189, 248, 0.12)", color: "#38bdf8", border: "1px solid rgba(56, 189, 248, 0.3)", fontWeight: 700, letterSpacing: "0.03em" }}>
+          <span className="badge small accent" style={{ fontWeight: 700, letterSpacing: "0.03em" }}>
             {fps.toFixed(0)} FPS
           </span>
           <button className="ghost" onClick={() => setPps((p) => Math.max(0.5, p * 0.75))} title={t("editor.zoom_out")}>

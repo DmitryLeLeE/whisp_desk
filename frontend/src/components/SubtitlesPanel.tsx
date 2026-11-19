@@ -562,7 +562,7 @@ export default function SubtitlesPanel({ pid, project: _project, cues, busy, onJ
 
                     <div className="row" style={{ flex: "none", gap: 6, alignItems: "center" }}>
                       {isCut && (
-                        <span className="badge small" style={{ background: "rgba(239, 68, 68, 0.15)", color: "#ef4444" }}>
+                        <span className="badge small bad">
                           {lang === "ru" ? "Вырезано" : "Cut"}
                         </span>
                       )}
