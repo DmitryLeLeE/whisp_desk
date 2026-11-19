@@ -1825,3 +1825,12 @@ main:has(> .nle-manager-toolbar) { max-width: 1400px; }
 .nle-manager-toolbar { flex-wrap: nowrap; justify-content: space-between; gap: 16px; }
 .nle-manager-actions { flex-wrap: nowrap; }
 .nle-manager-actions .nle-search-input { width: 180px; }
+
+/* Монтаж: меньше элементов в панелях */
+.nle-rate-select { height: 26px; min-height: 26px; width: 66px; padding: 0 22px 0 8px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.transport-more .row-menu-pop { top: auto; bottom: 30px; right: 0; min-width: 170px; padding: 8px 10px; }
+.pop-check { margin: 0; white-space: nowrap; }
+.nle-range-display { display: inline-flex; align-items: center; gap: 6px; font-family: ui-monospace, monospace; font-size: 11.5px; color: var(--muted); padding: 0 6px; }
+.nle-hotkey-cheatsheet { align-items: center; gap: 14px; }
+.nle-tool-btn { height: 26px; min-height: 26px; }
+.nle-timeline-toolbar { gap: 10px; padding-top: 5px; padding-bottom: 5px; }

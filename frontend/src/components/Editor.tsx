@@ -664,17 +664,9 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
             </div>
 
             {/* Скорость воспроизведения */}
-            <div className="nle-speed-chips">
-              {[0.75, 1, 1.25, 1.5, 2].map((r) => (
-                <button
-                  key={r}
-                  className={`nle-speed-chip ${rate === r ? "active" : ""}`}
-                  onClick={() => setRate(r)}
-                >
-                  {r}×
-                </button>
-              ))}
-            </div>
+            <select className="nle-rate-select" value={rate} onChange={(e) => setRate(Number(e.target.value))} title={lang === "ru" ? "Скорость воспроизведения" : "Playback speed"}>
+              {[0.5, 0.75, 1, 1.25, 1.5, 2].map((r) => <option key={r} value={r}>{r}×</option>)}
+            </select>
 
             {/* Громкость */}
             <div className="nle-volume-wrap">
@@ -701,7 +693,10 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
               <input type="checkbox" checked={skipCuts} onChange={(e) => setSkipCuts(e.target.checked)} />
               <span>{lang === "ru" ? "Пропускать вырезанное" : "Skip cuts"}</span>
             </label>
-            <label className="nle-check-chip" title="Звук при покадровом шаге">
+            <details className="row-menu transport-more">
+              <summary title={lang === "ru" ? "Ещё настройки предпросмотра" : "More preview options"}>⋯</summary>
+              <div className="row-menu-pop">
+            <label className="nle-check-chip pop-check" title="Звук при покадровом шаге">
               <input
                 type="checkbox"
                 checked={audioScrub}
@@ -712,6 +707,8 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
               />
               <span>{lang === "ru" ? "Звук при шаге" : "Scrub"}</span>
             </label>
+              </div>
+            </details>
           </div>
         </div>
 
@@ -937,9 +934,12 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
           >
             Out ]
           </button>
-          <span className="nle-range-display">
-            {markIn != null ? fmtTime(markIn) : "—"} → {markOut != null ? fmtTime(markOut) : "—"}
-          </span>
+          {(markIn != null || markOut != null) && (
+            <span className="nle-range-display">
+              {markIn != null ? fmtTime(markIn) : "—"} → {markOut != null ? fmtTime(markOut) : "—"}
+              <button className="nle-btn-micro" title={lang === "ru" ? "Сбросить отрезок" : "Clear range"} onClick={() => { setMarkIn(null); setMarkOut(null); }}>✕</button>
+            </span>
+          )}
 
           {rangeOk && (
             <>
@@ -974,21 +974,9 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
         </div>
 
         <div className="row" style={{ gap: 6, marginLeft: "auto", alignItems: "center" }}>
-          <span className="nle-badge-fps">
-            {fps.toFixed(0)} FPS
-          </span>
           <button className="nle-btn-ghost small" onClick={() => setPps((p) => Math.max(0.5, p * 0.75))} title={t("editor.zoom_out")}>
             <Icon name="zoom-out" />
           </button>
-          <input
-            type="range"
-            min={0.5}
-            max={300}
-            step={0.5}
-            value={pps}
-            onChange={(e) => setPps(Number(e.target.value))}
-            className="nle-zoom-slider"
-          />
           <button className="nle-btn-ghost small" onClick={() => setPps((p) => Math.min(300, p * 1.33))} title={t("editor.zoom_in")}>
             <Icon name="zoom-in" />
           </button>
@@ -1001,9 +989,6 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
             title={t("editor.autoscroll.title")}
           >
             <Icon name="compass" />
-          </button>
-          <button className="nle-btn-ghost small" onClick={() => setShowHelp(true)} title={t("common.help")}>
-            <Icon name="help" />
           </button>
         </div>
       </div>
@@ -1042,10 +1027,9 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
         </div>
         <div className="nle-hotkey-cheatsheet">
           <span><kbd>Пробел</kbd> {lang === "ru" ? "Воспроизведение" : "Play"}</span>
-          <span><kbd>J / K / L</kbd> {lang === "ru" ? "Назад / пауза / вперёд" : "Shuttle"}</span>
           <span><kbd>C</kbd> {lang === "ru" ? "Разрезать" : "Razor"}</span>
           <span><kbd>X</kbd> {lang === "ru" ? "Оставить / вырезать" : "Toggle Cut"}</span>
-          <span><kbd>Ctrl+Z</kbd> {lang === "ru" ? "Отмена" : "Undo"}</span>
+          <button className="nle-btn-ghost small" onClick={() => setShowHelp(true)}>{lang === "ru" ? "Все клавиши" : "All shortcuts"}</button>
         </div>
       </footer>
 
