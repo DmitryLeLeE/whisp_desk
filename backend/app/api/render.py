@@ -54,6 +54,7 @@ def export(pid: str, body: ExportBody, request: Request):
 ALLOWED_EXPORT_SUFFIXES = {
     ".mp4", ".xml", ".fcpxml", ".edl", ".otio", ".v3",
     ".csv", ".txt", ".srt", ".vtt", ".ass", ".json",
+    ".mp3", ".m4a", ".wav", ".whisp",
 }
 
 

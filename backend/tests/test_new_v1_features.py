@@ -88,3 +88,37 @@ def test_render_ass_bold_and_shadow():
     assert "Impact" in ass_text
     assert "84" in ass_text
     assert ",1," in ass_text  # bold=1
+
+
+def test_render_ass_word_highlight():
+    cues = [subs.Cue(start_ms=1000, end_ms=3000, text="One Two Three")]
+    ass_text = subs.render_ass(cues, word_highlight=True, highlight_color="#FFEA00")
+    assert "\\c" in ass_text
+    assert "One" in ass_text
+    assert "Three" in ass_text
+    # Should contain 3 dialogue slices
+    dialogue_lines = [line for line in ass_text.splitlines() if line.startswith("Dialogue:")]
+    assert len(dialogue_lines) == 3
+
+
+def test_project_bundle_export_and_import(client):
+    # 1. Create project
+    r_create = client.post("/api/projects", json={"name": "Bundle Test Project", "type": "interview"})
+    assert r_create.status_code == 201
+    pid = r_create.json()["id"]
+
+    # 2. Export bundle (.whisp)
+    r_bundle = client.get(f"/api/projects/{pid}/bundle")
+    assert r_bundle.status_code == 200
+    assert r_bundle.headers["content-type"] == "application/zip"
+    content = r_bundle.content
+    assert len(content) > 100
+
+    # 3. Import bundle
+    files = {"file": ("test_project.whisp", content, "application/zip")}
+    r_import = client.post("/api/projects/import-bundle", files=files)
+    assert r_import.status_code == 201
+    imp_data = r_import.json()
+    assert "id" in imp_data
+    assert "Bundle Test Project" in imp_data["name"]
+

@@ -276,8 +276,13 @@ def register_all(queue: JobQueue, pm: ProjectManager) -> None:
         tpl, tpl_dir = template_for(pm, pid, p.get("template"))
         options = render_mod.merge_options(mode, tpl, p.get("options"))
         overwrite = bool(p.get("overwrite"))
-        out_name = "preview.mp4" if mode == "fast" else "final.mp4"
-        package = p.get("package", mode == "final")
+        audio_only = bool(options.get("audio_only")) or (p.get("preset") == "podcast")
+        if audio_only:
+            options["audio_only"] = True
+            out_name = "podcast.mp3" if p.get("preset") == "podcast" else "audio.mp3"
+        else:
+            out_name = "preview.mp4" if mode == "fast" else "final.mp4"
+        package = p.get("package", mode == "final" and not audio_only)
         if p.get("range_start_ms") is not None and p.get("range_end_ms") is not None:
             r_start = int(p["range_start_ms"])
             r_end = int(p["range_end_ms"])
@@ -295,7 +300,13 @@ def register_all(queue: JobQueue, pm: ProjectManager) -> None:
             cues = load_cues(pm, pid)
             if not cues:
                 raise ProjectError("Нельзя вшить субтитры: расшифровка не загружена")
-            ass = subs.render_ass(subs.remap_cues(cues, plan), tpl.get("subtitles"))
+            sub_opts = options.get("subtitles") or tpl.get("subtitles") or {}
+            ass = subs.render_ass(
+                subs.remap_cues(cues, plan),
+                sub_opts,
+                word_highlight=bool(sub_opts.get("word_highlight")),
+                highlight_color=sub_opts.get("highlight_color", "#FFEA00"),
+            )
         formats = list(p.get("formats") or ["premiere", "fcpxml", "davinci_markers", "srt", "plan", "info", "v3", "otio"])
         if not package or not read_json(pm.dir(pid) / "subtitles" / "cues.json"):
             formats = [f for f in formats if f not in ("srt", "ass")]

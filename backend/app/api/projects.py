@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from pathlib import Path
-from fastapi import APIRouter, HTTPException, Request, Response
+import re
+from fastapi import APIRouter, File, HTTPException, Request, Response, UploadFile
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from ..core.config import require_tool
@@ -134,6 +136,35 @@ class DuplicateBody(BaseModel):
 def duplicate_project(pid: str, request: Request, body: DuplicateBody | None = None):
     new_name = body.name if body else None
     return pm(request).duplicate(pid, new_name)
+
+
+@router.get("/{pid}/bundle")
+def export_bundle(pid: str, request: Request):
+    m = pm(request)
+    bundle_path = m.export_bundle(pid)
+    project = m.get(pid)
+    safe_name = re.sub(r'[\\/*?:"<>|]', "_", project.get("name", pid))
+    return FileResponse(
+        bundle_path,
+        filename=f"{safe_name}.whisp",
+        media_type="application/zip",
+    )
+
+
+@router.post("/import-bundle", status_code=201)
+async def import_bundle(file: UploadFile, request: Request):
+    import tempfile
+    m = pm(request)
+    suffix = Path(file.filename or "project.whisp").suffix
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        content = await file.read()
+        tmp.write(content)
+        tmp_path = Path(tmp.name)
+    try:
+        p = m.import_bundle(tmp_path)
+        return p
+    finally:
+        tmp_path.unlink(missing_ok=True)
 
 
 @router.put("/{pid}/source")

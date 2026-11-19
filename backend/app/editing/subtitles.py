@@ -256,11 +256,14 @@ def _ass_colour(hex_rgb: str, alpha: int = 0) -> str:
     return f"&H{alpha:02X}{b}{g}{r}".upper()
 
 
-def render_ass(cues: list[Cue], style: dict | None = None, width: int = 1920, height: int = 1080) -> str:
+def render_ass(cues: list[Cue], style: dict | None = None, width: int = 1920, height: int = 1080,
+               word_highlight: bool = False, highlight_color: str = "#FFEA00") -> str:
     st = {"font": "Arial", "size": 64, "colour": "#FFFFFF", "outline_colour": "#000000", "outline": 3,
           "margin_v": 50, "alignment": 2, "bold": 0, "shadow": 1, **(style or {})}
     bold_flag = 1 if st.get("bold") else 0
     shadow_val = st.get("shadow", 1)
+    base_col = _ass_colour(st['colour'])
+    hl_col = _ass_colour(highlight_color)
     # Размер шрифта задан для 1080p — масштабируется через PlayRes.
     header = (
         "[Script Info]\nScriptType: v4.00+\n"
@@ -269,13 +272,30 @@ def render_ass(cues: list[Cue], style: dict | None = None, width: int = 1920, he
         "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, "
         "Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, "
         "MarginR, MarginV, Encoding\n"
-        f"Style: Default,{st['font']},{st['size']},{_ass_colour(st['colour'])},&H000000FF,"
+        f"Style: Default,{st['font']},{st['size']},{base_col},&H000000FF,"
         f"{_ass_colour(st['outline_colour'])},&H64000000,{bold_flag},0,0,0,100,100,0,0,1,{st['outline']},{shadow_val},"
         f"{st['alignment']},60,60,{st['margin_v']},1\n\n"
         "[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n"
     )
     lines = []
     for c in cues:
-        txt = c.text.replace("\\", "\\\\").replace("{", "(").replace("}", ")").replace("\n", "\\N")
-        lines.append(f"Dialogue: 0,{_ass_time(c.start_ms)},{_ass_time(c.end_ms)},Default,,0,0,0,,{txt}")
+        raw_words = c.text.replace("\\", "\\\\").replace("{", "(").replace("}", ")").split()
+        dur = c.end_ms - c.start_ms
+        if not word_highlight or len(raw_words) <= 1 or dur <= 100:
+            txt = c.text.replace("\\", "\\\\").replace("{", "(").replace("}", ")").replace("\n", "\\N")
+            lines.append(f"Dialogue: 0,{_ass_time(c.start_ms)},{_ass_time(c.end_ms)},Default,,0,0,0,,{txt}")
+        else:
+            n = len(raw_words)
+            dur_per_word = dur / n
+            for i in range(n):
+                t_start = c.start_ms + round(i * dur_per_word)
+                t_end = c.start_ms + round((i + 1) * dur_per_word) if i < n - 1 else c.end_ms
+                word_parts = []
+                for j, w in enumerate(raw_words):
+                    if j == i:
+                        word_parts.append(f"{{\\c{hl_col}&}}{w}{{\\c{base_col}&}}")
+                    else:
+                        word_parts.append(w)
+                line_txt = " ".join(word_parts)
+                lines.append(f"Dialogue: 0,{_ass_time(t_start)},{_ass_time(t_end)},Default,,0,0,0,,{line_txt}")
     return header + "\n".join(lines) + "\n"

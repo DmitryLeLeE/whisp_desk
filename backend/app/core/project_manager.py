@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import re
 import shutil
 import threading
@@ -160,6 +161,54 @@ class ProjectManager:
                     pass
             self.db.execute("INSERT INTO projects VALUES (?,?,?,?,?)", (new_pid, copy_name, ptype, ts, ts))
         self.log_history(new_pid, "duplicate", f"Копия проекта {pid}")
+        return self.get(new_pid)
+
+    def export_bundle(self, pid: str) -> Path:
+        """Экспортирует проект в компактный переносимый архив .whisp (zip)."""
+        import zipfile
+        src_dir = self.dir(pid)
+        bundle_path = self.path(pid, "exports", f"{pid}.whisp")
+        bundle_path.parent.mkdir(parents=True, exist_ok=True)
+        skip_exts = {".mp4", ".part", ".wav", ".avi", ".mov", ".mkv"}
+        with zipfile.ZipFile(bundle_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            for f in src_dir.rglob("*"):
+                if f.is_file() and f.suffix.lower() not in skip_exts and f != bundle_path:
+                    arcname = f.relative_to(src_dir)
+                    zf.write(f, arcname)
+        return bundle_path
+
+    def import_bundle(self, bundle_file: Path) -> dict:
+        """Импортирует проект из архива .whisp в новый проект."""
+        import zipfile
+        if not bundle_file.is_file():
+            raise ProjectError(f"Файл архива не найден: {bundle_file}")
+        with zipfile.ZipFile(bundle_file, "r") as zf:
+            if "project.json" not in zf.namelist():
+                raise ProjectError("Некорректный архив проекта: отсутствует project.json")
+            orig = json.loads(zf.read("project.json").decode("utf-8"))
+            ptype = orig.get("type", "lecture")
+            with self._create_lock:
+                n = 1
+                while (self.root / f"{ptype}_{n:03d}").exists():
+                    n += 1
+                new_pid = f"{ptype}_{n:03d}"
+                dst_dir = self.root / new_pid
+                dst_dir.mkdir(parents=True, exist_ok=True)
+                zf.extractall(dst_dir)
+                ts = now()
+                name = orig.get("name", "Импортированный проект")
+                p = {**orig, "id": new_pid, "created": ts, "updated": ts}
+                write_json_atomic(dst_dir / "project.json", p)
+                plan_file = dst_dir / "timeline" / "edit_plan.json"
+                if plan_file.is_file():
+                    try:
+                        plan = read_json(plan_file)
+                        plan["project_id"] = new_pid
+                        write_json_atomic(plan_file, plan)
+                    except Exception:
+                        pass
+                self.db.execute("INSERT INTO projects VALUES (?,?,?,?,?)", (new_pid, name, ptype, ts, ts))
+        self.log_history(new_pid, "import_bundle", f"Импорт из {bundle_file.name}")
         return self.get(new_pid)
 
     # ----- история и журнал -----

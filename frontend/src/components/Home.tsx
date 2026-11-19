@@ -94,6 +94,32 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
   const load = useCallback(() => api.get<ProjectSummary[]>("/api/projects/summary").then(setRows).catch((e) => setError(e.message)), []);
   useEffect(() => { load(); }, [load]);
 
+  const handleImportBundle = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setError(""); setBusy(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/projects/import-bundle", {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new Error(errJson.detail || "Ошибка импорта архива .whisp");
+      }
+      const data = await res.json();
+      await load();
+      if (data.id) onOpen(data.id);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+      e.target.value = "";
+    }
+  };
+
   const start = async (path: string) => {
     setError(""); setBusy(true); setBrowse(false);
     let created: ProjectRow | null = null;
@@ -248,6 +274,10 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
           <select value={type} onChange={(e) => setType(e.target.value)} aria-label="Type">
             {Object.entries(typesMap).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
+          <label className="button ghost" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, cursor: "pointer", marginTop: 4 }} title={lang === "ru" ? "Импортировать проект из архива .whisp" : "Import project from .whisp bundle"}>
+            <Icon name="folder" /> <span>{lang === "ru" ? "Импорт .whisp" : "Import .whisp"}</span>
+            <input type="file" accept=".whisp,.zip" style={{ display: "none" }} onChange={handleImportBundle} />
+          </label>
         </div>
       </div>
       {error && <p className="error">{error}</p>}

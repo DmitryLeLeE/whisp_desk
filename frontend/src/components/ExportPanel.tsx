@@ -39,6 +39,12 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
   const [voiceEnhancer, setVoiceEnhancer] = useState("off");
   const [normalize, setNormalize] = useState(true);
   const [targetLufs, setTargetLufs] = useState(-14);
+  const [audioOnly, setAudioOnly] = useState(false);
+  const [bgmPath, setBgmPath] = useState("");
+  const [bgmVolume, setBgmVolume] = useState(0.15);
+  const [bgmDucking, setBgmDucking] = useState(true);
+  const [wordHighlight, setWordHighlight] = useState(false);
+  const [highlightColor, setHighlightColor] = useState("#FFEA00");
 
   interface Chapter { time_ms: number; title: string; source_ms?: number }
   const [chapters, setChapters] = useState<Chapter[]>([]);
@@ -99,15 +105,57 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
     try { await fn(); if (ok) setMsg(ok); reload(); } catch (e) { setError((e as Error).message); }
   };
 
+  const applyPlatformPreset = (preset: "telegram" | "youtube" | "shorts" | "podcast") => {
+    if (preset === "telegram") {
+      setAspectRatio("original");
+      setEncoder("libx264");
+      setNormalize(true);
+      setTargetLufs(-14);
+      setAudioOnly(false);
+      setMsg(lang === "ru" ? "Применён пресет Telegram Fast: стандартный кадр, нормализация -14 LUFS" : "Applied Telegram Fast preset");
+    } else if (preset === "youtube") {
+      setAspectRatio("original");
+      setEncoder("libx264");
+      setNormalize(true);
+      setTargetLufs(-14);
+      setVoiceEnhancer("clarity");
+      setAudioOnly(false);
+      setMsg(lang === "ru" ? "Применён пресет YouTube Master: чёткость речи, нормализация -14 LUFS" : "Applied YouTube Master preset");
+    } else if (preset === "shorts") {
+      setAspectRatio("9:16_crop");
+      setNormalize(true);
+      setTargetLufs(-14);
+      setAudioOnly(false);
+      if (project.has_subtitles) {
+        setBurn(true);
+        setWordHighlight(true);
+      }
+      setMsg(lang === "ru" ? "Применён пресет Shorts / Reels: вертикальный кадр 9:16, караоке-субтитры" : "Applied Shorts 9:16 preset");
+    } else if (preset === "podcast") {
+      setAudioOnly(true);
+      setVoiceEnhancer("podcast");
+      setNormalize(true);
+      setTargetLufs(-16);
+      setMsg(lang === "ru" ? "Применён пресет Подкаст: экспорт в MP3 аудио, тёплый голос, нормализация -16 LUFS" : "Applied Podcast MP3 preset");
+    }
+    setTimeout(() => setMsg(""), 3500);
+  };
+
   const render = (mode: "fast" | "final") => guard(async () => {
     await api.patch(`/api/projects/${pid}`, { settings: { template } });
     onJob(await api.post<Job>(`/api/projects/${pid}/render`, {
       mode, template, burn_subtitles: burn && project.has_subtitles, overwrite, engine,
       options: {
+        audio_only: audioOnly,
         video: { encoder, aspect_ratio: aspectRatio },
         audio: {
           denoise, denoise_level: denoiseLevel, voice_enhancer: voiceEnhancer,
           normalize, target_lufs: targetLufs,
+          bgm: bgmPath.trim() ? { path: bgmPath.trim(), volume: bgmVolume, ducking: bgmDucking } : undefined,
+        },
+        subtitles: {
+          word_highlight: wordHighlight,
+          highlight_color: highlightColor,
         },
       },
     }));
@@ -247,6 +295,27 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
             </button>
           </div>
 
+          {/* Пресеты в 1 клик для соцсетей */}
+          <div style={{ marginTop: 12, marginBottom: 8 }}>
+            <span className="muted small" style={{ display: "block", marginBottom: 6 }}>
+              {lang === "ru" ? "Пресеты платформы в 1 клик:" : "1-Click Platform Presets:"}
+            </span>
+            <div className="row wrap" style={{ gap: 6 }}>
+              <button type="button" className="ghost small" onClick={() => applyPlatformPreset("telegram")} title="Telegram Fast (720p, быстрый экспорт)">
+                ✈️ Telegram Fast
+              </button>
+              <button type="button" className="ghost small" onClick={() => applyPlatformPreset("youtube")} title="YouTube Master (1080p, -14 LUFS, чёткость речи)">
+                🎬 YouTube 1080p
+              </button>
+              <button type="button" className="ghost small" onClick={() => applyPlatformPreset("shorts")} title="Shorts / Reels (9:16 верт. кроп, караоке-субтитры)">
+                📱 Shorts 9:16
+              </button>
+              <button type="button" className="ghost small" onClick={() => applyPlatformPreset("podcast")} title="Подкаст (MP3 звук, -16 LUFS, тёплый голос)">
+                🎙️ Подкаст MP3
+              </button>
+            </div>
+          </div>
+
           {error && <p className="error">{error}</p>}
           {msg && <p className="ok">{msg}</p>}
 
@@ -297,9 +366,29 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
             </label>
 
             <label className="check">
+              <input type="checkbox" checked={audioOnly} onChange={(e) => setAudioOnly(e.target.checked)} />
+              <span><b>{lang === "ru" ? "Экспорт только аудио (MP3 подкаст без видеоряда)" : "Audio-only export (MP3 podcast, no video)"}</b></span>
+            </label>
+
+            <label className="check">
               <input type="checkbox" checked={burn} disabled={!project.has_subtitles || engine === "auto-editor"} onChange={(e) => setBurn(e.target.checked)} />
               {lang === "ru" ? "Вшить субтитры в видеоряд (Hardsub)" : "Burn subtitles into video (Hardsub)"}
             </label>
+            {burn && (
+              <div style={{ marginLeft: 24, marginTop: 4, display: "flex", flexDirection: "column", gap: 6 }}>
+                <label className="check">
+                  <input type="checkbox" checked={wordHighlight} onChange={(e) => setWordHighlight(e.target.checked)} />
+                  <span>✨ {lang === "ru" ? "Караоке-подсветка активного слова" : "Word-by-word active karaoke highlight"}</span>
+                </label>
+                {wordHighlight && (
+                  <div className="row" style={{ gap: 10, alignItems: "center" }}>
+                    <span className="muted small">{lang === "ru" ? "Цвет подсветки:" : "Highlight color:"}</span>
+                    <input type="color" value={highlightColor} onChange={(e) => setHighlightColor(e.target.value)} style={{ width: 36, height: 24, padding: 0, border: "none", cursor: "pointer" }} />
+                    <span className="muted small">{highlightColor}</span>
+                  </div>
+                )}
+              </div>
+            )}
             <label className="check">
               <input type="checkbox" checked={normalize} onChange={(e) => setNormalize(e.target.checked)} />
               <span><b>{lang === "ru" ? "Нормализация громкости (EBU R128 / LUFS)" : "Loudness Normalization (EBU R128 / LUFS)"}</b></span>
@@ -328,6 +417,37 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
                 </select>
               </div>
             )}
+
+            {/* Фоновая музыка и Auto-Ducking */}
+            <div style={{ borderTop: "1px solid var(--border)", paddingTop: 12, marginTop: 12 }}>
+              <label style={{ fontWeight: 600 }}>
+                🎵 {lang === "ru" ? "Фоновая музыка (BGM)" : "Background Music (BGM)"}
+                <input
+                  type="text"
+                  value={bgmPath}
+                  onChange={(e) => setBgmPath(e.target.value)}
+                  placeholder={lang === "ru" ? "Полный путь к аудиофайлу (например, C:\\music\\track.mp3)" : "Full path to audio file (e.g. C:\\music\\track.mp3)"}
+                  style={{ marginTop: 4 }}
+                />
+              </label>
+              {bgmPath && (
+                <div style={{ marginTop: 8, padding: "8px 12px", background: "var(--bg-subtle, rgba(255,255,255,0.03))", borderRadius: 6 }}>
+                  <label>
+                    {lang === "ru" ? `Громкость музыки: ${Math.round(bgmVolume * 100)}%` : `Music volume: ${Math.round(bgmVolume * 100)}%`}
+                    <input type="range" min="0.02" max="0.5" step="0.01" value={bgmVolume} onChange={(e) => setBgmVolume(Number(e.target.value))} />
+                  </label>
+                  <label className="check" style={{ marginTop: 8 }}>
+                    <input type="checkbox" checked={bgmDucking} onChange={(e) => setBgmDucking(e.target.checked)} />
+                    <span><b>{lang === "ru" ? "Умное авто-приглушение речи (Auto-Ducking Sidechain)" : "Speech Auto-Ducking (Sidechain)"}</b></span>
+                  </label>
+                  <p className="muted small" style={{ margin: "4px 0 0 24px" }}>
+                    {lang === "ru"
+                      ? "Музыка динамически приглушается во время речи спикера и возвращается в паузах."
+                      : "Music volume ducks when speech is active and returns to full volume during pauses."}
+                  </p>
+                </div>
+              )}
+            </div>
             <label className="check">
               <input type="checkbox" checked={overwrite} onChange={(e) => setOverwrite(e.target.checked)} />
               {lang === "ru" ? "Перезаписывать существующие файлы" : "Overwrite existing files"}

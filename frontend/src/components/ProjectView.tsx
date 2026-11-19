@@ -220,6 +220,15 @@ export default function ProjectView({ pid, onClose }: { pid: string; onClose: ()
             </button>
           ))}
         </nav>
+        <a
+          href={`/api/projects/${pid}/bundle`}
+          download={`${pid}.whisp`}
+          className="button ghost small"
+          title={lang === "ru" ? "Экспорт компактного переносимого архива проекта (.whisp)" : "Export portable project archive (.whisp)"}
+          style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}
+        >
+          <Icon name="download" /> {lang === "ru" ? "Архив .whisp" : ".whisp Bundle"}
+        </a>
         <button className="ghost small" onClick={() => setShowTour(true)} title="Гайд по функциям проекта">
           <Icon name="compass" /> {t("tour.btn")}
         </button>

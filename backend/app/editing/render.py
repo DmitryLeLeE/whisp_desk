@@ -176,8 +176,24 @@ def build_filter_script(plan: dict, meta: dict, options: dict, *, has_subs: bool
         a_chain.append(f"aformat=sample_rates={sr}:channel_layouts=stereo")
     parts.append(f"[ac]{','.join(a_chain) if a_chain else 'anull'}[amain]")
 
+    # --- фоновая музыка с авто-приглушением (BGM + Auto-Ducking) ---
+    bgm = options.get("audio", {}).get("bgm")
+    if bgm and "bgm" in extra_inputs:
+        bi = extra_inputs["bgm"]
+        bgm_vol = max(0.01, min(1.0, float(bgm.get("volume", 0.15))))
+        ducking = bool(bgm.get("ducking", True))
+        parts.append(f"[{bi}:a]aformat=sample_rates={sr}:channel_layouts=stereo,volume={bgm_vol:.3f}[bgm_raw]")
+        if ducking:
+            parts.append("[bgm_raw][amain]sidechaincompress=threshold=0.035:ratio=7:attack=120:release=700[bgm_ducked]")
+            parts.append("[amain][bgm_ducked]amix=inputs=2:duration=first:dropout_transition=2[amixed]")
+        else:
+            parts.append("[amain][bgm_raw]amix=inputs=2:duration=first:dropout_transition=2[amixed]")
+        label_a = "[amixed]"
+    else:
+        label_a = "[amain]"
+
     if not has_video:
-        parts[-1] = parts[-1].replace("[amain]", "[aout]")
+        parts.append(f"{label_a}anull[aout]")
         return ";\n".join(parts) + "\n", total_s
 
     # --- видео после склейки ---
@@ -220,7 +236,7 @@ def build_filter_script(plan: dict, meta: dict, options: dict, *, has_subs: bool
     if intro_s:
         card("intro", intro_s, "intro")
     seq_v.append(label)
-    seq_a.append("[amain]")
+    seq_a.append(label_a)
     if outro_s:
         card("outro", outro_s, "outro")
     if has_cards:
@@ -228,7 +244,7 @@ def build_filter_script(plan: dict, meta: dict, options: dict, *, has_subs: bool
         parts.append(f"{joined}concat=n={len(seq_v)}:v=1:a=1[vout][aout]")
     else:
         parts.append(f"{label}null[vout]")
-        parts.append("[amain]anull[aout]")
+        parts.append(f"{label_a}anull[aout]")
     return ";\n".join(parts) + "\n", total_s
 
 
@@ -304,7 +320,18 @@ def render(*, plan: dict, meta: dict, source: Path, out_path: Path, work_dir: Pa
             extra["outro"] = len(extra) + 1
             inputs += ["-loop", "1", "-t", str(outro_s), "-i", str(op)]
 
-    has_subs = bool(subtitles_ass) and has_video
+    # Фоновая музыка с авто-приглушением (BGM)
+    bgm = options.get("audio", {}).get("bgm")
+    if bgm and bgm.get("path"):
+        bgm_path = Path(bgm["path"]).resolve()
+        if bgm_path.is_file():
+            extra["bgm"] = len(extra) + 1
+            inputs += ["-stream_loop", "-1", "-i", str(bgm_path)]
+
+    is_audio_only = bool(options.get("audio_only")) or out_path.suffix.lower() == ".mp3"
+    effective_has_video = has_video and not is_audio_only
+
+    has_subs = bool(subtitles_ass) and effective_has_video
     if has_subs:
         (work_dir / "subs.ass").write_text(subtitles_ass or "", encoding="utf-8")
     script, main_s = build_filter_script(plan, meta, options, has_subs=has_subs, logo=logo, extra_inputs=extra,
@@ -315,19 +342,24 @@ def render(*, plan: dict, meta: dict, source: Path, out_path: Path, work_dir: Pa
 
     part = out_path.with_name(out_path.stem + ".part" + out_path.suffix)
     v = options["video"]
-    encoder = pick_encoder(v.get("encoder", "libx264")) if has_video else "libx264"
+    encoder = pick_encoder(v.get("encoder", "libx264")) if effective_has_video else "libx264"
 
     script_flag = _script_flags(ffmpeg_info().get("version", ""))
 
     def build_cmd(enc: str) -> list[str]:
         c = [require_tool("ffmpeg"), "-y", "-v", "error", "-nostdin", "-progress", "pipe:1", *inputs,
              *script_flag, str(script_path)]
-        if has_video:
+        if effective_has_video:
             c += ["-map", "[vout]", "-map", "[aout]", *video_codec_args(enc, v)]
+            return c + ["-c:a", "aac", "-b:a", str(v["audio_bitrate"]), "-ar", str(options["audio"]["sample_rate"]),
+                        "-movflags", "+faststart", "-f", "mp4", str(part)]
         else:
             c += ["-map", "[aout]"]
-        return c + ["-c:a", "aac", "-b:a", str(v["audio_bitrate"]), "-ar", str(options["audio"]["sample_rate"]),
-                    "-movflags", "+faststart", "-f", "mp4", str(part)]
+            if out_path.suffix.lower() == ".mp3":
+                return c + ["-c:a", "libmp3lame", "-b:a", str(v.get("audio_bitrate", "192k")),
+                            "-ar", str(options["audio"]["sample_rate"]), "-f", "mp3", str(part)]
+            return c + ["-c:a", "aac", "-b:a", str(v.get("audio_bitrate", "192k")),
+                        "-ar", str(options["audio"]["sample_rate"]), "-movflags", "+faststart", "-f", "mp4", str(part)]
 
     log(f"Рендер: {len(kept_ranges(plan))} фрагментов, ожидаемая длительность {expected_s:.1f} с, кодек {encoder}")
 
@@ -350,7 +382,7 @@ def render(*, plan: dict, meta: dict, source: Path, out_path: Path, work_dir: Pa
         part.unlink(missing_ok=True)
         raise RenderError(f"FFmpeg завершился с ошибкой (код {code}):\n{out[-1500:]}")
 
-    res = verify_output(part, expected_s, has_video)
+    res = verify_output(part, expected_s, effective_has_video)
     part.replace(out_path)
     if progress:
         progress(1.0)
