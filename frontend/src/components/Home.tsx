@@ -280,7 +280,7 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
             </>
           )}
 
-          <div className="seg" role="group" aria-label="Вид">
+          <div className="view-toggle" role="group" aria-label="Вид">
             <button className={view === "grid" ? "active" : ""} onClick={() => setViewMode("grid")} title={lang === "ru" ? "Карточки" : "Grid"}>▦</button>
             <button className={view === "list" ? "active" : ""} onClick={() => setViewMode("list")} title={lang === "ru" ? "Список" : "List"}>☰</button>
           </div>
