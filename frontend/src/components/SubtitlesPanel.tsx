@@ -50,6 +50,33 @@ export default function SubtitlesPanel({ pid, project: _project, cues, busy, onJ
   const [showFillers, setShowFillers] = useState(false);
   const [fillerMatches, setFillerMatches] = useState<FillerWordItem[]>([]);
   const [cleaningFillers, setCleaningFillers] = useState(false);
+  const [diarizing, setDiarizing] = useState(false);
+
+  const handleDiarize = async () => {
+    setDiarizing(true);
+    try {
+      const res = await api.post<{ speakers_count: number }>(`/api/projects/${pid}/subtitles/diarize`, {});
+      onChanged();
+      setMsg(lang === "ru" ? `Диаризация выполнена: обнаружено спикеров — ${res.speakers_count}` : `Diarization complete: ${res.speakers_count} speakers detected`);
+      setTimeout(() => setMsg(""), 3500);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setDiarizing(false);
+    }
+  };
+
+  const toggleSpeaker = async (idx: number, currentSpeaker?: string) => {
+    const nextSpeaker = currentSpeaker === "SPEAKER_2" ? "SPEAKER_1" : "SPEAKER_2";
+    const updated = [...cues];
+    updated[idx] = { ...updated[idx], speaker: nextSpeaker };
+    try {
+      await api.put(`/api/projects/${pid}/subtitles`, { cues: updated, lang: "original" });
+      onChanged();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
 
   const loadFillers = useCallback(() => {
     api.get<{ matches: FillerWordItem[]; count: number }>(`/api/projects/${pid}/filler-words`)
@@ -441,6 +468,14 @@ export default function SubtitlesPanel({ pid, project: _project, cues, busy, onJ
               >
                 <Icon name="scissors" /> {lang === "ru" ? `Слова-паразиты (${fillerMatches.length})` : `Fillers (${fillerMatches.length})`}
               </button>
+              <button
+                className="small ghost"
+                onClick={handleDiarize}
+                disabled={busy || diarizing}
+                title={lang === "ru" ? "Автоматическое определение и разделение голосов спикеров" : "Speaker Diarization"}
+              >
+                <Icon name="mic" /> {diarizing ? (lang === "ru" ? "Анализ..." : "Analyzing...") : (lang === "ru" ? "Спикеры" : "Speakers")}
+              </button>
               {viewMode === "trans" && transLangs.length > 1 && (
                 <select value={selectedTransLang} onChange={(e) => setSelectedTransLang(e.target.value)}>
                   {transLangs.map((l) => <option key={l} value={l}>{l.toUpperCase()}</option>)}
@@ -553,6 +588,18 @@ export default function SubtitlesPanel({ pid, project: _project, cues, busy, onJ
                     </div>
 
                     <div className="row" style={{ flex: "none", gap: 6, alignItems: "center" }}>
+                      {c.speaker && (
+                        <button
+                          className={`badge small ${c.speaker === "SPEAKER_2" ? "warn" : "accent"}`}
+                          onClick={(e) => { e.stopPropagation(); toggleSpeaker(i, c.speaker); }}
+                          title={lang === "ru" ? "Нажмите для переключения спикера" : "Click to toggle speaker"}
+                          style={{ cursor: "pointer", border: "none" }}
+                        >
+                          {c.speaker === "SPEAKER_2"
+                            ? (lang === "ru" ? "Спикер 2" : "Speaker 2")
+                            : (lang === "ru" ? "Спикер 1" : "Speaker 1")}
+                        </button>
+                      )}
                       {isCut && (
                         <span className="badge small bad">
                           {lang === "ru" ? "Вырезано" : "Cut"}
@@ -567,7 +614,7 @@ export default function SubtitlesPanel({ pid, project: _project, cues, busy, onJ
                             ? (lang === "ru" ? "Вернуть реплику в видео" : "Restore cue to video")
                             : (lang === "ru" ? "Вырезать реплику из видео (текстовый монтаж)" : "Cut cue from video")}
                         >
-                          {isCut ? "↩️" : <Icon name="scissors" />}
+                          {isCut ? (lang === "ru" ? "Вернуть" : "Restore") : <Icon name="scissors" />}
                         </button>
                       )}
                       {isTooLong && (

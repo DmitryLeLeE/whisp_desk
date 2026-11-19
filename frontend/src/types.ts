@@ -24,6 +24,7 @@ export interface Plan {
   fps: { numerator: number; denominator: number };
   segments: Segment[];
   markers?: TimelineMarker[];
+  sequence?: string[];
 }
 
 export interface PlanPayload {
@@ -76,7 +77,7 @@ export interface Profile {
   min_keep_s: number; low_volume_db: number | null; low_volume_min_s: number | null;
 }
 
-export interface Cue { start_ms: number; end_ms: number; text: string }
+export interface Cue { start_ms: number; end_ms: number; text: string; speaker?: string }
 export interface FsEntry { name: string; dir: boolean; path: string }
 export interface FsListing { path: string; parent: string | null; entries: FsEntry[] }
 export interface ExportFile { name: string; size: number; where: string; path?: string }

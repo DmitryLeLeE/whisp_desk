@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, fmtSize, fmtTime } from "../api";
 import { useTranslation } from "../i18n";
 import Icon from "./Icon";
+import ShowNotesModal from "./ShowNotesModal";
 import type { ExportFile, Job, PlanPayload, Project, TemplateInfo, VersionInfo } from "../types";
 
 interface NlePreset {
@@ -45,6 +46,9 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
   const [bgmDucking, setBgmDucking] = useState(true);
   const [wordHighlight, setWordHighlight] = useState(false);
   const [highlightColor, setHighlightColor] = useState("#FFEA00");
+  const [lossless, setLossless] = useState(false);
+  const [smartReframe, setSmartReframe] = useState(false);
+  const [showNotesOpen, setShowNotesOpen] = useState(false);
 
   interface Chapter { time_ms: number; title: string; source_ms?: number }
   const [chapters, setChapters] = useState<Chapter[]>([]);
@@ -144,14 +148,15 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
   const render = (mode: "fast" | "final") => guard(async () => {
     await api.patch(`/api/projects/${pid}`, { settings: { template } });
     onJob(await api.post<Job>(`/api/projects/${pid}/render`, {
-      mode, template, burn_subtitles: burn && project.has_subtitles, overwrite, engine,
+      mode, template, burn_subtitles: !lossless && burn && project.has_subtitles, overwrite, engine,
+      lossless,
       options: {
         audio_only: audioOnly,
-        video: { encoder, aspect_ratio: aspectRatio },
+        video: { encoder, aspect_ratio: aspectRatio, smart_reframe: smartReframe },
         audio: {
-          denoise, denoise_level: denoiseLevel, voice_enhancer: voiceEnhancer,
-          normalize, target_lufs: targetLufs,
-          bgm: bgmPath.trim() ? { path: bgmPath.trim(), volume: bgmVolume, ducking: bgmDucking } : undefined,
+          denoise: !lossless && denoise, denoise_level: denoiseLevel, voice_enhancer: voiceEnhancer,
+          normalize: !lossless && normalize, target_lufs: targetLufs,
+          bgm: !lossless && bgmPath.trim() ? { path: bgmPath.trim(), volume: bgmVolume, ducking: bgmDucking } : undefined,
         },
         subtitles: {
           word_highlight: wordHighlight,
@@ -286,13 +291,30 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
             )}
           </p>
 
-          <div className="row wrap">
+          <div className="row wrap" style={{ gap: 8, alignItems: "center" }}>
             <button className="primary big" onClick={() => render("final")} disabled={busy}>
               <Icon name="film" /> {t("export.btn_render_final")}
             </button>
             <button className="big" onClick={() => render("fast")} disabled={busy} title="480p preview render">
               {t("export.btn_render_fast")}
             </button>
+            <button
+              className="big ghost"
+              onClick={() => setShowNotesOpen(true)}
+              style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+              title={lang === "ru" ? "Сгенерировать шоу-ноуты, описание для YouTube и пост для Telegram" : "Show notes & publishing text"}
+            >
+              <Icon name="captions" /> {lang === "ru" ? "Шоу-ноуты" : "Show Notes"}
+            </button>
+          </div>
+
+          <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 8 }}>
+            <label className="check" style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <input type="checkbox" checked={lossless} onChange={(e) => setLossless(e.target.checked)} />
+              <span style={{ fontWeight: 500, fontSize: 13 }}>
+                {lang === "ru" ? "Lossless экспорт (Stream Copy) — мгновенно за 2–3 сек без перекодирования" : "Lossless Export (Stream Copy) — instant 2–3s without re-encoding"}
+              </span>
+            </label>
           </div>
 
           {/* Пресеты экспорта в 1 клик */}
@@ -385,10 +407,16 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
               {lang === "ru" ? "Формат кадра и соотношение сторон" : "Video Format & Aspect Ratio"}
               <select value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value)}>
                 <option value="original">{lang === "ru" ? "16:9 Горизонтальный (Оригинал)" : "16:9 Horizontal (Original)"}</option>
-                <option value="9:16_crop">{lang === "ru" ? "9:16 Shorts / Reels (Кроп по центру 1080x1920)" : "9:16 Shorts / Reels (Center Crop 1080x1920)"}</option>
+                <option value="9:16_crop">{lang === "ru" ? "9:16 Shorts / Reels (Кроп 1080x1920)" : "9:16 Shorts / Reels (1080x1920)"}</option>
                 <option value="9:16_pad">{lang === "ru" ? "9:16 Shorts / Reels (С полями 1080x1920)" : "9:16 Shorts / Reels (Padded 1080x1920)"}</option>
               </select>
             </label>
+            {aspectRatio === "9:16_crop" && (
+              <label className="check" style={{ marginTop: 4, marginBottom: 8 }}>
+                <input type="checkbox" checked={smartReframe} onChange={(e) => setSmartReframe(e.target.checked)} />
+                <span>{lang === "ru" ? "Умный авто-кроп лица (Smart Reframe) — авто-центрирование спикера" : "Smart Face Reframe — keep speaker centered"}</span>
+              </label>
+            )}
 
             <label>
               {lang === "ru" ? "Улучшение голоса (Voice Enhancer)" : "Voice Enhancer Preset"}
@@ -745,6 +773,8 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
           )}
         </section>
       </div>
+
+      {showNotesOpen && <ShowNotesModal pid={pid} onClose={() => setShowNotesOpen(false)} />}
     </div>
   );
 }

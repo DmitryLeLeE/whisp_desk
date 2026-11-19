@@ -5,7 +5,7 @@ import shutil
 from pathlib import Path
 
 from ..analysis import compare as compare_mod, edit_planner, scene_detector, silence_detector, threshold
-from ..editing import exports, render as render_mod, subtitles as subs
+from ..editing import exports, lossless as lossless_mod, render as render_mod, subtitles as subs
 from ..editing.timeline import stats
 from ..integrations import auto_editor, whisp
 from ..media import ffprobe, proxy, waveform
@@ -315,7 +315,13 @@ def register_all(queue: JobQueue, pm: ProjectManager) -> None:
             if clash:
                 raise FileExistsError("Файлы уже существуют: " + ", ".join(clash) + ". Подтвердите перезапись.")
         work = pm.dir(pid) / "exports" / ".work"
-        if p.get("engine") == "auto-editor":
+        if p.get("lossless") or options.get("video", {}).get("lossless"):
+            ctx.stage("Lossless-экспорт (без перекодирования)")
+            result = lossless_mod.render_lossless(
+                source=source, out_path=out, plan=plan, work_dir=work,
+                token=ctx.token, progress=lambda f: ctx.progress(0.02 + 0.93 * f), log=ctx.log
+            )
+        elif p.get("engine") == "auto-editor":
             result = _render_with_auto_editor(ctx, plan, meta, source, out, work, options, ass, overwrite)
         else:
             ctx.stage(f"Рендер ({'быстрый' if mode == 'fast' else 'финальный'})")

@@ -96,7 +96,7 @@ def create_batch(body: BatchProjectCreate, request: Request):
         m.set_source(p["id"], str(p_path.resolve()))
         job_id = None
         if body.auto_analyze:
-            job = j_queue.submit("analyze", p["id"], {"profile": body.profile})
+            job = j_queue.submit(p["id"], "analyze", {"profile": body.profile})
             job_id = job["id"]
         created.append({"id": p["id"], "name": name, "path": str(p_path), "job_id": job_id})
     return {"created": created, "count": len(created)}
@@ -242,5 +242,37 @@ def get_insights(pid: str, request: Request, lang: str = "ru"):
         except Exception:
             cues = []
     return calculate_insights(plan, cues=cues, meta=meta, lang=lang)
+
+
+@router.get("/{pid}/show-notes")
+def get_show_notes(pid: str, request: Request):
+    """Генерирует описание ролика, шоу-ноуты, таймкоды и готовые посты для YouTube и Telegram."""
+    import json
+    m = pm(request)
+    p = m.get(pid)
+    meta = m.metadata(pid) or {}
+    cues = []
+    cues_path = m.dir(pid) / "subtitles" / "cues.json"
+    if cues_path.is_file():
+        try:
+            data = json.loads(cues_path.read_text(encoding="utf-8"))
+            cues = data.get("cues", []) if isinstance(data, dict) else data
+        except Exception:
+            cues = []
+    chapters = []
+    ch_path = m.dir(pid) / "exports" / "chapters.json"
+    if ch_path.is_file():
+        try:
+            chapters = json.loads(ch_path.read_text(encoding="utf-8")).get("chapters", [])
+        except Exception:
+            chapters = []
+    from ..analysis.show_notes import generate_show_notes
+    return generate_show_notes(
+        project_name=p.get("name", "Проект"),
+        cues=cues,
+        chapters=chapters,
+        duration_ms=meta.get("duration_ms", 0),
+    )
+
 
 

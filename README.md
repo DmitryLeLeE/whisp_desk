@@ -10,13 +10,13 @@
 
 <p align="center">
   <a href="https://github.com/DmitryLeLeE/whisp_desk/releases"><img src="https://img.shields.io/github/v/release/DmitryLeLeE/whisp_desk?color=38bdf8&style=flat-square&logo=github" alt="Release"></a>
-  <img src="https://img.shields.io/badge/Version-1.1.0-38bdf8?style=flat-square" alt="Version 1.1.0">
+  <img src="https://img.shields.io/badge/Version-1.2.0-38bdf8?style=flat-square" alt="Version 1.2.0">
   <img src="https://img.shields.io/badge/Platform-Windows-0078D6?style=flat-square&logo=windows&logoColor=white" alt="Platform">
   <img src="https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/Privacy-100%25%20Offline-10b981?style=flat-square&logo=shield" alt="100% Offline">
   <a href="https://github.com/DmitryLeLeE/whisp"><img src="https://img.shields.io/badge/AI-Whisp%201.2.2-f59e0b?style=flat-square" alt="Whisp"></a>
   <img src="https://img.shields.io/badge/Video-FFmpeg%20Pro-007808?style=flat-square&logo=ffmpeg&logoColor=white" alt="FFmpeg">
-  <img src="https://img.shields.io/badge/Tests-91%20passed-success?style=flat-square" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-98%20passed-success?style=flat-square" alt="Tests">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="License"></a>
 </p>
 
@@ -159,7 +159,47 @@ graph LR
 
 ---
 
-### 8. ⌨️ Горячие клавиши и навигация
+### 8. Мгновенный Lossless-экспорт (Stream Copy)
+* Экспорт видео и аудиопотоков без перекодирования (`-c copy`) за **2–3 секунды** с сохранением оригинального качества.
+* Идеально подходит для быстрой черновой нарезки и вырезания пауз без наложения фильтров и субтитров.
+
+---
+
+### 9. Пакетная очередь обработки (Batch Processing Queue)
+* Массовая загрузка десятков видеофайлов в один клик.
+* Автоматическая постановка в фоновую очередь анализа пауз и нарезки по выбранному профилю (*«Динамичный»*, *«Подкаст»*, *«Лекция»*).
+* Наглядный мониторинг статуса каждого проекта и быстрый переход в редактор.
+
+---
+
+### 10. Генератор описания и шоу-ноутов (Show Notes & Publishing)
+* Автоматический анализ расшифровки и формирование готовых материалов для публикации:
+  * **YouTube Description**: оформленное описание с точными таймкодами глав.
+  * **Telegram Post**: готовый форматированный пост с тезисами выпуска, главными цитатами и хештегами.
+  * Копирование в буфер обмена в 1 клик.
+
+---
+
+### 11. Умный авто-кроп лица (Smart Reframe 9:16)
+* Интеллектуальный вертикальный кроп под формат Shorts, Reels и TikTok на основе OpenCV.
+* Автоматическое распознавание лица главного спикера и плавное центрирование кадра в каждом сегменте речи.
+
+---
+
+### 12. Детекция и разделение спикеров (Speaker Diarization)
+* Локальный спектральный анализ частотных характеристик голосов (F0, форманты, спектральный центроид).
+* Автоматическое разделение реплик на участников (*«Спикер 1»*, *«Спикер 2»*) для интервью и подкастов.
+* Назначение индивидуальных стилей субтитров и возможность ручного переключения в 1 клик.
+
+---
+
+### 13. Лезвие (Razor Cut) и перестановка блоков (Storyboarding)
+* Быстрая нарезка сегментов по текущему положению плейхеда клавишами <kbd>C</kbd> или <kbd>B</kbd>.
+* Инструмент изменения последовательности блоков: перемещайте фрагменты раньше или позже по таймлайну кнопками <kbd>▲</kbd> / <kbd>▼</kbd>.
+
+---
+
+### 14. ⌨️ Горячие клавиши и навигация
 
 Поддерживаются студийные раскладки **Adobe Premiere Pro**, **DaVinci Resolve** и **Whisp Desk**:
 

@@ -38,6 +38,7 @@ class CueItem(BaseModel):
     start_ms: int
     end_ms: int
     text: str
+    speaker: str | None = None
 
 
 class UpdateCuesBody(BaseModel):
@@ -135,3 +136,20 @@ def search(pid: str, q: str, request: Request):
         return {"results": []}
     cues = tasks.load_cues(pm(request), pid)
     return {"results": [c.to_dict() for c in cues if needle in c.text.lower()][:200]}
+
+
+@router.post("/diarize")
+def diarize(pid: str, request: Request):
+    """Разделение спикеров (диаризация) на основе спектрального анализа аудио."""
+    m = pm(request)
+    cues_obj = tasks.load_cues(m, pid)
+    if not cues_obj:
+        raise HTTPException(400, "Сначала расшифруйте или загрузите субтитры")
+    source = m.source_path(pid)
+    work = m.dir(pid) / "subtitles" / ".diarize_work"
+    raw_cues = [c.to_dict() for c in cues_obj]
+    from ..analysis.diarization import diarize_cues
+    result = diarize_cues(source, raw_cues, work)
+    updated_cues = [subs.Cue(**c) for c in result["cues"]]
+    tasks.save_cues(m, pid, updated_cues, "diarized")
+    return result

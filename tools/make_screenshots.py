@@ -15,7 +15,7 @@ import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-PORT = 8791
+PORT = 8793
 BASE = f"http://127.0.0.1:{PORT}"
 
 

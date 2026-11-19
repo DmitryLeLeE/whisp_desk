@@ -16,9 +16,13 @@ class Cue:
     start_ms: int
     end_ms: int
     text: str
+    speaker: str | None = None
 
     def to_dict(self) -> dict:
-        return {"start_ms": self.start_ms, "end_ms": self.end_ms, "text": self.text}
+        d = {"start_ms": self.start_ms, "end_ms": self.end_ms, "text": self.text}
+        if self.speaker:
+            d["speaker"] = self.speaker
+        return d
 
 
 # ---------- чтение ----------
@@ -118,8 +122,9 @@ def parse_json(text: str) -> list[Cue]:
     for it in items:
         start, end = float(it["start"]), float(it["end"])  # формат Whisp — секунды
         txt = str(it.get("text", "")).strip()
+        spk = it.get("speaker")
         if txt and end > start:
-            cues.append(Cue(round(start * 1000), round(end * 1000), txt))
+            cues.append(Cue(round(start * 1000), round(end * 1000), txt, speaker=spk))
     return cues
 
 
@@ -187,12 +192,12 @@ def remap_cues(cues: list[Cue], plan: dict) -> list[Cue]:
         if len(merged) == 1:
             s, e = merged[0]
             if e - s >= MIN_PIECE_MS or (cue.end_ms - cue.start_ms) < MIN_PIECE_MS:
-                result.append(Cue(s, e, cue.text))
+                result.append(Cue(s, e, cue.text, speaker=cue.speaker))
             continue
         texts = _split_text(cue.text, [e - s for s, e in merged])
         for (s, e), txt in zip(merged, texts):
             if txt.strip() and e - s >= MIN_PIECE_MS:
-                result.append(Cue(s, e, txt))
+                result.append(Cue(s, e, txt, speaker=cue.speaker))
     # Не допускаем наложения из-за склеек и округлений.
     result.sort(key=lambda c: (c.start_ms, c.end_ms))
     for prev, nxt in zip(result, result[1:]):

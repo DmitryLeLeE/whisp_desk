@@ -6,6 +6,7 @@ import type { ProjectRow, ProjectSummary } from "../types";
 import FileBrowser from "./FileBrowser";
 import Icon from "./Icon";
 import TourGuide, { TourStep } from "./TourGuide";
+import BatchModal from "./BatchModal";
 
 const stem = (path: string) => (path.split(/[\\/]/).pop() ?? "").replace(/\.[^.]+$/, "");
 
@@ -18,6 +19,7 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [showTour, setShowTour] = useState(false);
+  const [batchOpen, setBatchOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<"updated_desc" | "updated_asc" | "name_asc" | "name_desc" | "duration_desc">("updated_desc");
 
@@ -233,6 +235,15 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
             </>
           )}
 
+          <button
+            className="ghost"
+            style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+            onClick={() => setBatchOpen(true)}
+            title={lang === "ru" ? "Пакетная обработка нескольких видео" : "Batch process multiple videos"}
+          >
+            <Icon name="folder" /> <span>{lang === "ru" ? "Пакетная очередь" : "Batch Queue"}</span>
+          </button>
+
           <label className="button ghost" style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", margin: 0 }} title={lang === "ru" ? "Импортировать проект из архива .whisp" : "Import project from .whisp bundle"}>
             <Icon name="folder" /> <span>{lang === "ru" ? "Импорт .whisp" : "Import .whisp"}</span>
             <input type="file" accept=".whisp,.zip" style={{ display: "none" }} onChange={handleImportBundle} />
@@ -250,6 +261,7 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
 
       {error && <p className="error">{error}</p>}
       {browse && <FileBrowser onPick={start} onPickMultiple={(paths) => startBatch(paths)} onClose={() => setBrowse(false)} />}
+      {batchOpen && <BatchModal onClose={() => setBatchOpen(false)} onCreated={load} />}
 
       {/* Зона перетаскивания файлов */}
       <div

@@ -12,7 +12,7 @@ router = APIRouter(prefix="/api/projects/{pid}/timeline", tags=["timeline"])
 
 
 class Op(BaseModel):
-    op: Literal["set_action", "set_range", "move_boundary", "split", "merge", "lock", "review", "add_marker", "delete_marker"]
+    op: Literal["set_action", "set_range", "move_boundary", "split", "merge", "lock", "review", "add_marker", "delete_marker", "reorder"]
     id: str | None = None
     second_id: str | None = None
     action: Literal["KEEP", "CUT"] | None = None
@@ -27,6 +27,7 @@ class Op(BaseModel):
     label: str | None = None
     color: str | None = None
     marker_id: str | None = None
+    sequence: list[str] | None = None
 
 
 class VersionBody(BaseModel):
@@ -85,6 +86,9 @@ def apply_op(pid: str, body: Op, request: Request):
         elif o.op == "delete_marker":
             _need(marker_id=o.marker_id)
             T.delete_marker(plan, o.marker_id)
+        elif o.op == "reorder":
+            _need(sequence=o.sequence)
+            return T.reorder_sequence(plan, o.sequence)
 
     plan, result = m.edit_plan(pid, body.op, run)
     return {**_payload(m, pid, plan), "result": result}

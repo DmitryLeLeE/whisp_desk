@@ -125,11 +125,14 @@ def build_filter_script(plan: dict, meta: dict, options: dict, *, has_subs: bool
         if n > 1:
             labels = "".join(f"[vs{i}]" for i in range(n))
             parts.append(f"{vsrc}split={n}{labels}")
+    aspect = options.get("video", {}).get("aspect_ratio", "original")
+    smart_x = options.get("video", {}).get("smart_reframe_x") if aspect == "9:16_crop" else None
     for i, (a, b) in enumerate(ranges):
         dur = (b - a) / 1000
         if has_video:
             src = f"[vs{i}]" if n > 1 else vsrc
-            parts.append(f"{src}trim=start={_sec(a)}:end={_sec(b)},setpts=PTS-STARTPTS[v{i}]")
+            crop_part = f",crop=ih*9/16:ih:{smart_x[i]}:0" if smart_x and i < len(smart_x) else ""
+            parts.append(f"{src}trim=start={_sec(a)}:end={_sec(b)},setpts=PTS-STARTPTS{crop_part}[v{i}]")
         chain = f"[0:a:{a_idx}]atrim=start={_sec(a)}:end={_sec(b)},asetpts=PTS-STARTPTS,aresample={sr}"
         if declick > 0 and dur > 2 * declick:
             if a > 0:
@@ -201,7 +204,9 @@ def build_filter_script(plan: dict, meta: dict, options: dict, *, has_subs: bool
     aspect = options.get("video", {}).get("aspect_ratio", "original")
     v_chain = []
     if aspect == "9:16_crop":
-        v_chain.extend(["crop=ih*9/16:ih:(iw-ih*9/16)/2:0", f"scale={w}:{h}:flags=bicubic", "setsar=1"])
+        if not smart_x:
+            v_chain.append("crop=ih*9/16:ih:(iw-ih*9/16)/2:0")
+        v_chain.extend([f"scale={w}:{h}:flags=bicubic", "setsar=1"])
     elif aspect == "9:16_pad":
         v_chain.extend([f"scale={w}:{h}:force_original_aspect_ratio=decrease", f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2:black", "setsar=1"])
     else:
@@ -330,6 +335,17 @@ def render(*, plan: dict, meta: dict, source: Path, out_path: Path, work_dir: Pa
 
     is_audio_only = bool(options.get("audio_only")) or out_path.suffix.lower() == ".mp3"
     effective_has_video = has_video and not is_audio_only
+
+    if effective_has_video and options.get("video", {}).get("aspect_ratio") == "9:16_crop" and options.get("video", {}).get("smart_reframe"):
+        try:
+            from .face_reframe import compute_smart_reframe_segments
+            ranges = kept_ranges(plan)
+            w_src, h_src = meta["video"]["width"], meta["video"]["height"]
+            crops_x = compute_smart_reframe_segments(source, w_src, h_src, ranges, log=log)
+            options["video"]["smart_reframe_x"] = crops_x
+        except Exception as e:
+            if log:
+                log(f"Smart reframe fallback: {e}")
 
     has_subs = bool(subtitles_ass) and effective_has_video
     if has_subs:

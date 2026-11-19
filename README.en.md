@@ -10,13 +10,13 @@
 
 <p align="center">
   <a href="https://github.com/DmitryLeLeE/whisp_desk/releases"><img src="https://img.shields.io/github/v/release/DmitryLeLeE/whisp_desk?color=38bdf8&style=flat-square&logo=github" alt="Release"></a>
-  <img src="https://img.shields.io/badge/Version-1.1.0-38bdf8?style=flat-square" alt="Version 1.1.0">
+  <img src="https://img.shields.io/badge/Version-1.2.0-38bdf8?style=flat-square" alt="Version 1.2.0">
   <img src="https://img.shields.io/badge/Platform-Windows-0078D6?style=flat-square&logo=windows&logoColor=white" alt="Platform">
   <img src="https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/Privacy-100%25%20Offline-10b981?style=flat-square&logo=shield" alt="100% Offline">
   <a href="https://github.com/DmitryLeLeE/whisp"><img src="https://img.shields.io/badge/AI-Whisp%201.2.2-f59e0b?style=flat-square" alt="Whisp"></a>
   <img src="https://img.shields.io/badge/Video-FFmpeg%20Pro-007808?style=flat-square&logo=ffmpeg&logoColor=white" alt="FFmpeg">
-  <img src="https://img.shields.io/badge/Tests-91%20passed-success?style=flat-square" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-98%20passed-success?style=flat-square" alt="Tests">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="License"></a>
 </p>
 
@@ -159,7 +159,47 @@ One-click rule-based assembly algorithms for fast rough-cut workflows:
 
 ---
 
-### 8. ⌨️ Shortcuts & Studio Navigation
+### 8. Instant Lossless Export (Stream Copy)
+* Stream copy export without re-encoding (`-c copy`) in **2–3 seconds** with 100% original video/audio quality.
+* Perfect for ultra-fast rough cuts and silence trimming without rendering filters or burnt-in subtitles.
+
+---
+
+### 9. Batch Processing Queue
+* Import dozens of video files in a single click.
+* Automated background queue for silence detection and rough-cut assembly across preset profiles (*Dynamic*, *Podcast*, *Lecture*).
+* Live progress monitoring and direct links to open any project in the editor.
+
+---
+
+### 10. Show Notes & Social Publishing Generator
+* Instant analysis of transcript and timeline chapters to generate publishing-ready content:
+  * **YouTube Description**: Clean description with precise chapter timestamps.
+  * **Telegram Post**: Formatted channel post with key takeaways, highlights, and hashtags.
+  * 1-click clipboard copy.
+
+---
+
+### 11. Smart Face Reframe (9:16 Auto-Crop)
+* Intelligent vertical framing for Shorts, Reels, and TikTok powered by OpenCV face detection.
+* Detects the primary speaker and smoothly centers the crop box across speech segments.
+
+---
+
+### 12. Speaker Diarization
+* Offline spectral clustering of vocal characteristics (F0, formants, centroid, PSD).
+* Separates dialogues and interviews into participants (*Speaker 1*, *Speaker 2*) with color-coded subtitle badges.
+* Supports 1-click manual speaker toggle.
+
+---
+
+### 13. Razor Tool & Storyboard Reordering
+* Cut segments precisely at the playhead position with <kbd>C</kbd> or <kbd>B</kbd>.
+* Storyboard mode: reorder speech blocks earlier or later using <kbd>▲</kbd> / <kbd>▼</kbd> buttons on the timeline.
+
+---
+
+### 14. ⌨️ Shortcuts & Studio Navigation
 
 Supports **Adobe Premiere Pro**, **DaVinci Resolve**, and **Whisp Desk** keymaps:
 

@@ -51,9 +51,10 @@ const PATHS: Record<string, string> = {
   radio: "M4.9 19.1A10 10 0 0 1 19.1 4.9M7.8 16.2a6 6 0 0 1 8.4-8.4M12 12h.01",
 };
 
-export default function Icon({ name, className = "", style }: { name: keyof typeof PATHS | string; className?: string; style?: React.CSSProperties }) {
+export default function Icon({ name, className = "", style, size }: { name: keyof typeof PATHS | string; className?: string; style?: React.CSSProperties; size?: number }) {
+  const mergedStyle = size ? { width: size, height: size, ...style } : style;
   return (
-    <svg className={`icon ${className}`} style={style} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg className={`icon ${className}`} style={mergedStyle} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d={PATHS[name] ?? PATHS.info} />
     </svg>
   );

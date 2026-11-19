@@ -191,10 +191,32 @@ def snap_ms(ms: int, fps: dict | None) -> int:
     return round(frame * 1000 * den / num)
 
 
+def reorder_sequence(plan: dict, new_sequence: list[str]) -> list[str]:
+    """Устанавливает пользовательский порядок воспроизведения/склейки сегментов (Storyboarding)."""
+    keep_ids = {s["id"] for s in plan["segments"] if s["action"] == "KEEP"}
+    valid = [sid for sid in new_sequence if sid in keep_ids]
+    for s in plan["segments"]:
+        if s["action"] == "KEEP" and s["id"] not in valid:
+            valid.append(s["id"])
+    plan["sequence"] = valid
+    return valid
+
+
 def kept_ranges(plan: dict, snap: bool = True) -> list[tuple[int, int]]:
     """Сохраняемые интервалы источника (мс), по возможности на границах кадров; пустые отбрасываются."""
     fps = plan.get("fps") if snap else None
     out: list[tuple[int, int]] = []
+
+    if plan.get("sequence"):
+        seg_map = {s["id"]: s for s in plan["segments"] if s["action"] == "KEEP"}
+        for sid in plan["sequence"]:
+            if sid in seg_map:
+                s = seg_map[sid]
+                a, b = snap_ms(s["source_start_ms"], fps), snap_ms(s["source_end_ms"], fps)
+                if b > a:
+                    out.append((a, b))
+        return out
+
     for s in plan["segments"]:
         if s["action"] != "KEEP":
             continue

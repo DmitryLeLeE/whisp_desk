@@ -15,6 +15,7 @@ class RenderBody(BaseModel):
     mode: str = "final"
     template: str | None = None
     burn_subtitles: bool = False
+    lossless: bool = False
     overwrite: bool = False
     package: bool | None = None
     engine: str | None = None

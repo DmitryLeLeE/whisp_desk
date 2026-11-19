@@ -245,6 +245,37 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
     window.open(`/api/projects/${pid}/frame?time_ms=${snapMs(current)}&download=true`, "_blank");
   };
 
+  const razorCut = useCallback(async () => {
+    const at = snapMs(current);
+    const target = segsRef.current.find((s) => s.source_start_ms < at && s.source_end_ms > at);
+    if (!target) {
+      setMsg(lang === "ru" ? "Курсор на границе фрагмента" : "Playhead is already at boundary");
+      setTimeout(() => setMsg(""), 2000);
+      return;
+    }
+    await run({ op: "split", id: target.id, at_ms: at });
+    setMsg(lang === "ru" ? `Фрагмент разрезан в точке ${fmtTime(at, true)}` : `Split at ${fmtTime(at, true)}`);
+    setTimeout(() => setMsg(""), 2500);
+  }, [current, snapMs, run, lang]);
+
+  const moveSequence = (segId: string, direction: "up" | "down") => {
+    const keepSegments = segs.filter((s) => s.action === "KEEP");
+    const currentSeq = plan.sequence && plan.sequence.length > 0
+      ? plan.sequence.filter((id: string) => keepSegments.some((s) => s.id === id))
+      : keepSegments.map((s) => s.id);
+
+    const idx = currentSeq.indexOf(segId);
+    if (idx === -1) return;
+    const targetIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (targetIdx < 0 || targetIdx >= currentSeq.length) return;
+
+    const updatedSeq = [...currentSeq];
+    const [moved] = updatedSeq.splice(idx, 1);
+    updatedSeq.splice(targetIdx, 0, moved);
+
+    run({ op: "reorder", sequence: updatedSeq });
+  };
+
   const addMarkerAtCurrent = async () => {
     const at = snapMs(current);
     const existing = plan.markers?.find((m) => Math.abs(m.time_ms - at) < 150);
@@ -332,7 +363,8 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
           }
           break;
         case "b":
-          if (here) run({ op: "split", id: here.id, at_ms: snapMs(current) });
+          e.preventDefault();
+          razorCut();
           break;
         case "arrowleft": {
           const tNext = Math.max(0, current - (e.shiftKey ? 5000 : frameMs));
@@ -604,8 +636,8 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
           </>
         )}
 
-        <button disabled={!here || busy} onClick={() => here && run({ op: "split", id: here.id, at_ms: snapMs(current) })}>
-          <Icon name="scissors" /> {t("editor.split")}
+        <button disabled={!here || busy} onClick={razorCut} title={lang === "ru" ? "Лезвие: разрезать фрагмент по курсору (C)" : "Razor tool: split at playhead (C)"}>
+          <Icon name="scissors" /> {lang === "ru" ? "Лезвие (C)" : "Razor (C)"}
         </button>
         <button
           className="ghost small"
@@ -792,6 +824,16 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
                       <button disabled={busy} title="Merge" onClick={() => run({ op: "merge", id: s.id, second_id: next.id, action: s.action })}>
                         ⇆
                       </button>
+                    )}
+                    {s.action === "KEEP" && (
+                      <>
+                        <button disabled={busy} title={lang === "ru" ? "Сдвинуть блок раньше (Storyboarding)" : "Move up"} onClick={() => moveSequence(s.id, "up")}>
+                          ▲
+                        </button>
+                        <button disabled={busy} title={lang === "ru" ? "Сдвинуть блок позже (Storyboarding)" : "Move down"} onClick={() => moveSequence(s.id, "down")}>
+                          ▼
+                        </button>
+                      </>
                     )}
                   </td>
                 </tr>
