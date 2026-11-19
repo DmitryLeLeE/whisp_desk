@@ -1834,3 +1834,16 @@ main:has(> .nle-manager-toolbar) { max-width: 1400px; }
 .nle-hotkey-cheatsheet { align-items: center; gap: 14px; }
 .nle-tool-btn { height: 26px; min-height: 26px; }
 .nle-timeline-toolbar { gap: 10px; padding-top: 5px; padding-bottom: 5px; }
+
+/* Диалог «Как обработать видео?» */
+.start-dialog { width: min(680px, 94vw); }
+.start-grid { display: flex; flex-direction: column; gap: 8px; }
+.start-card { display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); cursor: pointer; }
+.start-card input { position: absolute; opacity: 0; pointer-events: none; }
+.start-card:hover { border-color: var(--muted); }
+.start-card.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; background: color-mix(in srgb, var(--accent) 8%, var(--panel)); }
+.start-lang { display: flex; flex-direction: column; gap: 4px; margin-top: 14px; }
+.auto-banner { position: fixed; left: 50%; transform: translateX(-50%); bottom: 64px; z-index: 40; display: flex; align-items: center; gap: 10px; padding: 9px 16px; background: var(--raised); border: 1px solid var(--accent); border-radius: 4px; box-shadow: 0 6px 24px rgba(0,0,0,.4); font-size: 13px; }
+.start-dialog .modal-footer { display: flex; justify-content: flex-end; gap: 8px; }
+.start-dialog .modal-body { max-height: 70vh; overflow-y: auto; }
+.auto-banner.bad { border-color: var(--cut, #e5484d); max-width: min(720px, 92vw); }

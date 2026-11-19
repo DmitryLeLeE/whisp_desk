@@ -36,7 +36,7 @@ DaVinci Resolve or Final Cut Pro.
    `WHISP_MEDIA_DESK-setup.exe`, if you want a Start menu shortcut.
 2. Run it. The first start is slower than the rest because the exe unpacks itself (about 300 MB). Windows SmartScreen may warn
    about an unknown publisher because the file is not signed: "More info" → "Run anyway".
-3. Drop a video into the window, then follow the four steps:
+3. Drop a video into the window. The app asks how to process it: Auto (pauses and subtitles), Dynamic for Shorts, Gentle for interviews, Pauses only, or Manual. The chosen option runs by itself and opens the result in the editor. In manual mode, follow the four steps:
 
 | Step | What you do |
 |---|---|

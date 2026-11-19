@@ -54,6 +54,8 @@ export default function ProjectView({ pid, onClose, sys, theme, onToggleTheme, o
   const [editingName, setEditingName] = useState(false);
   const [nameVal, setNameVal] = useState("");
   const firstLoad = useRef(true);
+  const autoRan = useRef(false);
+  const [autoNote, setAutoNote] = useState("");
 
   const saveName = async () => {
     const trimmed = nameVal.trim();
@@ -130,6 +132,47 @@ export default function ProjectView({ pid, onClose, sys, theme, onToggleTheme, o
   }, [pid]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
+
+  // Быстрый старт: цепочка «поиск пауз → расшифровка», выбранная в диалоге при добавлении видео
+  useEffect(() => {
+    if (!project || autoRan.current) return;
+    autoRan.current = true;
+    const key = `whisp_autorun_${pid}`;
+    let cfg: { profile: string; transcribe: boolean; language: string } | null = null;
+    try { const raw = localStorage.getItem(key); if (raw) cfg = JSON.parse(raw); localStorage.removeItem(key); } catch { /* ignore */ }
+    if (!cfg || !project.source) return;
+    const plan = cfg;
+    const wait = async (j: Job): Promise<Job> => {
+      setJob(j);
+      let cur = j;
+      while (cur.status === "QUEUED" || cur.status === "RUNNING") {
+        await new Promise((r) => setTimeout(r, 800));
+        cur = await api.get<Job>(`/api/jobs/${cur.id}`);
+        setJob(cur);
+      }
+      return cur;
+    };
+    (async () => {
+      try {
+        setAutoNote(plan.transcribe ? "Шаг 1 из 2: ищем паузы…" : "Ищем паузы…");
+        const a = await wait(await api.post<Job>(`/api/projects/${pid}/analyze`, {
+          profile: plan.profile, overrides: {}, audio_stream: project.settings.audio_stream, detect_scenes: true, engine: "builtin", auto_threshold: true, denoise: false,
+        }));
+        if (a.status !== "COMPLETED") { setError(a.error || "Не удалось найти паузы"); setAutoNote(""); await loadAll(); return; }
+        await loadAll();
+        setTab("edit");
+        if (plan.transcribe) {
+          setAutoNote("Шаг 2 из 2: распознаём речь (при первом запуске скачивается модель)…");
+          const tr = await wait(await api.post<Job>(`/api/projects/${pid}/subtitles/transcribe`, {
+            model: "turbo", language: plan.language, device: "auto", overwrite: false, translate_to: "", task: "transcribe", max_line_chars: 0, vad: true, initial_prompt: "",
+          }));
+          if (tr.status !== "COMPLETED") setError((tr.error || "Не удалось распознать речь") + ". Паузы уже найдены; расшифровку можно запустить на шаге «Субтитры».");
+        }
+        setAutoNote("");
+        await loadAll();
+      } catch (e) { setError((e as Error).message); setAutoNote(""); }
+    })();
+  }, [project, pid, loadAll]);
 
   // Опрос состояния текущей задачи
   useEffect(() => {
@@ -343,6 +386,8 @@ export default function ProjectView({ pid, onClose, sys, theme, onToggleTheme, o
         )}
       </main>
 
+      {autoNote && <div className="auto-banner" role="status"><span className="spinner" /> {autoNote}</div>}
+      {error && !autoNote && <div className="auto-banner bad" role="alert"><span>{error}</span><button className="btn-icon" onClick={() => setError("")} aria-label="Закрыть">✕</button></div>}
       {running && job && <JobDock job={job} onJob={setJob} onDone={loadAll} />}
 
       {showTour && (

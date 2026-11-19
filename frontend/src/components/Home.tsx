@@ -7,6 +7,7 @@ import FileBrowser from "./FileBrowser";
 import Icon from "./Icon";
 import TourGuide, { TourStep } from "./TourGuide";
 import BatchModal from "./BatchModal";
+import StartDialog, { StartPreset } from "./StartDialog";
 
 const stem = (path: string) => (path.split(/[\\/]/).pop() ?? "").replace(/\.[^.]+$/, "");
 
@@ -20,6 +21,7 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
   const [error, setError] = useState("");
   const [showTour, setShowTour] = useState(false);
   const [batchOpen, setBatchOpen] = useState(false);
+  const [pendingPath, setPendingPath] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [view, setView] = useState<"grid" | "list">(() => (localStorage.getItem("home.view") === "list" ? "list" : "grid"));
   const setViewMode = (v: "grid" | "list") => { setView(v); try { localStorage.setItem("home.view", v); } catch { /* ignore */ } };
@@ -121,13 +123,18 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
     }
   };
 
-  const start = async (path: string) => {
-    setError(""); setBusy(true); setBrowse(false);
+  const start = (path: string) => { setError(""); setBrowse(false); setPendingPath(path); };
+
+  const create = async (path: string, preset: StartPreset, language: string) => {
+    setError(""); setBusy(true); setPendingPath(null);
     let created: ProjectRow | null = null;
     try {
       const defaultName = stem(path) || (lang === "ru" ? "Новый проект" : "New Project");
       created = await api.post<ProjectRow>("/api/projects", { name: defaultName, type });
       await api.put(`/api/projects/${created.id}/source`, { path });
+      if (!preset.manual) {
+        try { localStorage.setItem(`whisp_autorun_${created.id}`, JSON.stringify({ profile: preset.profile, transcribe: preset.transcribe, language })); } catch { /* ignore */ }
+      }
       onOpen(created.id);
     } catch (e) {
       setError((e as Error).message);
@@ -314,6 +321,7 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
 
       {error && <div className="notice bad" style={{ marginBottom: 16 }}>{error}</div>}
       {browse && <FileBrowser onPick={start} onPickMultiple={(paths) => startBatch(paths)} onClose={() => setBrowse(false)} />}
+      {pendingPath && <StartDialog filename={pendingPath.split(/[\\/]/).pop() ?? pendingPath} busy={busy} onStart={(pr, l) => create(pendingPath, pr, l)} onClose={() => setPendingPath(null)} />}
       {batchOpen && <BatchModal onClose={() => setBatchOpen(false)} onCreated={load} />}
 
       {/* Зона перетаскивания файлов */}
