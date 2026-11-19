@@ -19,6 +19,8 @@ class RenderBody(BaseModel):
     package: bool | None = None
     engine: str | None = None
     options: dict | None = None
+    range_start_ms: int | None = None
+    range_end_ms: int | None = None
 
 
 class ExportBody(BaseModel):

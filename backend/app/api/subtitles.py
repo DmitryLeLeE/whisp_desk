@@ -25,6 +25,7 @@ class TranscribeBody(BaseModel):
     max_line_chars: int = 0
     max_lines: int = 2
     max_duration: float = 0.0
+    initial_prompt: str = ""
 
 
 class TranslateOnlyBody(BaseModel):

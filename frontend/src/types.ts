@@ -11,11 +11,19 @@ export interface Segment {
   manual: boolean;
 }
 
+export interface TimelineMarker {
+  id: string;
+  time_ms: number;
+  label: string;
+  color: string;
+}
+
 export interface Plan {
   schema_version: number;
   duration_ms: number;
   fps: { numerator: number; denominator: number };
   segments: Segment[];
+  markers?: TimelineMarker[];
 }
 
 export interface PlanPayload {
@@ -116,7 +124,6 @@ export interface FillerWordItem {
   duration_ms: number;
   context: string;
 }
-
 
 export interface EditPattern {
   id: string;

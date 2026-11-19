@@ -76,7 +76,12 @@ The server binds strictly to `127.0.0.1`. Original media files are never modifie
 * 🧭 **Playhead Autoscroll**: Smooth tracking of the needle playhead across long recordings.
 * 🎬 **Batch Import**: Drag and drop multiple videos simultaneously or select a batch in file explorer.
 * 📦 **Zero-Re-encoding Export**: Export timeline projects to **Adobe Premiere Pro (XML)**, **DaVinci Resolve (FCPXML + Markers CSV)**, Final Cut Pro, EDL CMX3600, OpenTimelineIO, or render final MP4s with embedded subtitles.
-* ⌨️ **Pro Keyboard Presets**: Support for **Adobe Premiere Pro** (`J-K-L`, `Q/W` Ripple Trim, `C` Razor) and **DaVinci Resolve** workflows.
+* ⌨️ **Pro Keyboard Presets**: Support for **Adobe Premiere Pro** (`J-K-L`, `Q/W` Ripple Trim, `C` Razor, `M` Marker) and **DaVinci Resolve** workflows.
+* 📌 **Timeline Markers**: Place markers via `M` shortcut, add custom labels, and export markers directly into DaVinci Resolve CSV.
+* ⚡ **Quick Range Export**: Instantly render only selected `[In ... Out]` range into MP4 without rendering the entire timeline.
+* 🔊 **EBU R128 Loudness Normalization**: Master audio volume to industry broadcast standards (-14 LUFS for YouTube/Shorts, -16 LUFS for podcasts, -23 LUFS for TV).
+* 📖 **Custom Vocabulary & Names (Initial Prompt)**: Pass specialized terminology, brand names, and slang to eliminate Whisper hallucinations.
+* 🔄 **GitHub Release Update Checker**: Check for new releases directly from Settings with 100% offline fallback.
 * 📊 **Speech Insights**: Real-time Words Per Minute (WPM) calculation, runtime stats, trimmed duration, and content optimization ratio.
 
 ---

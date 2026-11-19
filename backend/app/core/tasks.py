@@ -277,6 +277,18 @@ def register_all(queue: JobQueue, pm: ProjectManager) -> None:
         options = render_mod.merge_options(mode, tpl, p.get("options"))
         overwrite = bool(p.get("overwrite"))
         out_name = "preview.mp4" if mode == "fast" else "final.mp4"
+        package = p.get("package", mode == "final")
+        if p.get("range_start_ms") is not None and p.get("range_end_ms") is not None:
+            r_start = int(p["range_start_ms"])
+            r_end = int(p["range_end_ms"])
+            import copy
+            plan = copy.deepcopy(plan)
+            plan["segments"] = [dict(s) for s in plan["segments"] if s["source_end_ms"] > r_start and s["source_start_ms"] < r_end]
+            for s in plan["segments"]:
+                s["source_start_ms"] = max(r_start, s["source_start_ms"])
+                s["source_end_ms"] = min(r_end, s["source_end_ms"])
+            out_name = f"range_{r_start // 1000}s_{r_end // 1000}s.mp4"
+            package = False
         out = pm.dir(pid) / "exports" / out_name
         ass = None
         if p.get("burn_subtitles"):
@@ -284,7 +296,6 @@ def register_all(queue: JobQueue, pm: ProjectManager) -> None:
             if not cues:
                 raise ProjectError("Нельзя вшить субтитры: расшифровка не загружена")
             ass = subs.render_ass(subs.remap_cues(cues, plan), tpl.get("subtitles"))
-        package = p.get("package", mode == "final")
         formats = list(p.get("formats") or ["premiere", "fcpxml", "davinci_markers", "srt", "plan", "info", "v3", "otio"])
         if not package or not read_json(pm.dir(pid) / "subtitles" / "cues.json"):
             formats = [f for f in formats if f not in ("srt", "ass")]
@@ -329,7 +340,7 @@ def register_all(queue: JobQueue, pm: ProjectManager) -> None:
             elif kind == "translate" and ev.get("total"):
                 ctx.progress(0.95 + 0.04 * ev["done"] / ev["total"], message="Перевод субтитров")
 
-        opts = {k: p[k] for k in ("device", "task", "translate_to", "vad", "max_line_chars", "max_lines", "max_duration") if k in p}
+        opts = {k: p[k] for k in ("device", "task", "translate_to", "vad", "max_line_chars", "max_lines", "max_duration", "initial_prompt") if k in p}
         files = whisp.transcribe(source, tmp, audio_index=a_idx, model=p.get("model", "small"),
                                  language=p.get("language", "auto"), token=ctx.token, on_event=on_event, on_line=ctx.log, **opts)
         srt = files["original"]

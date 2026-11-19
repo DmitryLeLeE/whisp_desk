@@ -22,6 +22,7 @@ export default function ShortcutsModal({ onClose }: { onClose: () => void }) {
     { key: "C", action: "Вырезать выбранный сегмент (CUT)" },
     { key: "K", action: "Оставить выбранный фрагмент (KEEP)" },
     { key: "I / O", action: "Установить точку входа (In) и выхода (Out)" },
+    { key: "M", action: "Поставить или изменить маркер (Marker)" },
     { key: "L", action: "Заблокировать/разблокировать фрагмент от правок" },
     { key: "R", action: "Отметить решение как проверенное (Review)" },
     { key: "Enter", action: "Принять решение и перейти к следующему непроверенному" },
@@ -39,6 +40,7 @@ export default function ShortcutsModal({ onClose }: { onClose: () => void }) {
     { key: "Q", action: "Ripple Trim In (Удалить начало фрагмента до курсора)" },
     { key: "W", action: "Ripple Trim Out (Удалить конец фрагмента от курсора)" },
     { key: "I / O", action: "Mark In / Mark Out (Метки начала и конца)" },
+    { key: "M", action: "Add Marker (Добавить маркер)" },
     { key: "← / →", action: "Шаг на 1 кадр назад / вперёд" },
     { key: "Shift + ← / →", action: "Шаг на 5 секунд" },
     { key: "Ctrl + Z", action: "Отменить (Undo)" },
@@ -52,6 +54,7 @@ export default function ShortcutsModal({ onClose }: { onClose: () => void }) {
     { key: "B", action: "Blade Tool (Лезвие / Разрез по курсору)" },
     { key: "Q / W", action: "Ripple Cut начала / конца фрагмента" },
     { key: "I / O", action: "Метки In и Out" },
+    { key: "M", action: "Добавить маркер таймлайна" },
     { key: "Ctrl + Z", action: "Отменить" },
     { key: "Ctrl + Shift + Z", action: "Повторить" },
   ];
@@ -66,6 +69,7 @@ export default function ShortcutsModal({ onClose }: { onClose: () => void }) {
     { key: "C", action: "Cut selected segment" },
     { key: "K", action: "Keep selected segment" },
     { key: "I / O", action: "Set In / Out points" },
+    { key: "M", action: "Add or edit timeline marker" },
     { key: "L", action: "Lock / unlock segment" },
     { key: "R", action: "Mark segment as reviewed" },
     { key: "Enter", action: "Accept decision & jump to next unreviewed" },
@@ -83,6 +87,7 @@ export default function ShortcutsModal({ onClose }: { onClose: () => void }) {
     { key: "Q", action: "Ripple Trim In (Trim head to playhead)" },
     { key: "W", action: "Ripple Trim Out (Trim tail from playhead)" },
     { key: "I / O", action: "Set In / Out marks" },
+    { key: "M", action: "Add Marker" },
     { key: "Ctrl + Z / Ctrl + Shift + Z", action: "Undo / Redo" },
   ];
 
@@ -92,6 +97,7 @@ export default function ShortcutsModal({ onClose }: { onClose: () => void }) {
     { key: "B", action: "Blade Tool (Split at playhead)" },
     { key: "Q / W", action: "Ripple Trim In / Out" },
     { key: "I / O", action: "Set In / Out" },
+    { key: "M", action: "Add Marker" },
     { key: "Ctrl + Z", action: "Undo" },
   ];
 

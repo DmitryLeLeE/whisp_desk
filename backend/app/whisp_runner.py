@@ -70,6 +70,7 @@ def _transcribe(p: dict) -> int:
         vad_filter=bool(p.get("vad", True)), beam_size=int(p.get("beam_size", 5)),
         max_line_chars=int(p.get("max_line_chars", 0)), max_lines=int(p.get("max_lines", 2)),
         max_duration=float(p.get("max_duration", 0.0)), device=p.get("device", "auto"), model_dir=model_dir,
+        initial_prompt=p.get("initial_prompt") or None,
         temp_dir=None, translate_to=translate_to, variants=variants, cancel_event=None)
 
     stem = p.get("stem") or source.stem

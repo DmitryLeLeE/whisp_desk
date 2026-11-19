@@ -356,6 +356,11 @@ def to_davinci_markers_csv(plan: dict, meta: dict | None = None) -> str:
         color = "Green" if action == "KEEP" else "Red"
         reason = seg.get("reason") or ("Речь" if action == "KEEP" else "Пауза")
         lines.append(f'"Сегмент {i:03d} ({action})","{color}","{tc(sf)}","{tc(dur)}","{reason}"')
+    for m in plan.get("markers", []):
+        mf = _frames(m.get("time_ms", 0), fps)
+        m_color = "Cyan" if m.get("color") == "cyan" else ("Yellow" if m.get("color") == "amber" else "Blue")
+        m_label = m.get("label") or "Пользовательский маркер"
+        lines.append(f'"{m_label}","{m_color}","{tc(mf)}","{tc(1)}","{m_label}"')
     return "\n".join(lines) + "\n"
 
 

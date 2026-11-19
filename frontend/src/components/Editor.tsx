@@ -45,6 +45,7 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
   const [showInsights, setShowInsights] = useState(false);
   const [showPatterns, setShowPatterns] = useState(false);
   const [followPlayhead, setFollowPlayhead] = useState(true);
+  const [exportingRange, setExportingRange] = useState(false);
 
   const rangeEnd = useRef<number | null>(null);
   const segsRef = useRef(segs);
@@ -225,6 +226,51 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
     window.open(`/api/projects/${pid}/frame?time_ms=${snapMs(current)}&download=true`, "_blank");
   };
 
+  const addMarkerAtCurrent = async () => {
+    const at = snapMs(current);
+    const existing = plan.markers?.find((m) => Math.abs(m.time_ms - at) < 150);
+    if (existing) {
+      const newLabel = prompt(
+        lang === "ru" ? "Название маркера (оставьте пустым для удаления):" : "Marker label (leave empty to delete):",
+        existing.label
+      );
+      if (newLabel === null) return;
+      if (newLabel.trim() === "") {
+        await run({ op: "delete_marker", marker_id: existing.id });
+      } else {
+        await run({ op: "delete_marker", marker_id: existing.id });
+        await run({ op: "add_marker", time_ms: existing.time_ms, label: newLabel.trim(), color: existing.color });
+      }
+    } else {
+      await run({ op: "add_marker", time_ms: at, label: "Маркер", color: "cyan" });
+    }
+  };
+
+  const exportRange = async () => {
+    if (markIn == null || markOut == null || markOut <= markIn) return;
+    setExportingRange(true);
+    setMsg(lang === "ru" ? "Рендеринг выделенного отрезка..." : "Rendering selected range...");
+    try {
+      const res = await api.post<{ task_id: string }>(`/api/projects/${pid}/render`, {
+        preset: "youtube_1080p",
+        codec: "libx264",
+        crf: 18,
+        range_start_ms: markIn,
+        range_end_ms: markOut,
+      });
+      setMsg(
+        lang === "ru"
+          ? `Экспорт фрагмента запущен (${res.task_id.slice(0, 8)}). Проверьте панель Экспорт.`
+          : `Range export started (${res.task_id.slice(0, 8)}). Check Export tab.`
+      );
+      setTimeout(() => setMsg(""), 6000);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setExportingRange(false);
+    }
+  };
+
   // Горячие клавиши.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -284,6 +330,7 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
         case "n": reviewNext(false); break;
         case "enter": reviewNext(true); break;
         case "r": if (sel) run({ op: "review", ids: [sel.id], reviewed: !sel.reviewed }); break;
+        case "m": e.preventDefault(); addMarkerAtCurrent(); break;
         case "?": setShowHelp(true); break;
       }
     };
@@ -482,11 +529,28 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
             <button disabled={busy} onClick={() => run({ op: "set_range", start_ms: markIn, end_ms: markOut, action: "KEEP" })}>
               {t("editor.keep")}
             </button>
+            <button
+              className="ghost small"
+              disabled={exportingRange || busy}
+              onClick={exportRange}
+              title={lang === "ru" ? "Быстрый рендер выделенного отрезка [In ... Out] в отдельный MP4" : "Quick render selected range [In ... Out] to MP4"}
+              style={{ color: "var(--accent)", borderColor: "rgba(56, 189, 248, 0.4)" }}
+            >
+              <Icon name="download" /> {lang === "ru" ? "Экспорт отрезка" : "Export Range"}
+            </button>
           </>
         )}
 
         <button disabled={!here || busy} onClick={() => here && run({ op: "split", id: here.id, at_ms: snapMs(current) })}>
           <Icon name="scissors" /> {t("editor.split")}
+        </button>
+        <button
+          className="ghost small"
+          disabled={busy}
+          onClick={addMarkerAtCurrent}
+          title={lang === "ru" ? "Поставить маркер на таймлайне (M)" : "Add marker at playhead (M)"}
+        >
+          <Icon name="bookmark" /> {lang === "ru" ? "Маркер" : "Marker"}
         </button>
 
         <button onClick={captureFrame} title={lang === "ru" ? "Сохранить текущий стоп-кадр в HD (1080p)" : "Capture current frame in HD"}>
@@ -537,6 +601,7 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
           durationMs={plan.duration_ms}
           fps={fps}
           segments={segs}
+          markers={plan.markers || []}
           sceneMs={scenes?.boundaries_ms ?? []}
           wave={wave}
           current={current}

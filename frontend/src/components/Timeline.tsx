@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { fmtTime } from "../api";
-import type { Segment, Waveform } from "../types";
+import type { Segment, TimelineMarker, Waveform } from "../types";
 
 interface Props {
   durationMs: number;
@@ -13,6 +13,7 @@ interface Props {
   selectedId: string | null;
   markIn: number | null;
   markOut: number | null;
+  markers?: TimelineMarker[];
   onSeek: (ms: number) => void;
   onSelect: (id: string) => void;
   onMoveBoundary: (leftId: string, ms: number) => void;
@@ -138,6 +139,18 @@ export default function Timeline(p: Props) {
               <span>{fmtTime(hoverMs, true)}</span>
             </div>
           )}
+          {p.markers?.map((m) => (
+            <div
+              key={m.id}
+              className={`tl-user-marker ${m.color || "cyan"}`}
+              style={{ left: x(m.time_ms) }}
+              title={`${fmtTime(m.time_ms)} · ${m.label || "Маркер"}`}
+              onClick={(e) => { e.stopPropagation(); p.onSeek(m.time_ms); }}
+            >
+              <div className="marker-pin">◆</div>
+              {m.label && <span className="marker-label">{m.label}</span>}
+            </div>
+          ))}
           <div className="playhead" style={{ left: x(p.current) }} />
         </div>
       </div>

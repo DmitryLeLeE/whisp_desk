@@ -679,6 +679,7 @@ def _run_transcription(
         vad_parameters=dict(min_silence_duration_ms=500, speech_pad_ms=200) if args.vad_filter else None,
         condition_on_previous_text=False,
         temperature=[0.0, 0.2, 0.4],
+        initial_prompt=getattr(args, "initial_prompt", None) or None,
         word_timestamps=word_level,
     )
 

@@ -24,6 +24,7 @@ export default function SubtitlesPanel({ pid, project: _project, cues, busy, onJ
   const [toEnglish, setToEnglish] = useState(false);
   const [lineChars, setLineChars] = useState(0);
   const [vad, setVad] = useState(true);
+  const [initialPrompt, setInitialPrompt] = useState("");
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
   const file = useRef<HTMLInputElement>(null);
@@ -163,7 +164,7 @@ export default function SubtitlesPanel({ pid, project: _project, cues, busy, onJ
     try {
       onJob(await api.post<Job>(`/api/projects/${pid}/subtitles/transcribe`, {
         model, language, device, overwrite: cues.length > 0, translate_to: translateTo, task: toEnglish ? "translate" : "transcribe",
-        max_line_chars: lineChars, vad,
+        max_line_chars: lineChars, vad, initial_prompt: initialPrompt,
       }));
     } catch (e) { setError((e as Error).message); }
   };
@@ -303,6 +304,23 @@ export default function SubtitlesPanel({ pid, project: _project, cues, busy, onJ
               <input type="checkbox" checked={toEnglish} disabled={!!translateTo} onChange={(e) => setToEnglish(e.target.checked)} />
               {lang === "ru" ? "Переводить сразу на английский средствами Whisper" : "Direct translate to English via Whisper"}
             </label>
+            <div style={{ marginTop: 10 }}>
+              <label>
+                {lang === "ru" ? "Словарь терминов и имён (Initial Prompt)" : "Custom Vocabulary & Terms (Initial Prompt)"}
+                <input
+                  type="text"
+                  placeholder={lang === "ru" ? "Whisp, DaVinci, Premiere Pro, FastAPI, FFmpeg, редкие термины..." : "Whisp, DaVinci, Premiere Pro, FastAPI, names, acronyms..."}
+                  value={initialPrompt}
+                  onChange={(e) => setInitialPrompt(e.target.value)}
+                  style={{ width: "100%", marginTop: 4 }}
+                />
+              </label>
+              <span className="small muted" style={{ display: "block", marginTop: 3 }}>
+                {lang === "ru"
+                  ? "Задайте через запятую сложные слова, бренды и имена: Whisper использует их как контекст и пишет без ошибок."
+                  : "Comma-separated technical terms, names, and brands to guide the AI decoder."}
+              </span>
+            </div>
           </details>
 
           <div className="row wrap">

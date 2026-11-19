@@ -37,6 +37,8 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
   const [denoiseLevel, setDenoiseLevel] = useState(12);
   const [aspectRatio, setAspectRatio] = useState("original");
   const [voiceEnhancer, setVoiceEnhancer] = useState("off");
+  const [normalize, setNormalize] = useState(true);
+  const [targetLufs, setTargetLufs] = useState(-14);
 
   interface Chapter { time_ms: number; title: string; source_ms?: number }
   const [chapters, setChapters] = useState<Chapter[]>([]);
@@ -103,7 +105,10 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
       mode, template, burn_subtitles: burn && project.has_subtitles, overwrite, engine,
       options: {
         video: { encoder, aspect_ratio: aspectRatio },
-        audio: { denoise, denoise_level: denoiseLevel, voice_enhancer: voiceEnhancer },
+        audio: {
+          denoise, denoise_level: denoiseLevel, voice_enhancer: voiceEnhancer,
+          normalize, target_lufs: targetLufs,
+        },
       },
     }));
   });
@@ -295,6 +300,20 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
               <input type="checkbox" checked={burn} disabled={!project.has_subtitles || engine === "auto-editor"} onChange={(e) => setBurn(e.target.checked)} />
               {lang === "ru" ? "Вшить субтитры в видеоряд (Hardsub)" : "Burn subtitles into video (Hardsub)"}
             </label>
+            <label className="check">
+              <input type="checkbox" checked={normalize} onChange={(e) => setNormalize(e.target.checked)} />
+              <span><b>{lang === "ru" ? "Нормализация громкости (EBU R128 / LUFS)" : "Loudness Normalization (EBU R128 / LUFS)"}</b></span>
+            </label>
+            {normalize && (
+              <div className="row" style={{ marginLeft: 24, gap: 12 }}>
+                <span className="muted small">{lang === "ru" ? "Целевой стандарт:" : "Target Standard:"}</span>
+                <select value={targetLufs} onChange={(e) => setTargetLufs(Number(e.target.value))}>
+                  <option value={-14}>-14 LUFS (YouTube, Shorts, TikTok, Reels)</option>
+                  <option value={-16}>-16 LUFS (Подкасты, Spotify, Apple Podcasts)</option>
+                  <option value={-23}>-23 LUFS (ТВ / Европейский стандарт EBU R128)</option>
+                </select>
+              </div>
+            )}
             <label className="check">
               <input type="checkbox" checked={denoise} onChange={(e) => setDenoise(e.target.checked)} />
               <span><b>{t("audio.denoise")}</b></span>

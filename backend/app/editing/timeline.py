@@ -220,3 +220,17 @@ def stats(plan: dict) -> dict:
         "segments": len(plan["segments"]),
         "unreviewed": sum(1 for s in plan["segments"] if not s.get("reviewed")),
     }
+
+
+def add_marker(plan: dict, time_ms: int, label: str = "", color: str = "cyan") -> dict:
+    markers = plan.setdefault("markers", [])
+    mid = f"marker_{len(markers) + 1}_{int(time_ms)}"
+    m = {"id": mid, "time_ms": int(time_ms), "label": label or "Маркер", "color": color or "cyan"}
+    markers.append(m)
+    markers.sort(key=lambda x: x["time_ms"])
+    return m
+
+
+def delete_marker(plan: dict, marker_id: str) -> None:
+    markers = plan.get("markers", [])
+    plan["markers"] = [m for m in markers if m["id"] != marker_id]

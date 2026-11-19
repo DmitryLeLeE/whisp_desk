@@ -154,6 +154,7 @@ def _require() -> None:
 def transcribe(source: Path, out_dir: Path, *, audio_index: int = 0, model: str = "small", language: str = "auto",
                device: str = "auto", task: str = "transcribe", translate_to: str = "", vad: bool = True,
                max_line_chars: int = 0, max_lines: int = 2, max_duration: float = 0.0,
+               initial_prompt: str = "",
                token: CancelToken | None = None, on_event: Callable[[dict], None] | None = None,
                on_line: Callable[[str], None] | None = None) -> dict[str, Path]:
     """Возвращает {'original': путь к SRT[, 'translated': путь к переводу]}."""
@@ -165,6 +166,7 @@ def transcribe(source: Path, out_dir: Path, *, audio_index: int = 0, model: str 
     params = {"source": str(source), "out_dir": str(out_dir), "model": model, "language": language, "device": device,
               "task": task, "translate_to": translate_to, "vad": vad, "audio_stream": audio_index,
               "max_line_chars": max_line_chars, "max_lines": max_lines, "max_duration": max_duration,
+              "initial_prompt": initial_prompt,
               "model_dir": str(md) if md else None, "stem": "whisp"}
     events = _run_runner("transcribe", params, token, on_event, on_line)
     done = next((e for e in reversed(events) if e["k"] == "done"), None)

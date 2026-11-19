@@ -7,6 +7,15 @@ import FileBrowser from "./FileBrowser";
 import Icon from "./Icon";
 import ModelCards from "./ModelCards";
 
+interface UpdateCheck {
+  status: "idle" | "checking" | "ok" | "offline";
+  current_version: string;
+  latest_version: string;
+  has_update: boolean;
+  release_name?: string;
+  release_url?: string;
+}
+
 function ToolRow({ name, info, hint }: { name: string; info: ToolInfo; hint: string }) {
   return (
     <tr>
@@ -32,6 +41,26 @@ export default function Settings() {
   const [browse, setBrowse] = useState(false);
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
+  const [update, setUpdate] = useState<UpdateCheck | null>(null);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+
+  const checkUpdate = async () => {
+    setCheckingUpdate(true);
+    try {
+      const res = await api.get<UpdateCheck>("/api/system/check-update");
+      setUpdate(res);
+    } catch {
+      setUpdate({
+        status: "offline",
+        current_version: s?.version || "1.0.0",
+        latest_version: s?.version || "1.0.0",
+        has_update: false,
+        release_url: "https://github.com/DmitryLeLeE/whisp_desk/releases",
+      });
+    } finally {
+      setCheckingUpdate(false);
+    }
+  };
 
   const loadModels = useCallback(() => api.get<WhispModels>("/api/whisp/models").then(setWm).catch((e) => setError(e.message)), []);
   useEffect(() => {
@@ -101,6 +130,58 @@ export default function Settings() {
             </table>
           )}
           {s && <p className="muted small">v{s.version} · {s.root}</p>}
+        </section>
+
+        <section className="card">
+          <div className="card-title">
+            <span className="num"><Icon name="refresh" /></span>
+            <h2>{lang === "ru" ? "Обновления программы" : "Software Updates"}</h2>
+          </div>
+          <div className="row wrap" style={{ alignItems: "center", justifyContent: "space-between" }}>
+            <div>
+              <p style={{ margin: 0, fontWeight: 600 }}>
+                WHISP MEDIA DESK <span className="badge small" style={{ marginLeft: 6, background: "rgba(56, 189, 248, 0.15)", color: "#38bdf8" }}>v{s?.version ?? "1.0.0"}</span>
+              </p>
+              <p className="muted small" style={{ margin: "4px 0 0" }}>
+                {lang === "ru" ? "Проверка релизов и новых версий на GitHub" : "Check for new releases on GitHub"}
+              </p>
+            </div>
+            <button className="ghost small" disabled={checkingUpdate} onClick={checkUpdate}>
+              <Icon name="refresh" /> {checkingUpdate ? (lang === "ru" ? "Проверка..." : "Checking...") : (lang === "ru" ? "Проверить обновления" : "Check for Updates")}
+            </button>
+          </div>
+          {update && (
+            <div style={{ marginTop: 12, padding: "10px 14px", background: "var(--panel2)", borderRadius: 8, border: "1px solid var(--line)" }}>
+              {update.has_update ? (
+                <div className="row wrap" style={{ alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                  <div>
+                    <span className="badge small" style={{ background: "rgba(245, 158, 11, 0.2)", color: "#f59e0b", fontWeight: 700 }}>
+                      {lang === "ru" ? "Доступна новая версия!" : "New version available!"}
+                    </span>
+                    <b style={{ marginLeft: 8 }}>v{update.latest_version}</b>
+                    {update.release_name && <span className="muted small" style={{ marginLeft: 8 }}>({update.release_name})</span>}
+                  </div>
+                  <a
+                    href={update.release_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="primary"
+                    style={{ padding: "4px 10px", fontSize: 12, textDecoration: "none", borderRadius: 6, display: "inline-block" }}
+                  >
+                    {lang === "ru" ? "Перейти к релизу" : "View Release"}
+                  </a>
+                </div>
+              ) : update.status === "ok" ? (
+                <p className="ok small" style={{ margin: 0 }}>
+                  ✓ {lang === "ru" ? `У вас установлена самая актуальная версия (v${update.current_version}).` : `You are using the latest version (v${update.current_version}).`}
+                </p>
+              ) : (
+                <p className="muted small" style={{ margin: 0 }}>
+                  {lang === "ru" ? "Проверка через интернет недоступна (автономный режим)." : "Update check unavailable (offline mode)."}
+                </p>
+              )}
+            </div>
+          )}
         </section>
 
         <section className="card">
