@@ -111,7 +111,7 @@ def main() -> None:
         except Exception:
             pass
 
-        out = ROOT / "docs"
+        out = Path(os.environ.get("SHOTS_OUT", ROOT / "docs"))
         out.mkdir(exist_ok=True)
 
         with sync_playwright() as pw:
@@ -174,6 +174,22 @@ def main() -> None:
             page.goto(BASE + "#/settings")
             page.wait_for_timeout(1500)
             page.screenshot(path=str(out / "06-settings.png"))
+
+            if os.environ.get("SHOTS_EXTRA"):
+                page.goto(BASE); page.wait_for_timeout(800)
+                try:
+                    page.get_by_role("button", name=re.compile("Пакетная")).first.click(); page.wait_for_timeout(700)
+                    page.screenshot(path=str(out / "x-batch.png"))
+                    page.keyboard.press("Escape"); page.reload(); page.wait_for_timeout(800)
+                except Exception as ex:
+                    print("batch:", ex)
+                try:
+                    page.get_by_text("Лекция: стерильность").first.click(); page.wait_for_timeout(1500)
+                    page.locator('[data-tour="step-export"]').first.click(); page.wait_for_timeout(1200)
+                    page.get_by_role("button", name=re.compile("Шоу-ноуты")).first.click(); page.wait_for_timeout(900)
+                    page.screenshot(path=str(out / "x-shownotes.png"))
+                except Exception as ex:
+                    print("shownotes:", ex)
 
             # 7. Светлая тема (Light theme - демонстрация эргономики 2026)
             page.goto(BASE)

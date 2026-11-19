@@ -306,11 +306,11 @@ export default function SubtitlesPanel({ pid, project: _project, cues, busy, onJ
 
           <p className="muted small">
             {lang === "ru"
-              ? "Нейросетевое распознавание речи на компьютере без интернета. Модель turbo рекомендуется для баланса скорости и точности."
+              ? "Распознавание идёт на вашем компьютере. Выберите модель: чем больше, тем точнее и медленнее. Нужная модель скачается сама при первом запуске, заранее её можно скачать в «Настройки и модели»."
               : "On-device AI speech transcription. Turbo model is recommended for high accuracy and speed."}
           </p>
 
-          {wm && <ModelCards models={wm.models} selected={model} onSelect={setModel} onChanged={loadModels} onError={setError} />}
+          {wm && <ModelCards compact models={wm.models} selected={model} onSelect={setModel} onChanged={loadModels} onError={setError} />}
 
           <div className="fields">
             <label>
@@ -716,7 +716,7 @@ export default function SubtitlesPanel({ pid, project: _project, cues, busy, onJ
                       )}
                       {isTooLong && (
                         <span className="badge warn small" title={lang === "ru" ? "Строка длиннее 42 символов" : "Line longer than 42 characters"}>
-                          {c.text.length}зн
+                          {c.text.length} симв.
                         </span>
                       )}
                       {!isEditing && (

@@ -699,7 +699,7 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
             {/* Быстрые переключатели предпросмотра */}
             <label className="nle-check-chip" title="Пропускать тишину и вырезанные участки">
               <input type="checkbox" checked={skipCuts} onChange={(e) => setSkipCuts(e.target.checked)} />
-              <span>{lang === "ru" ? "Без пауз" : "Skip cuts"}</span>
+              <span>{lang === "ru" ? "Пропускать вырезанное" : "Skip cuts"}</span>
             </label>
             <label className="nle-check-chip" title="Звук при покадровом шаге">
               <input
@@ -710,7 +710,7 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
                   try { localStorage.setItem("whisp_audio_scrub", e.target.checked.toString()); } catch {}
                 }}
               />
-              <span>{lang === "ru" ? "Скраббинг" : "Scrub"}</span>
+              <span>{lang === "ru" ? "Звук при шаге" : "Scrub"}</span>
             </label>
           </div>
         </div>
@@ -1052,11 +1052,11 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
           <span className="sw scene" /> {lang === "ru" ? "Смена сцены" : "Scene change"}
         </div>
         <div className="nle-hotkey-cheatsheet">
-          <span><kbd>Space</kbd> Play</span>
-          <span><kbd>J / K / L</kbd> Shuttle</span>
-          <span><kbd>C</kbd> Razor</span>
-          <span><kbd>X</kbd> Toggle Cut</span>
-          <span><kbd>Ctrl+Z</kbd> Undo</span>
+          <span><kbd>Пробел</kbd> {lang === "ru" ? "Воспроизведение" : "Play"}</span>
+          <span><kbd>J / K / L</kbd> {lang === "ru" ? "Назад / пауза / вперёд" : "Shuttle"}</span>
+          <span><kbd>C</kbd> {lang === "ru" ? "Разрезать" : "Razor"}</span>
+          <span><kbd>X</kbd> {lang === "ru" ? "Оставить / вырезать" : "Toggle Cut"}</span>
+          <span><kbd>Ctrl+Z</kbd> {lang === "ru" ? "Отмена" : "Undo"}</span>
         </div>
       </footer>
 

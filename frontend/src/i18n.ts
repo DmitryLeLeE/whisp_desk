@@ -47,7 +47,7 @@ const DICT: Record<Language, Record<string, string>> = {
     "step.setup": "1. Исходники",
     "step.editor": "2. Черновой монтаж",
     "step.subtitles": "3. Субтитры",
-    "step.export": "4. Экспорт (Deliver)",
+    "step.export": "4. Экспорт",
 
     // Setup Panel
     "setup.source_file": "Исходный медиафайл",
@@ -226,7 +226,7 @@ const DICT: Record<Language, Record<string, string>> = {
     "step.setup": "1. Media Setup",
     "step.editor": "2. Cut & Edit",
     "step.subtitles": "3. Subtitles",
-    "step.export": "4. Deliver",
+    "step.export": "4. Export",
 
     // Setup Panel
     "setup.source_file": "Source Media File",

@@ -1449,3 +1449,116 @@ label.check { flex-direction: row; align-items: center; gap: 8px; color: var(--t
 }
 .tour-title { font-size: 15px; font-weight: 700; color: var(--text); }
 .tour-content { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+/* ==========================================================================
+   Недостающие стили: страницы, списки, диалоги, шаблоны, подсказки тура.
+   Эти классы используются в компонентах, но раньше не были описаны.
+   ========================================================================== */
+
+/* Страница с обычным потоком (настройки, проект) */
+.page { max-width: 1280px; width: 100%; margin: 0 auto; padding: 28px 32px 56px; display: flex; flex-direction: column; gap: 18px; box-sizing: border-box; }
+.page.narrow { max-width: 980px; }
+.page-head h1, .page-head h2 { margin: 0 0 4px; font-size: 22px; font-weight: 700; }
+.page-head p { margin: 0; }
+
+/* Таблица «ключ — значение» */
+table.kv { border-collapse: collapse; width: 100%; font-size: 13px; }
+table.kv th, table.kv td { text-align: left; padding: 7px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.kv th { width: 150px; color: var(--muted); font-weight: 600; padding-right: 16px; }
+table.kv tr:last-child th, table.kv tr:last-child td { border-bottom: none; }
+
+/* Списки */
+ul.list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+ul.list > li { display: flex; align-items: center; gap: 10px; padding: 8px 4px; border-bottom: 1px solid var(--line); font-size: 13px; min-width: 0; }
+ul.list > li:last-child { border-bottom: none; }
+ul.list > li > .muted { margin-left: auto; white-space: nowrap; }
+ul.cues { max-height: 62vh; overflow: auto; }
+ul.cues > li { align-items: flex-start; }
+button.link, a.link { background: none; border: none; padding: 0; color: var(--cyan); font-weight: 600; cursor: pointer; text-decoration: none; font-size: inherit; box-shadow: none; }
+button.link:hover, a.link:hover { text-decoration: underline; background: none; border: none; }
+.row.wrap { flex-wrap: wrap; }
+
+/* Раскрывающиеся «Дополнительно» */
+details.more { border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--panel2); padding: 0; }
+details.more > summary { cursor: pointer; padding: 10px 14px; font-size: 13px; font-weight: 600; color: var(--text); list-style: none; display: flex; align-items: center; gap: 8px; }
+details.more > summary::-webkit-details-marker { display: none; }
+details.more > summary::before { content: "▸"; color: var(--muted); transition: transform .12s; }
+details.more[open] > summary::before { transform: rotate(90deg); }
+details.more > :not(summary) { margin: 0 14px 14px; }
+details.more[open] > summary { border-bottom: 1px solid var(--line); margin-bottom: 12px; }
+
+/* Диалоги «модал в подложке» (пакетная очередь, шоу-ноуты) */
+.modal-backdrop { position: fixed; inset: 0; background: var(--modal-overlay); display: grid; place-items: center; z-index: 100; padding: 20px; backdrop-filter: blur(8px); }
+.modal-backdrop > .modal {
+  position: static; inset: auto; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line-strong);
+  border-radius: 12px; box-shadow: var(--shadow); max-height: 88vh; padding: 0; backdrop-filter: none; place-items: initial; overflow: hidden;
+}
+.modal-header { display: flex; align-items: center; gap: 10px; padding: 16px 20px; border-bottom: 1px solid var(--line); }
+.modal-header h2, .modal-header h3 { margin: 0; font-size: 16px; flex: 1; }
+.modal-body { padding: 18px 20px; overflow: auto; display: flex; flex-direction: column; gap: 14px; }
+.modal-footer { padding: 14px 20px; border-top: 1px solid var(--line); background: var(--panel2); }
+.btn-icon { width: 30px; height: 30px; padding: 0; display: inline-grid; place-items: center; background: transparent; border: 1px solid transparent; color: var(--muted); }
+.btn-icon:hover:not(:disabled) { background: var(--raised); color: var(--text); }
+.btn, button.btn { cursor: pointer; }
+.btn.secondary, button.secondary { background: var(--panel2); border: 1px solid var(--line-strong); color: var(--text); }
+.btn.primary, button.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+select.select { width: 100%; }
+
+/* Окно шаблонов монтажа */
+.panel-header-bar { display: flex; align-items: center; gap: 10px; }
+.panel-tag { font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); background: var(--accent-soft); padding: 3px 8px; border-radius: 3px; }
+.patterns-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; overflow: auto; }
+.pattern-card { border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; background: var(--panel2); cursor: pointer; text-align: left; display: flex; flex-direction: column; gap: 8px; transition: border-color .12s; }
+.pattern-card:hover { border-color: var(--line-strong); }
+.pattern-card.active { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 1px var(--accent); }
+.pattern-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-weight: 700; }
+.pattern-badge { font-size: 10.5px; padding: 2px 6px; border-radius: 3px; background: var(--panel); color: var(--muted); border: 1px solid var(--line); font-weight: 700; }
+.pattern-desc { margin: 0; font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+.pattern-params-box { border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; background: var(--panel2); }
+.param-item { display: flex; flex-direction: column; gap: 4px; }
+.spinner { width: 14px; height: 14px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; display: inline-block; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Подсказки тура */
+.tour-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tour-badge { font-size: 11px; font-weight: 700; color: var(--accent); }
+.tour-close { background: none; border: none; width: 26px; height: 26px; padding: 0; color: var(--muted); }
+.tour-dots { display: flex; gap: 5px; }
+.tour-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--line-strong); padding: 0; border: none; min-width: 0; }
+.tour-dot.active { background: var(--accent); width: 18px; border-radius: 4px; }
+.tour-dot.passed { background: var(--muted); }
+.tour-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 4px; }
+.tour-skip { background: none; border: none; color: var(--muted); font-size: 12px; padding: 4px 0; }
+.tour-skip:hover:not(:disabled) { color: var(--text); background: none; }
+
+/* Справка по импорту в монтажных программах */
+.nle-help-box { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel2); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.nle-help-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.nle-help-item b { display: block; margin-bottom: 4px; font-size: 13px; }
+.nle-help-item p { margin: 0; font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+.platform-preset-btn { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 14px; text-align: left; flex: 1; min-width: 130px; }
+.platform-preset-btn.selected, .platform-preset-btn.active { border-color: var(--accent); background: var(--accent-soft); }
+.filler-tag { display: inline-block; padding: 1px 6px; border-radius: 3px; background: var(--warn-soft); color: var(--warn); font-size: 11px; font-weight: 700; }
+.kbd-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.kbd-table td { padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.kbd-table td:first-child { white-space: nowrap; width: 1%; }
+.steps-mini { display: flex; gap: 6px; flex-wrap: wrap; }
+.nle-page-title { font-size: 26px; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 10px; }
+.nle-panel-card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
+.nle-next-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 20px; margin-top: 18px; }
+.insights-metric { display: flex; flex-direction: column; gap: 2px; }
+.crumbs { display: flex; gap: 6px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); }
+.places, .files { display: flex; flex-direction: column; gap: 2px; }
+.modal-header .btn-icon { margin-left: auto; }
+.modal-body label.check { align-self: flex-start; }
+label.nle-btn-ghost { flex-direction: row; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text); font-weight: 600; }
+.models.compact { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.models.compact .model { padding: 10px 12px; gap: 4px; }
+.models.compact .model .top { flex-wrap: wrap; gap: 4px 6px; }
+.models.compact .model .top b { font-size: 13.5px; }
+.models.compact .model .badge { font-size: 10px; }
+.models ul, .model .bar { margin: 0; }
+.bar { height: 5px; background: var(--raised); border-radius: 3px; overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--accent); }
+.platform-preset-btn { border: 1px solid var(--line); background: var(--panel2); }
+.platform-preset-btn:hover:not(:disabled) { border-color: var(--line-strong); }

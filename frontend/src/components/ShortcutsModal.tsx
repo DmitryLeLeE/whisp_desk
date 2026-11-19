@@ -37,7 +37,7 @@ export default function ShortcutsModal({ onClose }: { onClose: () => void }) {
   const shortcutsPremiereRu = [
     { key: "Пробел", action: "Пуск / Пауза воспроизведения" },
     { key: "J / K / L", action: "Транспорт: Назад / Пауза / Вперёд (нажатия ускоряют)" },
-    { key: "C", action: "Razor Tool (Разрезать фрагмент по курсору)" },
+    { key: "C", action: "Разрезать фрагмент по курсору" },
     { key: "Q", action: "Ripple Trim In (Удалить начало фрагмента до курсора)" },
     { key: "W", action: "Ripple Trim Out (Удалить конец фрагмента от курсора)" },
     { key: "I / O", action: "Mark In / Mark Out (Метки начала и конца)" },

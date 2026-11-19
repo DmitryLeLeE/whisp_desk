@@ -73,7 +73,7 @@ export default function App() {
               <img src="/favicon.png" alt="" />
               <div className="brand-text">
                 <span className="brand-title">{t("brand.title")} {t("brand.sub")}</span>
-                <span className="brand-badge">PRO NLE 2.0</span>
+                {/* версия показана в настройках */}
               </div>
             </a>
           </div>

@@ -367,9 +367,9 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
                 </span>
                 {r.broken ? <span className="badge bad">Проект повреждён</span> : (
                   <div className="steps-mini">
-                    <span className={`badge ${r.has_plan ? "ok" : ""}`}>{r.has_plan ? "Монтаж" : "Ждёт анализа"}</span>
-                    {r.has_subtitles && <span className="badge ok">Субтитры</span>}
-                    {r.rendered && <span className="badge ok">Готово</span>}
+                    <span className={`badge ${r.has_plan ? "ok" : ""}`}>{r.has_plan ? "Монтаж готов" : "Ждёт анализа"}</span>
+                    {r.has_subtitles && <span className="badge ok">Есть субтитры</span>}
+                    {r.rendered && <span className="badge ok">Видео собрано</span>}
                   </div>
                 )}
                 <div className="row" style={{ alignItems: "center", gap: 6, marginTop: "auto", paddingTop: 8, borderTop: "1px solid var(--line)" }}>
