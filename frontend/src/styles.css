@@ -1562,3 +1562,132 @@ label.nle-btn-ghost { flex-direction: row; align-items: center; gap: 6px; font-s
 .bar > i { display: block; height: 100%; background: var(--accent); }
 .platform-preset-btn { border: 1px solid var(--line); background: var(--panel2); }
 .platform-preset-btn:hover:not(:disabled) { border-color: var(--line-strong); }
+
+/* ==========================================================================
+   ПРОФЕССИОНАЛЬНЫЙ ПРОХОД: нейтральный графит, один акцент, плоские панели,
+   плотная сетка, тонкие разделители. Переопределяет токены и компоненты выше.
+   ========================================================================== */
+:root {
+  --bg: #1b1c1f; --panel: #232427; --panel2: #2a2c30; --raised: #34363b; --raised-hover: #3e4147;
+  --line: #36383d; --line-strong: #4b4e55; --text: #e1e3e6; --muted: #959aa2; --muted-soft: #666b73;
+  --accent: #4d94f7; --accent-hover: #6aa6f9; --accent-soft: rgba(77, 148, 247, 0.16); --on-accent: #fff;
+  --manual: #a78bfa; --manual-soft: rgba(167, 139, 250, 0.16);
+  --warn: #e0a030; --warn-soft: rgba(224, 160, 48, 0.16);
+  --keep: #3fb27f; --keep-soft: rgba(63, 178, 127, 0.16); --ok: #3fb27f; --ok-soft: rgba(63, 178, 127, 0.16);
+  --cut: #e5534b; --cut-soft: rgba(229, 83, 75, 0.16); --bad: #e5534b; --bad-soft: rgba(229, 83, 75, 0.16);
+  --timeline-bg: #151618; --track-bg: #1d1e21; --track-v1: #212225; --tc-bg: #141517; --code-bg: #151618;
+  --radius: 3px; --radius-sm: 3px; --shadow: none;
+}
+:root[data-theme="light"] {
+  --bg: #e4e6ea; --panel: #f6f7f9; --panel2: #ebedf0; --raised: #dfe2e6; --raised-hover: #d3d7dc;
+  --line: #cfd3d9; --line-strong: #aeb4bd; --text: #1d2026; --muted: #5d636d; --muted-soft: #80868f;
+  --accent: #2468d8; --accent-hover: #1a56bb; --accent-soft: rgba(36, 104, 216, 0.12);
+  --manual: #7c5ce0; --manual-soft: rgba(124, 92, 224, 0.12);
+  --timeline-bg: #d6d9de; --track-bg: #dfe2e6; --track-v1: #e8eaee; --tc-bg: #fff; --code-bg: #fff;
+  --shadow: none;
+}
+html, body { font-size: 12.5px; line-height: 1.4; }
+h1 { font-size: 18px; } h2 { font-size: 14px; } h3 { font-size: 13px; }
+* { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 5px; border: 2px solid transparent; background-clip: content-box; }
+::selection { background: var(--accent-soft); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* Шапка и вкладки: подчёркнутый текст вместо «таблеток» */
+.nle-manager-header { height: 40px; min-height: 40px; box-shadow: none; padding: 0 14px; background: var(--panel); }
+.nle-header-brand img { width: 22px; height: 22px; border-radius: 3px; }
+.brand-title { font-size: 12px; letter-spacing: .1em; }
+.nle-manager-tabs, .nle-workspaces { background: none; border: none; padding: 0; gap: 2px; align-self: stretch; }
+.nle-tab, .nle-workspace-tab {
+  border: none; border-radius: 0; background: none; box-shadow: none; padding: 0 14px; height: 100%;
+  border-bottom: 2px solid transparent; color: var(--muted); font-weight: 500; font-size: 12.5px;
+}
+.nle-tab:hover, .nle-workspace-tab:hover { background: var(--panel2); color: var(--text); }
+.nle-tab.active, .nle-workspace-tab.active { background: none; box-shadow: none; border: none; border-bottom: 2px solid var(--accent); color: var(--text); font-weight: 600; }
+.nle-engine-status { background: none; border: none; padding: 0; gap: 12px; }
+.nle-header { height: 40px; min-height: 40px; padding: 0 10px; }
+
+/* Кнопки и поля: компактные, плоские */
+button, a.btn { height: 28px; padding: 0 12px; font-weight: 500; font-size: 12.5px; background: var(--raised); border-color: var(--line-strong); }
+button:hover:not(:disabled), a.btn:hover { background: var(--raised-hover); }
+button:active:not(:disabled), a.btn:active { transform: none; background: var(--panel2); }
+button.primary, a.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+button.big, a.btn.big { height: 34px; padding: 0 18px; font-size: 13px; }
+button.small, a.btn.small { height: 24px; padding: 0 8px; font-size: 11.5px; }
+button.ghost, .nle-btn-ghost { background: transparent; border-color: transparent; }
+.nle-btn-ghost { height: 28px; padding: 0 10px; }
+input, select, textarea { height: 28px; padding: 0 9px; font-size: 12.5px; background: var(--bg); border-color: var(--line-strong); }
+textarea { height: auto; padding: 7px 9px; }
+input[type=checkbox], input[type=radio] { height: 14px; width: 14px; }
+select { padding-right: 24px; }
+label { font-weight: 500; font-size: 11.5px; }
+.badge { border-radius: 2px; font-weight: 600; font-size: 10.5px; padding: 1px 6px; text-transform: none; letter-spacing: 0; }
+kbd { border-radius: 2px; }
+
+/* Панели вместо карточек: заголовок-полоса, без теней и скруглений */
+.card { padding: 0; gap: 0; border-radius: var(--radius); box-shadow: none; background: var(--panel); overflow: hidden; }
+.card > .card-title { padding: 8px 12px; background: var(--panel2); border-bottom: 1px solid var(--line); gap: 8px; min-height: 34px; }
+.card > .card-title h2, .card > .card-title h3 { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.card > .card-title .num { background: none; border: none; width: 16px; height: 16px; color: var(--muted); }
+.card > .card-title .num.done { background: none; color: var(--ok); }
+.card > *:not(.card-title) { margin-left: 14px; margin-right: 14px; }
+.card > .card-title + * { margin-top: 14px; }
+.card > *:last-child { margin-bottom: 14px; }
+.card > details.more, .card > .notice { margin-left: 14px; margin-right: 14px; }
+.card > .row.wrap > .grow, .card > .row { min-width: 0; }
+.grid2 { gap: 12px; } .stack { gap: 12px; }
+.notice { border-radius: 3px; padding: 8px 12px; }
+.next-bar, .nle-next-bar { border-radius: 3px; box-shadow: none; padding: 10px 14px; margin-top: 12px; }
+.profile, .model, .pattern-card, .nle-card, .nle-scene-card { border-radius: 3px; }
+.profile.on, .pattern-card.active { box-shadow: none; border-color: var(--accent); background: var(--accent-soft); }
+.profile { padding: 12px; gap: 6px; } .profile b { font-size: 13px; }
+details.more { border-radius: 3px; background: var(--panel2); }
+.pick { border-radius: 3px; padding: 16px; }
+.filecard { border-radius: 3px; }
+.empty { padding: 28px 16px; }
+.page { padding: 20px 24px 40px; gap: 12px; }
+.page-head h1, .page-head h2 { font-size: 18px; }
+
+/* Список проектов: сетка и карточки без «лифта» */
+.nle-manager-page { padding: 18px 24px 40px; }
+.nle-page-title { font-size: 20px; }
+.nle-proj-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.nle-proj-card { border-radius: 3px; box-shadow: none; transition: border-color .1s; }
+.nle-proj-card:hover { transform: none; box-shadow: none; border-color: var(--accent); }
+.nle-proj-card .body { padding: 10px 12px; gap: 6px; }
+.pname-text { font-size: 13px; font-weight: 600; }
+.nle-drop-banner { border-radius: 3px; padding: 12px 16px; background: transparent; border: 1px dashed var(--line-strong); }
+.nle-drop-icon-box { background: none; border: none; width: 32px; height: 32px; }
+.nle-search-input, .nle-select { height: 28px; }
+.nle-counter-badge { border-radius: 2px; }
+
+/* Таблица решений и монтаж */
+.nle-table th { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; color: var(--muted); background: var(--panel2); }
+.nle-table td { padding-top: 5px; padding-bottom: 5px; }
+.nle-table tbody tr:hover { background: var(--panel2); }
+.nle-btn-micro { border-radius: 2px; height: 22px; width: 22px; padding: 0; }
+.studio-panel-bar, .nle-timeline-toolbar, .nle-decisions-toolbar { background: var(--panel2); }
+.nle-tool-btn { border-radius: 3px; height: 26px; }
+.nle-tool-btn.active { background: var(--accent); border-color: var(--accent); }
+.nle-insp-tab.active { box-shadow: inset 0 -2px 0 var(--accent); color: var(--text); }
+.nle-btn-play { background: var(--accent); }
+.nle-btn-play:hover { background: var(--accent-hover); }
+.nle-check-chip { border-radius: 3px; }
+.nle-back-btn { border-radius: 3px; height: 26px; }
+.rec-indicator { color: var(--cut); }
+.tour-highlight-ring { box-shadow: 0 0 0 4px var(--accent-soft), 0 0 22px rgba(77, 148, 247, 0.4); }
+
+/* Диалоги и плавающие панели */
+.dialog, .modal-backdrop > .modal, .tour-card, .dock { border-radius: 6px; box-shadow: 0 12px 40px rgba(0, 0, 0, .5); }
+.modal, .modal-backdrop { backdrop-filter: none; }
+.dialog { padding: 20px; }
+button { min-height: 28px; height: auto; white-space: nowrap; }
+button.small { min-height: 24px; }
+.nle-check-chip { flex-direction: row; align-items: center; gap: 6px; white-space: nowrap; font-size: 11.5px; color: var(--muted); }
+.nle-decisions-toolbar { gap: 8px; flex-wrap: wrap; }
+.nle-decisions-toolbar label { flex-direction: row; align-items: center; gap: 6px; white-space: nowrap; }
+.nle-decisions-toolbar button { white-space: nowrap; }
+.nle-transport-bar { gap: 12px; }
+.card-title h2 { white-space: nowrap; }
+.nle-help-box { margin-top: 14px !important; } .nle-grid { margin-bottom: 4px; }
