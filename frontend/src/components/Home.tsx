@@ -21,6 +21,8 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
   const [showTour, setShowTour] = useState(false);
   const [batchOpen, setBatchOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [view, setView] = useState<"grid" | "list">(() => (localStorage.getItem("home.view") === "list" ? "list" : "grid"));
+  const setViewMode = (v: "grid" | "list") => { setView(v); try { localStorage.setItem("home.view", v); } catch { /* ignore */ } };
   const [sortKey, setSortKey] = useState<"updated_desc" | "updated_asc" | "name_asc" | "name_desc" | "duration_desc">("updated_desc");
 
   const duplicate = async (r: ProjectSummary, e: React.MouseEvent) => {
@@ -278,6 +280,11 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
             </>
           )}
 
+          <div className="seg" role="group" aria-label="Вид">
+            <button className={view === "grid" ? "active" : ""} onClick={() => setViewMode("grid")} title={lang === "ru" ? "Карточки" : "Grid"}>▦</button>
+            <button className={view === "list" ? "active" : ""} onClick={() => setViewMode("list")} title={lang === "ru" ? "Список" : "List"}>☰</button>
+          </div>
+
           <button
             className="nle-btn-ghost"
             onClick={() => setBatchOpen(true)}
@@ -349,6 +356,44 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
             <Icon name="plus" /> {lang === "ru" ? "Создать первый проект" : "Create First Project"}
           </button>
         </div>
+      ) : view === "list" ? (
+        <table className="proj-table">
+          <thead>
+            <tr>
+              <th></th>
+              <th>{lang === "ru" ? "Название" : "Name"}</th>
+              <th>{lang === "ru" ? "Длительность" : "Duration"}</th>
+              <th>{lang === "ru" ? "Убрано" : "Removed"}</th>
+              <th>{lang === "ru" ? "Состояние" : "Status"}</th>
+              <th>{lang === "ru" ? "Изменён" : "Modified"}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredRows.map((r) => (
+              <tr key={r.id} onClick={() => { location.hash = `#/p/${r.id}`; }}>
+                <td className="pt-thumb">{r.thumb ? <img src={r.thumb} alt="" loading="lazy" /> : <Icon name="film" />}</td>
+                <td><b>{r.name}</b><div className="muted small">{r.filename || (typesMap[r.type] ?? r.type)}</div></td>
+                <td className="mono">{r.duration_ms ? fmtTime(r.duration_ms, false) : "—"}</td>
+                <td className="mono">{r.removed_ms ? `-${fmtTime(r.removed_ms, false)}` : "—"}</td>
+                <td>
+                  {r.broken ? <span className="badge bad">Проект повреждён</span> : (
+                    <span className="steps-mini">
+                      <span className={`badge ${r.has_plan ? "ok" : ""}`}>{r.has_plan ? "Монтаж готов" : "Ждёт анализа"}</span>
+                      {r.has_subtitles && <span className="badge ok">Субтитры</span>}
+                      {r.rendered && <span className="badge ok">Видео</span>}
+                    </span>
+                  )}
+                </td>
+                <td className="muted small">{new Date(r.updated).toLocaleDateString(lang === "ru" ? "ru-RU" : "en-US", { day: "numeric", month: "short", year: "numeric" })}</td>
+                <td className="pt-actions">
+                  <button className="nle-btn-micro" onClick={(e) => duplicate(r, e)} aria-label="Дублировать проект" title={lang === "ru" ? "Создать копию проекта" : "Duplicate Project"}><Icon name="copy" /></button>
+                  <button className="nle-btn-micro danger" onClick={(e) => remove(r, e)} aria-label="Удалить проект" title={t("common.delete")}><Icon name="trash" /></button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       ) : (
         <div className="nle-proj-grid">
           {filteredRows.map((r) => (

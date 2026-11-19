@@ -1702,3 +1702,45 @@ button.small { min-height: 24px; }
 .ptabs > button:hover { background: var(--panel2); color: var(--text); }
 .ptabs > button.active { background: var(--panel2); color: var(--text); font-weight: 600; border-bottom-color: var(--accent); }
 .subs-layout { grid-template-columns: minmax(380px, 1.15fr) minmax(360px, 1fr); }
+
+/* Исходники: слева файл и параметры анализа, справа профиль и запуск */
+.setup-layout { grid-template-columns: minmax(360px, 1fr) minmax(380px, 1fr); }
+.setup-layout .profiles { display: flex; flex-direction: column; gap: 6px; }
+.setup-layout .profile { padding: 10px 12px; }
+.setup-layout label.check { display: flex; align-items: center; gap: 8px; margin: 8px 0 0; }
+.setup-layout label.check + p.muted { margin: 2px 0 0 24px !important; }
+
+/* Переключатель вида и таблица проектов (как панель «Проект» в Premiere) */
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 3px; overflow: hidden; }
+.seg > button { height: 28px; min-height: 28px; width: 30px; padding: 0; border: none; border-radius: 0; background: var(--panel); color: var(--muted); }
+.seg > button + button { border-left: 1px solid var(--line); }
+.seg > button.active { background: var(--raised); color: var(--text); }
+.proj-table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line); border-radius: 3px; }
+.proj-table th { text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); padding: 8px 12px; background: var(--panel2); border-bottom: 1px solid var(--line); }
+.proj-table td { padding: 6px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.proj-table tbody tr { cursor: pointer; }
+.proj-table tbody tr:hover { background: var(--panel2); }
+.proj-table .pt-thumb { width: 84px; padding-right: 0; }
+.proj-table .pt-thumb img, .proj-table .pt-thumb svg { width: 72px; height: 40px; object-fit: cover; border-radius: 2px; background: var(--bg); display: block; }
+.proj-table .pt-thumb svg { padding: 10px 24px; box-sizing: border-box; opacity: .4; }
+.proj-table .pt-actions { text-align: right; white-space: nowrap; width: 70px; }
+.proj-table .mono { font-family: var(--mono, ui-monospace, monospace); font-size: 12px; }
+.proj-table .steps-mini { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+
+/* Параметры рендера: вкладки Видео / Звук / Субтитры вместо длинного списка */
+.rset { margin-top: 12px; border: 1px solid var(--line); border-radius: 3px; background: var(--panel); }
+.rset > .ptabs { border: none; border-bottom: 1px solid var(--line); border-radius: 0; }
+.rset-body { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.rset-body > label { display: flex; flex-direction: column; gap: 4px; }
+.rset-body > label.check { flex-direction: row; align-items: center; }
+
+/* Инспектор монтажа: те же вкладки панели, что и на других экранах */
+.nle-inspector-tabs { display: flex; gap: 0; background: var(--panel); border-bottom: 1px solid var(--line); }
+.nle-inspector-tabs .nle-insp-tab {
+  flex: 1; height: 32px; border: none; border-radius: 0; background: none; color: var(--muted);
+  text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 500;
+  border-bottom: 2px solid transparent; border-right: 1px solid var(--line);
+}
+.nle-inspector-tabs .nle-insp-tab:last-child { border-right: none; }
+.nle-inspector-tabs .nle-insp-tab:hover { background: var(--panel2); color: var(--text); }
+.nle-inspector-tabs .nle-insp-tab.active { background: var(--panel2); color: var(--text); font-weight: 600; border-bottom-color: var(--accent); }

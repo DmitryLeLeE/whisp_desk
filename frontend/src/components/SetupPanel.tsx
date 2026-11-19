@@ -93,13 +93,10 @@ export default function SetupPanel({ project, payload: _payload, busy, onJob, on
   const profText = lang === "ru" ? PROFILE_TEXT_RU : PROFILE_TEXT_EN;
 
   return (
-    <div className="grid2">
+    <div className="grid2 setup-layout">
       <div className="stack">
         <section className="card">
           <div className="card-title">
-            <span className={`num ${project.source ? "done" : ""}`}>
-              {project.source ? <Icon name="check" /> : "1"}
-            </span>
             <h2>{t("setup.source_file")}</h2>
           </div>
           {project.source ? (
@@ -131,9 +128,61 @@ export default function SetupPanel({ project, payload: _payload, busy, onJob, on
 
         <section className="card">
           <div className="card-title">
-            <span className={`num ${project.has_plan ? "done" : ""}`}>
-              {project.has_plan ? <Icon name="check" /> : "2"}
-            </span>
+            <h2>{lang === "ru" ? "Параметры анализа" : "Analysis Parameters"}</h2>
+          </div>
+          <div className="fields">
+            {meta?.audio_streams && meta.audio_streams.length > 1 && (
+              <label>
+                {lang === "ru" ? "Аудиодорожка для поиска речи" : "Audio track for speech"}
+                <select value={audio} onChange={(e) => setAudio(Number(e.target.value))}>
+                  {meta.audio_streams.map((s) => (
+                    <option key={s.index} value={s.index}>
+                      #{s.index + 1} {s.title || s.language || s.codec} ({s.channels}ch, {s.sample_rate}Hz)
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <label>
+              {lang === "ru" ? "Движок поиска пауз" : "Silence Detection Engine"}
+              <select value={engine} onChange={(e) => setEngine(e.target.value)}>
+                <option value="builtin">Встроенный (FFmpeg silencedetect)</option>
+                <option value="auto_editor" disabled={!ae?.available}>
+                  Auto-Editor{ae?.available ? "" : " (не установлен)"}
+                </option>
+              </select>
+            </label>
+          </div>
+
+          <label className="check">
+            <input type="checkbox" checked={scenes} onChange={(e) => setScenes(e.target.checked)} />
+            {lang === "ru" ? "Определять смену сцен (помогает при видеомонтаже)" : "Detect scene boundaries"}
+          </label>
+
+          <label className="check">
+            <input type="checkbox" checked={denoise} onChange={(e) => setDenoise(e.target.checked)} />
+            <span><b>{t("audio.denoise")}</b></span>
+          </label>
+          <p className="muted small" style={{ margin: "-6px 0 0 24px" }}>{t("audio.denoise_hint")}</p>
+        </section>
+
+        {cmp && (
+          <section className="card">
+            <div className="card-title">
+              <h2>{lang === "ru" ? "Сравнение движков" : "Engine Comparison"}</h2>
+            </div>
+            <p className="muted small">
+              {lang === "ru"
+                ? `Совпадение сокращений: ${(cmp.agreement * 100).toFixed(0)}%. Встроенный сократил ${fmtTime(cmp.builtin.cut_ms, false)}, Auto-Editor: ${fmtTime(cmp.auto_editor.cut_ms, false)}.`
+                : `Agreement: ${(cmp.agreement * 100).toFixed(0)}%. Builtin cut ${fmtTime(cmp.builtin.cut_ms, false)}, Auto-Editor: ${fmtTime(cmp.auto_editor.cut_ms, false)}.`}
+            </p>
+          </section>
+        )}
+      </div>
+
+      <div className="stack">
+        <section className="card">
+          <div className="card-title">
             <h2>{t("setup.profile")}</h2>
           </div>
           <div className="profiles">
@@ -190,61 +239,6 @@ export default function SetupPanel({ project, payload: _payload, busy, onJob, on
           </div>
           {error && <p className="error">{error}</p>}
         </section>
-      </div>
-
-      <div className="stack">
-        <section className="card">
-          <div className="card-title">
-            <h2>{lang === "ru" ? "Параметры анализа" : "Analysis Parameters"}</h2>
-          </div>
-          <div className="fields">
-            {meta?.audio_streams && meta.audio_streams.length > 1 && (
-              <label>
-                {lang === "ru" ? "Аудиодорожка для поиска речи" : "Audio track for speech"}
-                <select value={audio} onChange={(e) => setAudio(Number(e.target.value))}>
-                  {meta.audio_streams.map((s) => (
-                    <option key={s.index} value={s.index}>
-                      #{s.index + 1} {s.title || s.language || s.codec} ({s.channels}ch, {s.sample_rate}Hz)
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-            <label>
-              {lang === "ru" ? "Движок поиска пауз" : "Silence Detection Engine"}
-              <select value={engine} onChange={(e) => setEngine(e.target.value)}>
-                <option value="builtin">Встроенный (FFmpeg silencedetect)</option>
-                <option value="auto_editor" disabled={!ae?.available}>
-                  Auto-Editor{ae?.available ? "" : " (не установлен)"}
-                </option>
-              </select>
-            </label>
-          </div>
-
-          <label className="check">
-            <input type="checkbox" checked={scenes} onChange={(e) => setScenes(e.target.checked)} />
-            {lang === "ru" ? "Определять смену сцен (помогает при видеомонтаже)" : "Detect scene boundaries"}
-          </label>
-
-          <label className="check">
-            <input type="checkbox" checked={denoise} onChange={(e) => setDenoise(e.target.checked)} />
-            <span><b>{t("audio.denoise")}</b></span>
-          </label>
-          <p className="muted small" style={{ margin: "-6px 0 0 24px" }}>{t("audio.denoise_hint")}</p>
-        </section>
-
-        {cmp && (
-          <section className="card">
-            <div className="card-title">
-              <h2>{lang === "ru" ? "Сравнение движков" : "Engine Comparison"}</h2>
-            </div>
-            <p className="muted small">
-              {lang === "ru"
-                ? `Совпадение сокращений: ${(cmp.agreement * 100).toFixed(0)}%. Встроенный сократил ${fmtTime(cmp.builtin.cut_ms, false)}, Auto-Editor: ${fmtTime(cmp.auto_editor.cut_ms, false)}.`
-                : `Agreement: ${(cmp.agreement * 100).toFixed(0)}%. Builtin cut ${fmtTime(cmp.builtin.cut_ms, false)}, Auto-Editor: ${fmtTime(cmp.auto_editor.cut_ms, false)}.`}
-            </p>
-          </section>
-        )}
       </div>
     </div>
   );

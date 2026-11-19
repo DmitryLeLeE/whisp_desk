@@ -269,6 +269,7 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
     ["v3", lang === "ru" ? "Auto-Editor .v3 проект" : "Auto-Editor .v3 project"],
   ];
 
+  const [rset, setRset] = useState<"video" | "audio" | "subs">("video");
   const [rtab, setRtab] = useState<"nle" | "extras" | "versions">("nle");
   const hasOut = files.some((f) => f.name.endsWith(".mp4"));
 
@@ -378,8 +379,14 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
           {error && <p className="error">{error}</p>}
           {msg && <p className="ok">{msg}</p>}
 
-          <details className="more">
-            <summary>{lang === "ru" ? "Параметры видео и кодирования" : "Render & Encoding Settings"}</summary>
+          <div className="rset">
+            <div className="ptabs" role="tablist">
+              <button role="tab" aria-selected={rset === "video"} className={rset === "video" ? "active" : ""} onClick={() => setRset("video")}>{lang === "ru" ? "Видео" : "Video"}</button>
+              <button role="tab" aria-selected={rset === "audio"} className={rset === "audio" ? "active" : ""} onClick={() => setRset("audio")}>{lang === "ru" ? "Звук" : "Audio"}</button>
+              <button role="tab" aria-selected={rset === "subs"} className={rset === "subs" ? "active" : ""} onClick={() => setRset("subs")}>{lang === "ru" ? "Субтитры" : "Captions"}</button>
+            </div>
+            <div className="rset-body">
+            {rset === "video" && (<>
             <label>
               {lang === "ru" ? "Шаблон оформления" : "Visual Template"}
               <select value={template} onChange={(e) => setTemplate(e.target.value)}>
@@ -418,6 +425,12 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
                 <span>{lang === "ru" ? "Умный авто-кроп лица (Smart Reframe) — авто-центрирование спикера" : "Smart Face Reframe — keep speaker centered"}</span>
               </label>
             )}
+            <label className="check">
+              <input type="checkbox" checked={overwrite} onChange={(e) => setOverwrite(e.target.checked)} />
+              {lang === "ru" ? "Перезаписывать существующие файлы" : "Overwrite existing files"}
+            </label>
+            </>)}
+            {rset === "audio" && (<>
 
             <label>
               {lang === "ru" ? "Улучшение голоса (Voice Enhancer)" : "Voice Enhancer Preset"}
@@ -435,6 +448,67 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
               <span><b>{lang === "ru" ? "Экспорт только аудио (MP3 подкаст без видеоряда)" : "Audio-only export (MP3 podcast, no video)"}</b></span>
             </label>
 
+            <label className="check">
+              <input type="checkbox" checked={normalize} onChange={(e) => setNormalize(e.target.checked)} />
+              <span><b>{lang === "ru" ? "Нормализация громкости (EBU R128 / LUFS)" : "Loudness Normalization (EBU R128 / LUFS)"}</b></span>
+            </label>
+            {normalize && (
+              <div className="row" style={{ marginLeft: 24, gap: 12 }}>
+                <span className="muted small">{lang === "ru" ? "Целевой стандарт:" : "Target Standard:"}</span>
+                <select value={targetLufs} onChange={(e) => setTargetLufs(Number(e.target.value))}>
+                  <option value={-14}>-14 LUFS (YouTube, Shorts, TikTok, Reels)</option>
+                  <option value={-16}>-16 LUFS (Подкасты, Spotify, Apple Podcasts)</option>
+                  <option value={-23}>-23 LUFS (ТВ / Европейский стандарт EBU R128)</option>
+                </select>
+              </div>
+            )}
+            <label className="check">
+              <input type="checkbox" checked={denoise} onChange={(e) => setDenoise(e.target.checked)} />
+              <span><b>{t("audio.denoise")}</b></span>
+            </label>
+            {denoise && (
+              <div className="row" style={{ marginLeft: 24, gap: 12 }}>
+                <span className="muted small">{t("audio.denoise_level")}:</span>
+                <select value={denoiseLevel} onChange={(e) => setDenoiseLevel(Number(e.target.value))}>
+                  <option value={6}>{t("audio.denoise.soft")}</option>
+                  <option value={12}>{t("audio.denoise.std")}</option>
+                  <option value={18}>{t("audio.denoise.strong")}</option>
+                </select>
+              </div>
+            )}
+
+            {/* Фоновая музыка и Auto-Ducking */}
+            <div style={{ borderTop: "1px solid var(--line)", paddingTop: 12, marginTop: 12 }}>
+              <label style={{ fontWeight: 600 }}>
+                {lang === "ru" ? "Фоновая музыка (BGM)" : "Background Music (BGM)"}
+                <input
+                  type="text"
+                  value={bgmPath}
+                  onChange={(e) => setBgmPath(e.target.value)}
+                  placeholder={lang === "ru" ? "Полный путь к аудиофайлу (например, C:\\music\\track.mp3)" : "Full path to audio file (e.g. C:\\music\\track.mp3)"}
+                  style={{ marginTop: 4 }}
+                />
+              </label>
+              {bgmPath && (
+                <div style={{ marginTop: 8, padding: "8px 12px", background: "var(--panel2)", borderRadius: 6, border: "1px solid var(--line)" }}>
+                  <label>
+                    {lang === "ru" ? `Громкость музыки: ${Math.round(bgmVolume * 100)}%` : `Music volume: ${Math.round(bgmVolume * 100)}%`}
+                    <input type="range" min="0.02" max="0.5" step="0.01" value={bgmVolume} onChange={(e) => setBgmVolume(Number(e.target.value))} />
+                  </label>
+                  <label className="check" style={{ marginTop: 8 }}>
+                    <input type="checkbox" checked={bgmDucking} onChange={(e) => setBgmDucking(e.target.checked)} />
+                    <span><b>{lang === "ru" ? "Умное авто-приглушение речи (Auto-Ducking Sidechain)" : "Speech Auto-Ducking (Sidechain)"}</b></span>
+                  </label>
+                  <p className="muted small" style={{ margin: "4px 0 0 24px" }}>
+                    {lang === "ru"
+                      ? "Музыка динамически приглушается во время речи спикера и возвращается в паузах."
+                      : "Music volume ducks when speech is active and returns to full volume during pauses."}
+                  </p>
+                </div>
+              )}
+            </div>
+            </>)}
+            {rset === "subs" && (<>
             <label className="check">
               <input type="checkbox" checked={burn} disabled={!project.has_subtitles || engine === "auto-editor"} onChange={(e) => setBurn(e.target.checked)} />
               {lang === "ru" ? "Вшить субтитры в видеоряд (Hardsub)" : "Burn subtitles into video (Hardsub)"}
@@ -516,70 +590,9 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
                 })()}
               </div>
             )}
-            <label className="check">
-              <input type="checkbox" checked={normalize} onChange={(e) => setNormalize(e.target.checked)} />
-              <span><b>{lang === "ru" ? "Нормализация громкости (EBU R128 / LUFS)" : "Loudness Normalization (EBU R128 / LUFS)"}</b></span>
-            </label>
-            {normalize && (
-              <div className="row" style={{ marginLeft: 24, gap: 12 }}>
-                <span className="muted small">{lang === "ru" ? "Целевой стандарт:" : "Target Standard:"}</span>
-                <select value={targetLufs} onChange={(e) => setTargetLufs(Number(e.target.value))}>
-                  <option value={-14}>-14 LUFS (YouTube, Shorts, TikTok, Reels)</option>
-                  <option value={-16}>-16 LUFS (Подкасты, Spotify, Apple Podcasts)</option>
-                  <option value={-23}>-23 LUFS (ТВ / Европейский стандарт EBU R128)</option>
-                </select>
-              </div>
-            )}
-            <label className="check">
-              <input type="checkbox" checked={denoise} onChange={(e) => setDenoise(e.target.checked)} />
-              <span><b>{t("audio.denoise")}</b></span>
-            </label>
-            {denoise && (
-              <div className="row" style={{ marginLeft: 24, gap: 12 }}>
-                <span className="muted small">{t("audio.denoise_level")}:</span>
-                <select value={denoiseLevel} onChange={(e) => setDenoiseLevel(Number(e.target.value))}>
-                  <option value={6}>{t("audio.denoise.soft")}</option>
-                  <option value={12}>{t("audio.denoise.std")}</option>
-                  <option value={18}>{t("audio.denoise.strong")}</option>
-                </select>
-              </div>
-            )}
-
-            {/* Фоновая музыка и Auto-Ducking */}
-            <div style={{ borderTop: "1px solid var(--line)", paddingTop: 12, marginTop: 12 }}>
-              <label style={{ fontWeight: 600 }}>
-                {lang === "ru" ? "Фоновая музыка (BGM)" : "Background Music (BGM)"}
-                <input
-                  type="text"
-                  value={bgmPath}
-                  onChange={(e) => setBgmPath(e.target.value)}
-                  placeholder={lang === "ru" ? "Полный путь к аудиофайлу (например, C:\\music\\track.mp3)" : "Full path to audio file (e.g. C:\\music\\track.mp3)"}
-                  style={{ marginTop: 4 }}
-                />
-              </label>
-              {bgmPath && (
-                <div style={{ marginTop: 8, padding: "8px 12px", background: "var(--panel2)", borderRadius: 6, border: "1px solid var(--line)" }}>
-                  <label>
-                    {lang === "ru" ? `Громкость музыки: ${Math.round(bgmVolume * 100)}%` : `Music volume: ${Math.round(bgmVolume * 100)}%`}
-                    <input type="range" min="0.02" max="0.5" step="0.01" value={bgmVolume} onChange={(e) => setBgmVolume(Number(e.target.value))} />
-                  </label>
-                  <label className="check" style={{ marginTop: 8 }}>
-                    <input type="checkbox" checked={bgmDucking} onChange={(e) => setBgmDucking(e.target.checked)} />
-                    <span><b>{lang === "ru" ? "Умное авто-приглушение речи (Auto-Ducking Sidechain)" : "Speech Auto-Ducking (Sidechain)"}</b></span>
-                  </label>
-                  <p className="muted small" style={{ margin: "4px 0 0 24px" }}>
-                    {lang === "ru"
-                      ? "Музыка динамически приглушается во время речи спикера и возвращается в паузах."
-                      : "Music volume ducks when speech is active and returns to full volume during pauses."}
-                  </p>
-                </div>
-              )}
+            </>)}
             </div>
-            <label className="check">
-              <input type="checkbox" checked={overwrite} onChange={(e) => setOverwrite(e.target.checked)} />
-              {lang === "ru" ? "Перезаписывать существующие файлы" : "Overwrite existing files"}
-            </label>
-          </details>
+          </div>
         </section>
 
         {/* Экспортированные файлы */}
