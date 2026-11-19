@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
+
+const shownDone = new Set<number>();
 import { api, fmtSize, fmtTime } from "../api";
 import { useTranslation } from "../i18n";
 import Icon from "./Icon";
@@ -15,8 +17,8 @@ interface NlePreset {
   formats: string[];
 }
 
-export default function ExportPanel({ pid, project, payload, busy, onJob, onPayload }: {
-  pid: string; project: Project; payload: PlanPayload; busy: boolean; onJob: (j: Job) => void; onPayload: (p: PlanPayload) => void;
+export default function ExportPanel({ pid, project, payload, busy, onJob, onPayload, doneJob }: {
+  pid: string; project: Project; payload: PlanPayload; busy: boolean; onJob: (j: Job) => void; onPayload: (p: PlanPayload) => void; doneJob?: Job | null;
 }) {
   const { t, lang } = useTranslation();
   const [templates, setTemplates] = useState<TemplateInfo[]>([]);
@@ -269,6 +271,17 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
     ["v3", lang === "ru" ? "Auto-Editor .v3 проект" : "Auto-Editor .v3 project"],
   ];
 
+  const [done, setDone] = useState<{ name: string; mode: string } | null>(null);
+  useEffect(() => {
+    if (!doneJob || doneJob.kind !== "render" || doneJob.status !== "COMPLETED" || shownDone.has(doneJob.id)) return;
+    const out = doneJob.result?.output;
+    if (typeof out !== "string") return;
+    shownDone.add(doneJob.id);
+    reload();
+    setDone({ name: out.split(/[\\/]/).pop() ?? out, mode: String(doneJob.params?.mode ?? "") });
+  }, [doneJob]); // eslint-disable-line react-hooks/exhaustive-deps
+  const doneFile = done ? files.find((f) => f.name === done.name) : undefined;
+  const openFile = async (name: string) => { try { await api.post(`/api/projects/${pid}/open-file`, { name }); } catch { /* ignore */ } };
   const [rset, setRset] = useState<"video" | "audio" | "subs">("video");
   const [rtab, setRtab] = useState<"nle" | "extras" | "versions">("nle");
   const hasOut = files.some((f) => f.name.endsWith(".mp4"));
@@ -276,6 +289,31 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
   return (
     <div className="grid2">
       <div className="stack">
+        {done && (
+          <section className="card done-card" role="status">
+            <div className="done-head">
+              <span className="done-check"><Icon name="check" /></span>
+              <div className="grow">
+                <b>{lang === "ru" ? (done.mode === "fast" ? "Быстрый тест готов" : "Видео готово") : (done.mode === "fast" ? "Quick test is ready" : "Video is ready")}</b>
+                <div className="muted small" style={{ wordBreak: "break-all" }}>{done.name}</div>
+              </div>
+              <button className="btn-icon" onClick={() => setDone(null)} aria-label={lang === "ru" ? "Закрыть" : "Close"}>✕</button>
+            </div>
+            <div className="done-meta">
+              <span><span className="muted small">{lang === "ru" ? "Длительность" : "Duration"}</span><b>{fmtTime(payload.stats.output_ms, false)}</b></span>
+              <span><span className="muted small">{lang === "ru" ? "Размер" : "Size"}</span><b>{doneFile ? fmtSize(doneFile.size) : "…"}</b></span>
+              <span><span className="muted small">{lang === "ru" ? "Убрано" : "Removed"}</span><b>{fmtTime(payload.stats.removed_ms, false)}</b></span>
+            </div>
+            <div className="row wrap" style={{ gap: 8 }}>
+              <button className="primary" onClick={() => openFile(done.name)}><Icon name="play" /> {lang === "ru" ? "Открыть файл" : "Open file"}</button>
+              <button onClick={openFolder}><Icon name="folder" /> {lang === "ru" ? "Показать в папке" : "Show in folder"}</button>
+              <a className="btn" href={`/api/projects/${pid}/exports/${encodeURIComponent(done.name)}`} download><Icon name="download" /> {lang === "ru" ? "Скачать" : "Download"}</a>
+              <button className="ghost" onClick={() => { setDone(null); document.querySelector(".export-presets")?.scrollIntoView({ behavior: "smooth", block: "center" }); }}>
+                {lang === "ru" ? "Сделать ещё в другом пресете" : "Make another with a different preset"}
+              </button>
+            </div>
+          </section>
+        )}
         {/* Карточка рендера готового видео */}
         <section className="card">
           <div className="card-title">
@@ -294,7 +332,7 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
           </p>
 
           {/* Пресеты экспорта в 1 клик */}
-          <div style={{ marginTop: 14, marginBottom: 10 }}>
+          <div className="export-presets" style={{ marginTop: 14, marginBottom: 10 }}>
             <span className="muted small" style={{ display: "block", marginBottom: 8, fontWeight: 500 }}>
               {lang === "ru" ? "Куда публикуете? Выберите — настройки подставятся сами:" : "Where to publish? Pick one to fill in the settings:"}
             </span>

@@ -4,6 +4,7 @@
 """
 from __future__ import annotations
 
+import json
 import logging
 import threading
 import time
@@ -47,6 +48,28 @@ def wait_ready(url: str, timeout: float = 25.0) -> bool:
     return False
 
 
+def _load_window_state(path) -> dict:
+    """Размер и позиция окна с прошлого запуска; битые значения отбрасываем."""
+    try:
+        d = json.loads(path.read_text(encoding="utf-8"))
+        out = {}
+        if 1000 <= d["width"] <= 7680 and 640 <= d["height"] <= 4320:
+            out.update(width=int(d["width"]), height=int(d["height"]))
+        if -50 <= d.get("x", 0) <= 7680 and -50 <= d.get("y", 0) <= 4320 and "x" in d and "y" in d:
+            out.update(x=int(d["x"]), y=int(d["y"]))
+        return out
+    except Exception:
+        return {}
+
+
+def _save_window_state(path, state: dict) -> None:
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(state), encoding="utf-8")
+    except Exception as e:
+        log.debug("не удалось сохранить размер окна: %s", e)
+
+
 def run_window(url: str) -> bool:
     """Показывает окно и блокирует поток до закрытия. False — окно не открылось."""
     try:
@@ -57,9 +80,19 @@ def run_window(url: str) -> bool:
     api = NativeApi()
     try:
         icon = config.BUNDLE / "assets" / "icon.png"
-        win = webview.create_window(f"WHISP MEDIA DESK {config.VERSION}", url, js_api=api, width=1360, height=880,
+        state_file = config.CONFIG_DIR / "window.json"
+        saved = _load_window_state(state_file)
+        win = webview.create_window(f"WHISP MEDIA DESK {config.VERSION}", url, js_api=api,
+                                    width=saved.get("width", 1360), height=saved.get("height", 880),
+                                    x=saved.get("x"), y=saved.get("y"),
                                     min_size=(1000, 640), text_select=True)
         api.window = win
+        try:
+            win.events.resized += lambda w, h: saved.update(width=int(w), height=int(h))
+            win.events.moved += lambda x, y: saved.update(x=int(x), y=int(y))
+            win.events.closing += lambda: _save_window_state(state_file, saved)
+        except Exception as e:  # старый pywebview без событий
+            log.debug("события окна недоступны: %s", e)
         started = time.time()
         webview.start(icon=str(icon) if icon.exists() else None, private_mode=False,
                       storage_path=str(config.CONFIG_DIR / "webview"))

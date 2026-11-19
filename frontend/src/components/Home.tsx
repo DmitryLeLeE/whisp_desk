@@ -9,6 +9,7 @@ import TourGuide, { TourStep } from "./TourGuide";
 import BatchModal from "./BatchModal";
 import StartDialog, { START_PRESETS, StartPreset } from "./StartDialog";
 import HelpModal from "./HelpModal";
+import FirstRunWizard, { WIZARD_KEY } from "./FirstRunWizard";
 
 const stem = (path: string) => (path.split(/[\\/]/).pop() ?? "").replace(/\.[^.]+$/, "");
 
@@ -24,6 +25,7 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
   const [batchOpen, setBatchOpen] = useState(false);
   const [pendingPath, setPendingPath] = useState<string | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [wizard, setWizard] = useState(() => { try { return localStorage.getItem(WIZARD_KEY) !== "1"; } catch { return false; } });
   const createDemo = async () => {
     setError(""); setBusy(true);
     try { const p = await api.post<ProjectRow>("/api/projects/demo"); onOpen(p.id); }
@@ -335,6 +337,7 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
       {error && <div className="notice bad" style={{ marginBottom: 16 }}>{error}</div>}
       {browse && <FileBrowser onPick={start} onPickMultiple={(paths) => startBatch(paths)} onClose={() => setBrowse(false)} />}
       {pendingPath && <StartDialog filename={pendingPath.split(/[\\/]/).pop() ?? pendingPath} busy={busy} onStart={(pr, l) => create(pendingPath, pr, l)} onClose={() => setPendingPath(null)} />}
+      {wizard && <FirstRunWizard onClose={() => setWizard(false)} />}
       {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} onTour={() => { setHelpOpen(false); setShowTour(true); }} />}
       {batchOpen && <BatchModal onClose={() => setBatchOpen(false)} onCreated={load} />}
 
@@ -364,7 +367,7 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
 
       {/* Сетка проектов */}
       {filteredRows === null ? (
-        <div className="empty" style={{ padding: 60 }}><p className="muted">{t("common.loading")}</p></div>
+        <div className="skel-grid" aria-busy="true">{[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="skel-card" />)}</div>
       ) : filteredRows.length === 0 ? (
         <div className="empty card nle-panel-card" style={{ padding: "60px 20px", maxWidth: 520, margin: "40px auto" }}>
           <Icon name="film" style={{ width: 44, height: 44, opacity: 0.3 }} />

@@ -258,6 +258,32 @@ def reveal_in_explorer(pid: str, request: Request, folder: str = "exports"):
     return {"ok": True, "path": str(target)}
 
 
+class OpenFileBody(BaseModel):
+    name: str
+
+
+@router.post("/{pid}/open-file")
+def open_export_file(pid: str, body: OpenFileBody, request: Request):
+    """Открывает готовый файл из папки exports программой по умолчанию (плеер, редактор)."""
+    import os
+    import subprocess
+    import sys
+    base = pm(request).path(pid, "exports").resolve()
+    target = (base / Path(body.name).name).resolve()
+    if base not in target.parents or not target.is_file():
+        raise HTTPException(404, "Файл не найден")
+    try:
+        if sys.platform == "win32":
+            os.startfile(str(target))  # noqa: S606
+        elif sys.platform == "darwin":
+            subprocess.run(["open", str(target)], check=False)
+        else:
+            subprocess.run(["xdg-open", str(target)], check=False)
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "path": str(target), "error": str(exc)}
+    return {"ok": True, "path": str(target)}
+
+
 @router.get("/{pid}/frame")
 def capture_frame(pid: str, request: Request, time_ms: int = 0, download: bool = False):
     """Захватывает один стоп-кадр видео в высоком качестве по заданному таймкоду."""

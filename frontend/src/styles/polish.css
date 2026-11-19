@@ -79,3 +79,43 @@ main:has(> .nle-manager-toolbar) { max-width: 1400px; }
 .auto-banner button { height: 24px; min-height: 24px; padding: 0 10px; font-size: 12px; }
 .modal-footer { display: flex; justify-content: flex-end; gap: 8px; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
+
+/* Экран «Готово» после рендера */
+.done-card { border-color: var(--keep, #3fb950); box-shadow: 0 0 0 1px color-mix(in srgb, var(--keep, #3fb950) 40%, transparent) inset; }
+.done-head { display: flex; align-items: center; gap: 12px; padding: 12px 14px 4px; }
+.done-check { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--keep, #3fb950); color: #fff; flex: none; }
+.done-check svg { width: 16px; height: 16px; }
+.done-meta { display: flex; gap: 28px; padding: 8px 14px 12px; }
+.done-meta > span { display: flex; flex-direction: column; gap: 2px; }
+.done-meta b { font-size: 15px; font-variant-numeric: tabular-nums; }
+.done-card .row { padding: 0 14px 14px; }
+.done-card a.btn { display: inline-flex; align-items: center; gap: 6px; }
+
+/* Плашка «Отменить» после действий в монтаже */
+.undo-toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: 44px; z-index: 50; display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 16px; background: var(--raised); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 8px 28px rgba(0,0,0,.45); font-size: 13px; animation: toast-in .16s ease-out; }
+.undo-toast button { height: 26px; min-height: 26px; padding: 0 10px; font-size: 12px; }
+.undo-toast kbd { margin-left: 6px; opacity: .7; font-size: 10px; }
+@keyframes toast-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+/* Контекстное меню таймлайна */
+.ctx-menu { position: fixed; z-index: 80; min-width: 210px; padding: 4px; background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 10px 30px rgba(0,0,0,.5); display: flex; flex-direction: column; }
+.ctx-head { padding: 4px 10px 6px; font: 11px ui-monospace, monospace; color: var(--muted); border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+.ctx-menu button { height: 30px; display: flex; align-items: center; justify-content: space-between; gap: 18px; text-align: left; border: none; background: none; padding: 0 10px; border-radius: 3px; color: var(--text); }
+.ctx-menu button:hover { background: var(--raised); }
+.ctx-menu kbd { opacity: .55; font-size: 10px; }
+.ctx-sep { height: 1px; background: var(--line); margin: 4px 0; }
+
+/* Мастер первого запуска */
+.wiz-dialog { width: min(600px, 94vw); }
+.wiz-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.wiz-row:last-of-type { border-bottom: none; }
+.wiz-dot { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; flex: none; font-size: 12px; font-weight: 700; color: #fff; background: var(--raised); }
+.wiz-dot.ok { background: var(--keep, #3fb950); }
+.wiz-dot.bad { background: var(--cut, #e5484d); }
+.wiz-dot svg { width: 13px; height: 13px; }
+.wiz-bar { width: 120px; }
+
+/* Скелетоны вместо «Загрузка…» */
+.skel-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; padding: 16px 0; }
+.skel-card { height: 190px; border-radius: 8px; background: linear-gradient(90deg, var(--panel) 25%, var(--raised) 50%, var(--panel) 75%); background-size: 200% 100%; animation: skel 1.2s linear infinite; }
+@keyframes skel { to { background-position: -200% 0; } }

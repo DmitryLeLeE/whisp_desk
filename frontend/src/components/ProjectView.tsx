@@ -47,7 +47,20 @@ export default function ProjectView({ pid, onClose, sys, theme, onToggleTheme, o
   const [wave, setWave] = useState<Waveform | null>(null);
   const [cues, setCues] = useState<Cue[]>([]);
   const [job, setJob] = useState<Job | null>(null);
+  // Системное уведомление, если долгая задача закончилась, пока окно было свёрнуто
+  const notified = useRef<number | null>(null);
+  useEffect(() => {
+    if (!job || (job.status !== "COMPLETED" && job.status !== "FAILED") || notified.current === job.id) return;
+    notified.current = job.id;
+    if (!document.hidden || typeof Notification === "undefined") return;
+    const show = () => new Notification("WHISP MEDIA DESK", {
+      body: job.status === "COMPLETED" ? (lang === "ru" ? "Задача завершена" : "Task finished") : (lang === "ru" ? "Задача завершилась с ошибкой" : "Task failed"),
+    });
+    if (Notification.permission === "granted") show();
+    else if (Notification.permission === "default") Notification.requestPermission().then((r) => { if (r === "granted") show(); });
+  }, [job, lang]);
   const [tab, setTab] = useState<Tab>("setup");
+  useEffect(() => { try { localStorage.setItem(`whisp_tab_${pid}`, tab); } catch { /* ignore */ } }, [tab, pid]);
   const [error, setError] = useState("");
   const [seekTo, setSeekTo] = useState<{ ms: number; n: number } | null>(null);
   const [showTour, setShowTour] = useState(false);
@@ -128,7 +141,7 @@ export default function ProjectView({ pid, onClose, sys, theme, onToggleTheme, o
       } else setPayload(null);
       if (p.has_subtitles) api.get<{ cues: Cue[] }>(`/api/projects/${pid}/subtitles`).then((r) => setCues(r.cues));
       else setCues([]);
-      if (firstLoad.current) { firstLoad.current = false; setTab(p.has_plan ? "edit" : "setup"); }
+      if (firstLoad.current) { firstLoad.current = false; { let saved: string | null = null; try { saved = localStorage.getItem(`whisp_tab_${pid}`); } catch { /* ignore */ } setTab(p.has_plan ? ((saved === "export" || saved === "subs" || saved === "edit") ? (saved as Tab) : "edit") : "setup"); } }
     } catch (e) { setError((e as Error).message); }
   }, [pid]);
 
@@ -370,6 +383,7 @@ export default function ProjectView({ pid, onClose, sys, theme, onToggleTheme, o
                 busy={running}
                 onJob={setJob}
                 onPayload={setPayload}
+                doneJob={job}
               />
             ) : <NeedsPlan onGo={() => setTab("setup")} />}
           </div>

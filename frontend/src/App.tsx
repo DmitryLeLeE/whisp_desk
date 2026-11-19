@@ -21,7 +21,7 @@ export default function App() {
   const [sys, setSys] = useState<SettingsData | null>(null);
   const [theme, setTheme] = useState<string>(() => {
     try {
-      return localStorage.getItem("theme") ?? "dark";
+      return localStorage.getItem("theme") ?? (window.matchMedia?.("(prefers-color-scheme: light)").matches ? "light" : "dark");
     } catch {
       return "dark";
     }
@@ -48,6 +48,19 @@ export default function App() {
   useEffect(() => {
     api.get<SettingsData>("/api/settings").then(setSys).catch(() => setSys(null));
   }, [route.name]);
+
+  // Запоминаем открытый проект и возвращаемся в него при следующем запуске
+  useEffect(() => {
+    if (route.name === "project") { try { localStorage.setItem("whisp_last_project", route.pid); } catch { /* ignore */ } }
+  }, [route]);
+  useEffect(() => {
+    if (location.hash && location.hash !== "#/") return;
+    let id: string | null = null;
+    try { id = localStorage.getItem("whisp_last_project"); } catch { /* ignore */ }
+    if (!id) return;
+    fetch(`/api/projects/${id}`).then((r) => { if (r.ok) location.hash = `#/p/${id}`; else localStorage.removeItem("whisp_last_project"); }).catch(() => undefined);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;

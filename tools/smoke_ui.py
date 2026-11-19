@@ -54,7 +54,7 @@ def main() -> int:
         with sync_playwright() as pw:
             browser = pw.chromium.launch()
             ctx = browser.new_context(viewport={"width": 1440, "height": 900})
-            ctx.add_init_script("localStorage.setItem('whisp_seen_home_tour','true');localStorage.setItem('whisp_seen_project_tour','true')")
+            ctx.add_init_script("localStorage.setItem('whisp_seen_home_tour','true');localStorage.setItem('whisp_wizard_done','1');localStorage.setItem('whisp_seen_project_tour','true')")
             page = ctx.new_page()
             page.on("pageerror", lambda e: errors.append(str(e)))
             page.set_default_timeout(20000)
@@ -75,7 +75,7 @@ def main() -> int:
             page.get_by_role("button", name="Собрать видео").wait_for()
 
             # 3. Быстрый старт: диалог профилей и автоцепочка «Только паузы»
-            page.goto(BASE + "/")
+            page.goto(BASE + "/#/")
             page.get_by_text("Выбрать на диске").first.click()
             page.get_by_text("clip.mp4").first.click()
             page.get_by_text("Как обработать видео?").wait_for()
@@ -86,7 +86,7 @@ def main() -> int:
             assert page.locator("table.nle-table tbody tr").count() >= 2, "в таблице решений нет строк"
 
             # 4. Переключатель списка проектов
-            page.goto(BASE + "/")
+            page.goto(BASE + "/#/")
             page.get_by_title("Список").click()
             page.locator("table.proj-table tbody tr").first.wait_for()
             browser.close()

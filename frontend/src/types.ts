@@ -45,6 +45,7 @@ export interface Job {
   error: string | null;
   elapsed_s?: number | null;
   result: Record<string, unknown> | null;
+  params?: Record<string, unknown>;
   log?: string[];
 }
 

@@ -28,3 +28,9 @@ def test_demo_project_has_source_and_subtitles(client):
     assert p["has_subtitles"] is True
     cues = client.get(f"/api/projects/{p['id']}/subtitles").json()["cues"]
     assert len(cues) == 3
+
+
+def test_open_file_rejects_missing_and_traversal(client):
+    pid = client.post("/api/projects/demo").json()["id"]
+    assert client.post(f"/api/projects/{pid}/open-file", json={"name": "nope.mp4"}).status_code == 404
+    assert client.post(f"/api/projects/{pid}/open-file", json={"name": "../../demo.mp4"}).status_code == 404

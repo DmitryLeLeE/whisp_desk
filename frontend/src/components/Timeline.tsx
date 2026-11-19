@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { fmtTime } from "../api";
 import type { Cue, Segment, TimelineMarker, Waveform } from "../types";
 import { useTranslation } from "../i18n";
@@ -22,6 +22,8 @@ interface Props {
   onMoveBoundary: (leftId: string, ms: number) => void;
   onRange: (a: number, b: number) => void;
   scrollRef: React.RefObject<HTMLDivElement>;
+  onContextAction?: (action: "toggle" | "split" | "marker" | "lock" | "play", seg: Segment | null, ms: number) => void;
+  onZoom?: (factor: number) => void;
 }
 
 const tickStep = (pps: number): number => {
@@ -36,6 +38,41 @@ export default function Timeline(p: Props) {
   const [drag, setDrag] = useState<{ id: string; ms: number } | null>(null);
   const [hoverMs, setHoverMs] = useState<number | null>(null);
   const sel = useRef<{ x: number; ms: number; moved: boolean } | null>(null);
+  const [menu, setMenu] = useState<{ x: number; y: number; ms: number; seg: Segment | null } | null>(null);
+  const ppsRef = useRef(p.pps);
+  ppsRef.current = p.pps;
+  const onZoomRef = useRef(p.onZoom);
+  onZoomRef.current = p.onZoom;
+
+  // Ctrl + колесо: масштаб вокруг курсора мыши
+  useEffect(() => {
+    const el = p.scrollRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || !onZoomRef.current) return;
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      const offset = e.clientX - rect.left;
+      const anchorSec = (el.scrollLeft + offset) / ppsRef.current;
+      const factor = e.deltaY < 0 ? 1.18 : 1 / 1.18;
+      const next = Math.min(300, Math.max(0.5, ppsRef.current * factor));
+      onZoomRef.current(factor);
+      requestAnimationFrame(() => { el.scrollLeft = Math.max(0, anchorSec * next - offset); });
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [p.scrollRef]);
+
+  useEffect(() => {
+    if (!menu) return;
+    const close = () => setMenu(null);
+    const key = (e: KeyboardEvent) => { if (e.key === "Escape") close(); };
+    window.addEventListener("pointerdown", close);
+    window.addEventListener("keydown", key);
+    window.addEventListener("blur", close);
+    return () => { window.removeEventListener("pointerdown", close); window.removeEventListener("keydown", key); window.removeEventListener("blur", close); };
+  }, [menu]);
+
   const width = Math.max(1, (p.durationMs / 1000) * p.pps);
   const x = (ms: number) => (ms / 1000) * p.pps;
 
@@ -115,6 +152,14 @@ export default function Timeline(p: Props) {
             const a = snap(s.ms), b = snap(msAt(e.clientX));
             p.onRange(Math.min(a, b), Math.max(a, b));
           }}
+          onContextMenu={(e) => {
+            if (!p.onContextAction) return;
+            e.preventDefault();
+            const ms = snap(msAt(e.clientX));
+            const seg = p.segments.find((g) => g.source_start_ms <= ms && ms < g.source_end_ms) ?? null;
+            if (seg) p.onSelect(seg.id);
+            setMenu({ x: Math.min(e.clientX, window.innerWidth - 230), y: Math.min(e.clientY, window.innerHeight - 220), ms, seg });
+          }}
           onPointerLeave={() => { setHoverMs(null); }}
           onPointerUp={() => { sel.current = null; }}>
           <div className="ruler">
@@ -180,6 +225,23 @@ export default function Timeline(p: Props) {
           <div className="playhead" style={{ left: x(p.current) }} />
         </div>
       </div>
+      {menu && p.onContextAction && (
+        <div className="ctx-menu" style={{ left: menu.x, top: menu.y }} role="menu" onPointerDown={(e) => e.stopPropagation()} onContextMenu={(e) => e.preventDefault()}>
+          <div className="ctx-head">{fmtTime(menu.ms, true)}</div>
+          {menu.seg && (
+            <>
+              <button role="menuitem" onClick={() => { p.onContextAction!("toggle", menu.seg, menu.ms); setMenu(null); }}>
+                {menu.seg.action === "KEEP" ? (ru ? "Вырезать фрагмент" : "Cut segment") : (ru ? "Оставить фрагмент" : "Keep segment")}<kbd>X</kbd>
+              </button>
+              <button role="menuitem" onClick={() => { p.onContextAction!("play", menu.seg, menu.ms); setMenu(null); }}>{ru ? "Прослушать фрагмент" : "Play segment"}</button>
+              <button role="menuitem" onClick={() => { p.onContextAction!("lock", menu.seg, menu.ms); setMenu(null); }}>{menu.seg.locked ? (ru ? "Снять защиту" : "Unlock") : (ru ? "Защитить от изменений" : "Lock")}</button>
+              <div className="ctx-sep" />
+              <button role="menuitem" onClick={() => { p.onContextAction!("split", menu.seg, menu.ms); setMenu(null); }}>{ru ? "Разрезать здесь" : "Split here"}<kbd>C</kbd></button>
+            </>
+          )}
+          <button role="menuitem" onClick={() => { p.onContextAction!("marker", menu.seg, menu.ms); setMenu(null); }}>{ru ? "Поставить маркер" : "Add marker"}<kbd>M</kbd></button>
+        </div>
+      )}
     </div>
   );
 }

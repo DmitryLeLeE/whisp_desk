@@ -157,7 +157,8 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
   const [playing, setPlaying] = useState(false);
   const [skipCuts, setSkipCuts] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [pps, setPps] = useState(8);
+  const [pps, setPps] = useState(() => { try { const v = parseFloat(localStorage.getItem("whisp_pps") ?? ""); return v > 0 ? Math.min(300, Math.max(0.5, v)) : 8; } catch { return 8; } });
+  useEffect(() => { try { localStorage.setItem("whisp_pps", String(Math.round(pps * 100) / 100)); } catch { /* ignore */ } }, [pps]);
   const [markIn, setMarkIn] = useState<number | null>(null);
   const [markOut, setMarkOut] = useState<number | null>(null);
   const [jump, setJump] = useState("");
@@ -316,15 +317,42 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
     v.play().catch(() => undefined);
   };
 
+  const [toast, setToast] = useState<{ id: number; text: string } | null>(null);
+  const toastTimer = useRef<number | undefined>(undefined);
+  const showToast = useCallback((text: string) => {
+    window.clearTimeout(toastTimer.current);
+    setToast({ id: Date.now(), text });
+    toastTimer.current = window.setTimeout(() => setToast(null), 6000);
+  }, []);
+  const opLabel = (b: Record<string, unknown>): string | null => {
+    const ru = lang === "ru";
+    switch (b.op) {
+      case "set_action": return b.action === "CUT" ? (ru ? "Фрагмент вырезан" : "Segment cut") : (ru ? "Фрагмент оставлен" : "Segment kept");
+      case "set_range": return b.action === "CUT" ? (ru ? "Отрезок вырезан" : "Range cut") : (ru ? "Отрезок оставлен" : "Range kept");
+      case "split": return ru ? "Фрагмент разрезан" : "Segment split";
+      case "merge": return ru ? "Фрагменты объединены" : "Segments merged";
+      case "move_boundary": return ru ? "Граница сдвинута" : "Boundary moved";
+      case "reorder": return ru ? "Порядок фрагментов изменён" : "Order changed";
+      case "lock": return b.locked ? (ru ? "Фрагмент защищён от изменений" : "Segment locked") : (ru ? "Защита снята" : "Segment unlocked");
+      case "add_marker": return ru ? "Маркер добавлен" : "Marker added";
+      case "delete_marker": return ru ? "Маркер удалён" : "Marker removed";
+      default: return null;
+    }
+  };
   const run = useCallback(async (body: Record<string, unknown>) => {
     setError("");
-    try { onPayload(await api.post<PlanPayload>(`/api/projects/${pid}/timeline/ops`, body)); }
+    try {
+      onPayload(await api.post<PlanPayload>(`/api/projects/${pid}/timeline/ops`, body));
+      const label = opLabel(body);
+      if (label) showToast(label);
+    }
     catch (e) { setError((e as Error).message); }
-  }, [pid, onPayload]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pid, onPayload, lang, showToast]);
 
   const history = async (what: "undo" | "redo") => {
     setError("");
-    try { onPayload(await api.post<PlanPayload>(`/api/projects/${pid}/timeline/${what}`)); }
+    try { onPayload(await api.post<PlanPayload>(`/api/projects/${pid}/timeline/${what}`)); setToast(null); }
     catch (e) { setError((e as Error).message); }
   };
 
@@ -355,12 +383,11 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
 
   const acceptAll = async () => {
     if (stats.unreviewed === 0) return;
-    if (!confirm(lang === "ru" ? `Отметить все ${stats.unreviewed} непроверенных фрагментов как проверенные?` : `Mark all ${stats.unreviewed} unreviewed segments as reviewed?`)) return;
+    const n = stats.unreviewed;
     setError("");
     try {
       onPayload(await api.post<PlanPayload>(`/api/projects/${pid}/timeline/ops`, { op: "review", ids: null, reviewed: true }));
-      setMsg(lang === "ru" ? "Все фрагменты отмечены проверенными!" : "All cuts marked as reviewed!");
-      setTimeout(() => setMsg(""), 3000);
+      showToast(lang === "ru" ? `Отмечено проверенными: ${n}` : `Marked as reviewed: ${n}`);
     } catch (e) {
       setError((e as Error).message);
     }
@@ -1017,6 +1044,15 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
           scrollRef={scrollRef}
           onMoveBoundary={(id, ms) => run({ op: "move_boundary", id, at_ms: ms })}
           onRange={(a, b) => { setMarkIn(a); setMarkOut(b); }}
+          onZoom={(f) => setPps((v) => Math.min(300, Math.max(0.5, v * f)))}
+          onContextAction={(action, seg, ms) => {
+            if (action === "marker") run({ op: "add_marker", time_ms: ms, label: lang === "ru" ? "Маркер" : "Marker", color: "cyan" });
+            else if (!seg) return;
+            else if (action === "toggle") run({ op: "set_action", id: seg.id, action: seg.action === "KEEP" ? "CUT" : "KEEP" });
+            else if (action === "split") { if (ms > seg.source_start_ms && ms < seg.source_end_ms) run({ op: "split", id: seg.id, at_ms: ms }); }
+            else if (action === "lock") run({ op: "lock", id: seg.id, locked: !seg.locked });
+            else if (action === "play") playRange(seg.source_start_ms, seg.source_end_ms);
+          }}
         />
       </div>
 
@@ -1037,6 +1073,13 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
         </div>
       </footer>
 
+      {toast && (
+        <div className="undo-toast" role="status" key={toast.id}>
+          <span>{toast.text}</span>
+          <button onClick={() => history("undo")} disabled={!payload.can_undo || busy}>{lang === "ru" ? "Отменить" : "Undo"} <kbd>Ctrl+Z</kbd></button>
+          <button className="btn-icon" onClick={() => setToast(null)} aria-label={lang === "ru" ? "Закрыть" : "Close"}>✕</button>
+        </div>
+      )}
       {showHelp && <ShortcutsModal onClose={() => setShowHelp(false)} />}
       {showInsights && <InsightsModal pid={pid} onClose={() => setShowInsights(false)} />}
       {showPatterns && <AutoPatternModal pid={pid} onClose={() => setShowPatterns(false)} onPayload={onPayload} />}
