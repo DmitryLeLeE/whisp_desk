@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, fmtTime } from "../api";
 import { useTranslation } from "../i18n";
 import { hasNativePicker, nativePickFile } from "../native";
@@ -21,6 +21,37 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
   const [showQuickStart, setShowQuickStart] = useState(() => {
     try { return localStorage.getItem("whisp_hide_quickstart") !== "true"; } catch { return true; }
   });
+  const [search, setSearch] = useState("");
+  const [sortKey, setSortKey] = useState<"updated_desc" | "updated_asc" | "name_asc" | "name_desc" | "duration_desc">("updated_desc");
+
+  const duplicate = async (r: ProjectSummary, e: React.MouseEvent) => {
+    e.preventDefault(); e.stopPropagation();
+    try {
+      await api.post(`/api/projects/${r.id}/duplicate`);
+      load();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
+  const filteredRows = useMemo(() => {
+    if (!rows) return null;
+    let list = rows.filter((r) => {
+      if (!search.trim()) return true;
+      const q = search.toLowerCase();
+      return r.name.toLowerCase().includes(q) || (r.filename && r.filename.toLowerCase().includes(q)) || r.id.toLowerCase().includes(q);
+    });
+
+    list = [...list].sort((a, b) => {
+      if (sortKey === "updated_desc") return new Date(b.updated).getTime() - new Date(a.updated).getTime();
+      if (sortKey === "updated_asc") return new Date(a.updated).getTime() - new Date(b.updated).getTime();
+      if (sortKey === "name_asc") return a.name.localeCompare(b.name);
+      if (sortKey === "name_desc") return b.name.localeCompare(a.name);
+      if (sortKey === "duration_desc") return (b.duration_ms || 0) - (a.duration_ms || 0);
+      return 0;
+    });
+    return list;
+  }, [rows, search, sortKey]);
 
   const homeSteps: TourStep[] = [
     {
@@ -222,23 +253,45 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
       {error && <p className="error">{error}</p>}
       {browse && <FileBrowser onPick={start} onPickMultiple={(paths) => startBatch(paths)} onClose={() => setBrowse(false)} />}
 
-      <div className="page-head">
+      <div className="page-head" style={{ alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
         <div>
-          <h1>{t("home.title")}</h1>
+          <h1>{t("home.title")} {rows && rows.length > 0 && <span className="muted" style={{ fontSize: 18, fontWeight: 500 }}>({rows.length})</span>}</h1>
           <p className="muted">{t("home.subtitle")}</p>
         </div>
+        {rows && rows.length > 0 && (
+          <div className="row wrap" style={{ gap: 8, alignItems: "center" }}>
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={lang === "ru" ? "Поиск проектов…" : "Search projects…"}
+              style={{ width: 200, padding: "6px 10px", fontSize: 13 }}
+            />
+            <select
+              value={sortKey}
+              onChange={(e) => setSortKey(e.target.value as any)}
+              style={{ padding: "6px 10px", fontSize: 13 }}
+            >
+              <option value="updated_desc">{lang === "ru" ? "Сначала новые" : "Recently updated"}</option>
+              <option value="updated_asc">{lang === "ru" ? "Сначала старые" : "Oldest first"}</option>
+              <option value="name_asc">{lang === "ru" ? "По названию (А–Я)" : "Name (A–Z)"}</option>
+              <option value="name_desc">{lang === "ru" ? "По названию (Я–А)" : "Name (Z–A)"}</option>
+              <option value="duration_desc">{lang === "ru" ? "По длительности" : "Duration"}</option>
+            </select>
+          </div>
+        )}
       </div>
 
-      {rows === null ? (
+      {filteredRows === null ? (
         <p className="muted">{t("common.loading")}</p>
-      ) : rows.length === 0 ? (
+      ) : filteredRows.length === 0 ? (
         <div className="empty card">
           <Icon name="folder" />
-          <b>{t("home.empty")}</b>
+          <b>{search ? (lang === "ru" ? "Ничего не найдено по запросу" : "No projects match your search") : t("home.empty")}</b>
         </div>
       ) : (
         <div className="proj-grid">
-          {rows.map((r) => (
+          {filteredRows.map((r) => (
             <a key={r.id} className="proj" href={`#/p/${r.id}`}>
               <div className="thumb">
                 {r.thumb ? <img src={r.thumb} alt="" loading="lazy" /> : <Icon name="film" className="icon-big" />}
@@ -256,11 +309,14 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
                   </div>
                 )}
                 {r.removed_ms ? <span className="muted small" style={{ color: "var(--keep)" }}>Убрано: {fmtTime(r.removed_ms, false)}</span> : null}
-                <div className="row">
+                <div className="row" style={{ alignItems: "center", gap: 4 }}>
                   <span className="muted small grow">
                     {new Date(r.updated).toLocaleDateString(lang === "ru" ? "ru-RU" : "en-US")}
                   </span>
-                  <button className="ghost danger" onClick={(e) => remove(r, e)} aria-label="Удалить проект" title={t("common.delete")}>
+                  <button className="ghost small" onClick={(e) => duplicate(r, e)} aria-label="Дублировать проект" title={lang === "ru" ? "Создать копию проекта" : "Duplicate Project"}>
+                    <Icon name="copy" />
+                  </button>
+                  <button className="ghost danger small" onClick={(e) => remove(r, e)} aria-label="Удалить проект" title={t("common.delete")}>
                     <Icon name="trash" />
                   </button>
                 </div>

@@ -74,3 +74,73 @@ def check_update():
         "release_url": GITHUB_RELEASES_PAGE,
         "published_at": "",
     }
+
+
+def _scan_cache():
+    items = []
+    total_bytes = 0
+    if config.PROJECTS_DIR.is_dir():
+        for p_dir in config.PROJECTS_DIR.iterdir():
+            if not p_dir.is_dir():
+                continue
+            analysis = p_dir / "analysis"
+            if analysis.is_dir():
+                for f in analysis.glob("*"):
+                    if f.is_file() and f.name != "source_info.json":
+                        try:
+                            sz = f.stat().st_size
+                            items.append(f)
+                            total_bytes += sz
+                        except OSError:
+                            pass
+                thumbs = analysis / "thumbnails"
+                if thumbs.is_dir():
+                    for f in thumbs.glob("*.jpg"):
+                        try:
+                            sz = f.stat().st_size
+                            items.append(f)
+                            total_bytes += sz
+                        except OSError:
+                            pass
+            exports = p_dir / "exports"
+            if exports.is_dir():
+                for f in exports.glob("*.part"):
+                    try:
+                        sz = f.stat().st_size
+                        items.append(f)
+                        total_bytes += sz
+                    except OSError:
+                        pass
+    return items, total_bytes
+
+
+@router.get("/cache")
+def get_cache_info():
+    items, total_bytes = _scan_cache()
+    mb = total_bytes / (1024 * 1024)
+    return {
+        "files_count": len(items),
+        "total_bytes": total_bytes,
+        "formatted": f"{mb:.1f} МБ" if mb >= 1 else f"{total_bytes / 1024:.0f} КБ",
+    }
+
+
+@router.post("/cache/clean")
+def clean_cache():
+    items, total_bytes = _scan_cache()
+    deleted = 0
+    freed_bytes = 0
+    for f in items:
+        try:
+            sz = f.stat().st_size
+            f.unlink(missing_ok=True)
+            deleted += 1
+            freed_bytes += sz
+        except OSError:
+            pass
+    mb = freed_bytes / (1024 * 1024)
+    return {
+        "deleted_count": deleted,
+        "freed_bytes": freed_bytes,
+        "formatted": f"{mb:.1f} МБ" if mb >= 1 else f"{freed_bytes / 1024:.0f} КБ",
+    }

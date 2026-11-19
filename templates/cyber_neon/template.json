@@ -1,0 +1,7 @@
+{
+  "name": "⚡ Cyber Neon",
+  "description": "Неоновый киберпанк-стиль: яркий бирюзовый текст с фиолетово-розовой обводкой для динамичных роликов.",
+  "subtitles": {"font": "Trebuchet MS", "size": 76, "colour": "#00F0FF", "outline_colour": "#D946EF", "outline": 4, "shadow": 2, "margin_v": 90, "bold": 1},
+  "audio": {"normalize": true, "target_lufs": -14, "true_peak_db": -1.5, "limiter": true, "declick_ms": 8},
+  "export": {"crf": 18, "preset": "veryfast", "audio_bitrate": "192k"}
+}

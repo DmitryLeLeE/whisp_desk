@@ -126,6 +126,16 @@ def delete_project(pid: str, request: Request):
     pm(request).delete(pid)
 
 
+class DuplicateBody(BaseModel):
+    name: str | None = None
+
+
+@router.post("/{pid}/duplicate", status_code=201)
+def duplicate_project(pid: str, request: Request, body: DuplicateBody | None = None):
+    new_name = body.name if body else None
+    return pm(request).duplicate(pid, new_name)
+
+
 @router.put("/{pid}/source")
 def set_source(pid: str, body: SourceBody, request: Request):
     """Добавляет или заново указывает путь к исходному файлу. Файл не копируется и не изменяется."""

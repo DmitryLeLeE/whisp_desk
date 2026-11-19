@@ -258,7 +258,9 @@ def _ass_colour(hex_rgb: str, alpha: int = 0) -> str:
 
 def render_ass(cues: list[Cue], style: dict | None = None, width: int = 1920, height: int = 1080) -> str:
     st = {"font": "Arial", "size": 64, "colour": "#FFFFFF", "outline_colour": "#000000", "outline": 3,
-          "margin_v": 50, "alignment": 2, **(style or {})}
+          "margin_v": 50, "alignment": 2, "bold": 0, "shadow": 1, **(style or {})}
+    bold_flag = 1 if st.get("bold") else 0
+    shadow_val = st.get("shadow", 1)
     # Размер шрифта задан для 1080p — масштабируется через PlayRes.
     header = (
         "[Script Info]\nScriptType: v4.00+\n"
@@ -268,7 +270,7 @@ def render_ass(cues: list[Cue], style: dict | None = None, width: int = 1920, he
         "Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, "
         "MarginR, MarginV, Encoding\n"
         f"Style: Default,{st['font']},{st['size']},{_ass_colour(st['colour'])},&H000000FF,"
-        f"{_ass_colour(st['outline_colour'])},&H64000000,0,0,0,0,100,100,0,0,1,{st['outline']},1,"
+        f"{_ass_colour(st['outline_colour'])},&H64000000,{bold_flag},0,0,0,100,100,0,0,1,{st['outline']},{shadow_val},"
         f"{st['alignment']},60,60,{st['margin_v']},1\n\n"
         "[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n"
     )

@@ -30,6 +30,7 @@ export default function ShortcutsModal({ onClose }: { onClose: () => void }) {
     { key: "Ctrl + Z", action: "Отменить действие (Undo)" },
     { key: "Ctrl + Shift + Z", action: "Повторить действие (Redo)" },
     { key: "Ctrl + Колесо мыши", action: "Масштабирование таймлайна (Zoom)" },
+    { key: "~ / F11", action: "Полноэкранный режим монитора (Fullscreen)" },
     { key: "?", action: "Показать эту справку" },
   ];
 
@@ -45,6 +46,7 @@ export default function ShortcutsModal({ onClose }: { onClose: () => void }) {
     { key: "Shift + ← / →", action: "Шаг на 5 секунд" },
     { key: "Ctrl + Z", action: "Отменить (Undo)" },
     { key: "Ctrl + Shift + Z", action: "Повторить (Redo)" },
+    { key: "~ / F11", action: "Полноэкранный просмотр видео" },
     { key: "Ctrl + Колесо мыши", action: "Зум таймлайна" },
   ];
 
@@ -57,6 +59,7 @@ export default function ShortcutsModal({ onClose }: { onClose: () => void }) {
     { key: "M", action: "Добавить маркер таймлайна" },
     { key: "Ctrl + Z", action: "Отменить" },
     { key: "Ctrl + Shift + Z", action: "Повторить" },
+    { key: "~ / F11", action: "Полноэкранный режим монитора" },
   ];
 
   const shortcutsWhispEn = [
@@ -77,6 +80,7 @@ export default function ShortcutsModal({ onClose }: { onClose: () => void }) {
     { key: "Ctrl + Z", action: "Undo last edit" },
     { key: "Ctrl + Shift + Z", action: "Redo edit" },
     { key: "Ctrl + Mouse Wheel", action: "Zoom timeline in / out" },
+    { key: "~ / F11", action: "Fullscreen Program Monitor" },
     { key: "?", action: "Show this help dialog" },
   ];
 
@@ -89,6 +93,7 @@ export default function ShortcutsModal({ onClose }: { onClose: () => void }) {
     { key: "I / O", action: "Set In / Out marks" },
     { key: "M", action: "Add Marker" },
     { key: "Ctrl + Z / Ctrl + Shift + Z", action: "Undo / Redo" },
+    { key: "~ / F11", action: "Fullscreen Program Monitor" },
   ];
 
   const shortcutsDaVinciEn = [
@@ -99,6 +104,7 @@ export default function ShortcutsModal({ onClose }: { onClose: () => void }) {
     { key: "I / O", action: "Set In / Out" },
     { key: "M", action: "Add Marker" },
     { key: "Ctrl + Z", action: "Undo" },
+    { key: "~ / F11", action: "Fullscreen Monitor" },
   ];
 
   const list = lang === "ru"

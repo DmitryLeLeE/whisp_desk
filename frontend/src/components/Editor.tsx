@@ -46,6 +46,10 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
   const [showPatterns, setShowPatterns] = useState(false);
   const [followPlayhead, setFollowPlayhead] = useState(true);
   const [exportingRange, setExportingRange] = useState(false);
+  const [isFullscreenMonitor, setIsFullscreenMonitor] = useState(false);
+  const [audioScrub, setAudioScrub] = useState(() => {
+    try { return localStorage.getItem("whisp_audio_scrub") !== "false"; } catch { return true; }
+  });
 
   const rangeEnd = useRef<number | null>(null);
   const segsRef = useRef(segs);
@@ -56,6 +60,21 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
   followRef.current = followPlayhead;
   const ppsRef = useRef(pps);
   ppsRef.current = pps;
+  const playingRef = useRef(playing);
+  playingRef.current = playing;
+
+  const playScrubBurst = useCallback((targetMs: number) => {
+    const v = videoRef.current;
+    if (!v || playingRef.current || !audioScrub || isMuted) return;
+    v.currentTime = targetMs / 1000;
+    v.muted = false;
+    v.play().catch(() => undefined);
+    setTimeout(() => {
+      if (!playingRef.current) {
+        v.pause();
+      }
+    }, 70);
+  }, [audioScrub, isMuted]);
 
   const segAt = useCallback((ms: number): Segment | undefined => {
     const s = segsRef.current;
@@ -315,8 +334,24 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
         case "b":
           if (here) run({ op: "split", id: here.id, at_ms: snapMs(current) });
           break;
-        case "arrowleft": seek(current - (e.shiftKey ? 5000 : frameMs)); break;
-        case "arrowright": seek(current + (e.shiftKey ? 5000 : frameMs)); break;
+        case "arrowleft": {
+          const tNext = Math.max(0, current - (e.shiftKey ? 5000 : frameMs));
+          seek(tNext);
+          if (!playing && audioScrub) playScrubBurst(tNext);
+          break;
+        }
+        case "arrowright": {
+          const tNext = Math.min(plan.duration_ms, current + (e.shiftKey ? 5000 : frameMs));
+          seek(tNext);
+          if (!playing && audioScrub) playScrubBurst(tNext);
+          break;
+        }
+        case "`":
+        case "~":
+        case "f11":
+          e.preventDefault();
+          setIsFullscreenMonitor((prev) => !prev);
+          break;
         case "i": setMarkIn(snapMs(current)); break;
         case "o": setMarkOut(snapMs(current)); break;
         case "c":
@@ -352,7 +387,7 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
   return (
     <div className="editor">
       <div className="player-row">
-        <div className="monitor-panel">
+        <div className={`monitor-panel ${isFullscreenMonitor ? "fullscreen-monitor" : ""}`}>
           <div className="studio-panel-bar">
             <span className="studio-panel-title">
               <Icon name="film" /> {lang === "ru" ? "МОНИТОР ПРОГРАММЫ" : "PROGRAM MONITOR"}
@@ -368,6 +403,14 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
                 style={{ padding: "2px 7px", fontSize: 11 }}
               >
                 <Icon name="image" /> HD
+              </button>
+              <button
+                className="ghost small"
+                onClick={() => setIsFullscreenMonitor(!isFullscreenMonitor)}
+                title={lang === "ru" ? "Во весь экран (~ / F11)" : "Fullscreen toggle (~ / F11)"}
+                style={{ padding: "2px 7px", fontSize: 11 }}
+              >
+                <Icon name={isFullscreenMonitor ? "minimize" : "maximize"} /> {isFullscreenMonitor ? (lang === "ru" ? "Выход" : "Exit") : (lang === "ru" ? "Экран" : "Full")}
               </button>
             </div>
           </div>
@@ -486,6 +529,17 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
             <input type="checkbox" checked={skipCuts} onChange={(e) => setSkipCuts(e.target.checked)} />
             {lang === "ru" ? "Предпросмотр результата (пропускать вырезаемое)" : "Preview final result (skip cuts)"}
           </label>
+          <label className="check" style={{ marginTop: 2 }}>
+            <input
+              type="checkbox"
+              checked={audioScrub}
+              onChange={(e) => {
+                setAudioScrub(e.target.checked);
+                try { localStorage.setItem("whisp_audio_scrub", e.target.checked.toString()); } catch {}
+              }}
+            />
+            {lang === "ru" ? "Аудио-скраббинг (звук при покадровом шаге)" : "Audio Scrubbing on frame step"}
+          </label>
         </div>
       </div>
 
@@ -494,7 +548,11 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
         <div className="row" style={{ gap: 4 }}>
           <button
             className="ghost small"
-            onClick={() => seek(current - frameMs)}
+            onClick={() => {
+              const tNext = Math.max(0, current - frameMs);
+              seek(tNext);
+              if (!playing && audioScrub) playScrubBurst(tNext);
+            }}
             title={lang === "ru" ? "Шаг на 1 кадр назад (←)" : "Step 1 frame backward (←)"}
             style={{ padding: "6px 9px", fontSize: 13, minWidth: 32 }}
           >
@@ -505,7 +563,11 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
           </button>
           <button
             className="ghost small"
-            onClick={() => seek(current + frameMs)}
+            onClick={() => {
+              const tNext = Math.min(plan.duration_ms, current + frameMs);
+              seek(tNext);
+              if (!playing && audioScrub) playScrubBurst(tNext);
+            }}
             title={lang === "ru" ? "Шаг на 1 кадр вперёд (→)" : "Step 1 frame forward (→)"}
             style={{ padding: "6px 9px", fontSize: 13, minWidth: 32 }}
           >
@@ -602,6 +664,7 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
           fps={fps}
           segments={segs}
           markers={plan.markers || []}
+          cues={cues}
           sceneMs={scenes?.boundaries_ms ?? []}
           wave={wave}
           current={current}

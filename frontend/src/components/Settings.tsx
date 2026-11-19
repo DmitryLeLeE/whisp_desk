@@ -43,6 +43,28 @@ export default function Settings() {
   const [msg, setMsg] = useState("");
   const [update, setUpdate] = useState<UpdateCheck | null>(null);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [cacheInfo, setCacheInfo] = useState<{ files_count: number; total_bytes: number; formatted: string } | null>(null);
+  const [cleaning, setCleaning] = useState(false);
+
+  const loadCache = useCallback(() => {
+    api.get<{ files_count: number; total_bytes: number; formatted: string }>("/api/system/cache")
+      .then(setCacheInfo)
+      .catch(() => undefined);
+  }, []);
+
+  const cleanCache = async () => {
+    if (!confirm(lang === "ru" ? "Очистить временные файлы и кэш прокси? Это освободит место на диске. Исходные файлы не затрагиваются." : "Clean cache and proxy files? This frees disk space. Source files are untouched.")) return;
+    setCleaning(true);
+    try {
+      const res = await api.post<{ deleted_count: number; freed_bytes: number; formatted: string }>("/api/system/cache/clean");
+      setMsg(lang === "ru" ? `Очищено файлов: ${res.deleted_count} (освобождено ${res.formatted})` : `Cleaned ${res.deleted_count} files (${res.formatted} freed)`);
+      loadCache();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setCleaning(false);
+    }
+  };
 
   const checkUpdate = async () => {
     setCheckingUpdate(true);
@@ -66,7 +88,8 @@ export default function Settings() {
   useEffect(() => {
     api.get<SettingsData>("/api/settings").then((d) => { setS(d); setDir(d.whisp_model_dir); });
     loadModels();
-  }, [loadModels]);
+    loadCache();
+  }, [loadModels, loadCache]);
 
   useEffect(() => {
     if (!wm?.models.some((m) => m.download?.state === "running")) return;
@@ -182,6 +205,32 @@ export default function Settings() {
               )}
             </div>
           )}
+        </section>
+
+        <section className="card">
+          <div className="card-title">
+            <span className="num"><Icon name="trash" /></span>
+            <h2>{lang === "ru" ? "Дисковый кэш и временные файлы" : "Disk Cache & Temporary Files"}</h2>
+          </div>
+          <p className="muted">
+            {lang === "ru"
+              ? "Включает временные прокси-видео предпросмотра, кэш волноформ и миниатюры сцен. Очистка освобождает дисковое пространство, монтажные планы и исходники не удаляются."
+              : "Includes temporary proxy files, waveform caches and scene thumbnails. Cleaning frees disk space without affecting your edit plans or source footage."}
+          </p>
+          <div className="row wrap" style={{ alignItems: "center", justifyContent: "space-between", marginTop: 8 }}>
+            <div>
+              <span className="muted small">{lang === "ru" ? "Занято кэшем:" : "Cache size:"}</span>{" "}
+              <b style={{ fontSize: 15 }}>{cacheInfo?.formatted ?? "…"}</b>{" "}
+              <span className="muted small">({cacheInfo?.files_count ?? 0} {lang === "ru" ? "файлов" : "files"})</span>
+            </div>
+            <button
+              className="ghost danger small"
+              disabled={cleaning || !cacheInfo || cacheInfo.total_bytes === 0}
+              onClick={cleanCache}
+            >
+              <Icon name="trash" /> {cleaning ? (lang === "ru" ? "Очистка…" : "Cleaning…") : (lang === "ru" ? "Очистить кэш" : "Clean Cache")}
+            </button>
+          </div>
         </section>
 
         <section className="card">

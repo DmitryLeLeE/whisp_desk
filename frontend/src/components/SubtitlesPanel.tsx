@@ -369,6 +369,31 @@ export default function SubtitlesPanel({ pid, project: _project, cues, busy, onJ
             <span className="muted small">SRT, VTT, ASS, TXT, JSON</span>
           </div>
 
+          <div style={{ marginTop: 14, padding: "10px 12px", background: "var(--panel2)", borderRadius: 8, border: "1px solid var(--line)" }}>
+            <span className="small muted" style={{ display: "block", marginBottom: 6, fontWeight: 600 }}>
+              {lang === "ru" ? "Стили оформления субтитров для рендера (Hardsub):" : "Hardsub Style Presets:"}
+            </span>
+            <div className="row wrap" style={{ gap: 6 }}>
+              <span className="badge" style={{ background: "#FFEA00", color: "#000", fontWeight: 800, border: "1px solid #eab308" }}>
+                🔥 MrBeast Viral
+              </span>
+              <span className="badge" style={{ background: "rgba(0, 240, 255, 0.15)", color: "#00f0ff", border: "1px solid #d946ef", fontWeight: 700 }}>
+                ⚡ Cyber Neon
+              </span>
+              <span className="badge" style={{ background: "rgba(255, 255, 255, 0.1)", color: "#fff", border: "1px solid rgba(255,255,255,0.2)", fontWeight: 600 }}>
+                ✨ Clean Minimal
+              </span>
+              <span className="badge" style={{ background: "rgba(255, 255, 255, 0.05)", color: "var(--muted)", border: "1px solid var(--line)" }}>
+                📖 Классика
+              </span>
+            </div>
+            <p className="small muted" style={{ margin: "6px 0 0", fontSize: 11 }}>
+              {lang === "ru"
+                ? "Шаблон оформления выбирается во вкладке Экспорт перед запуском финального рендера."
+                : "Choose your desired visual template in the Export tab before rendering."}
+            </p>
+          </div>
+
           {msg && <p className="ok">{msg}</p>}
           {error && <p className="error">{error}</p>}
         </section>

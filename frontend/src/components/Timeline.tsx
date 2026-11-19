@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { fmtTime } from "../api";
-import type { Segment, TimelineMarker, Waveform } from "../types";
+import type { Cue, Segment, TimelineMarker, Waveform } from "../types";
 
 interface Props {
   durationMs: number;
@@ -14,6 +14,7 @@ interface Props {
   markIn: number | null;
   markOut: number | null;
   markers?: TimelineMarker[];
+  cues?: Cue[];
   onSeek: (ms: number) => void;
   onSelect: (id: string) => void;
   onMoveBoundary: (leftId: string, ms: number) => void;
@@ -85,10 +86,16 @@ export default function Timeline(p: Props) {
           <span className="th-icon">🔊</span>
           <span className="th-mute">M</span>
         </div>
+        {p.cues && p.cues.length > 0 && (
+          <div className="th-cell th-t1" title="Subtitle / Text Track 1">
+            <span className="th-badge" style={{ background: "rgba(168, 85, 247, 0.2)", color: "#c084fc", borderColor: "rgba(168, 85, 247, 0.4)" }}>T1</span>
+            <span className="th-icon" style={{ fontSize: 10 }}>💬</span>
+          </div>
+        )}
       </div>
 
       <div className="timeline" ref={p.scrollRef}>
-        <div className="tl-inner" ref={inner} style={{ width }}
+        <div className={`tl-inner ${p.cues && p.cues.length > 0 ? "with-subs" : ""}`} ref={inner} style={{ width }}
           onPointerDown={(e) => {
             if (e.button !== 0) return;
             (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -133,6 +140,21 @@ export default function Timeline(p: Props) {
           {p.sceneMs.map((ms) => <div key={ms} className="scene" style={{ left: x(ms) }} title={`Смена сцены ${fmtTime(ms)}`} />)}
           {p.markIn != null && <div className="mark in" style={{ left: x(p.markIn) }} />}
           {p.markOut != null && <div className="mark out" style={{ left: x(p.markOut) }} />}
+          {p.cues && p.cues.length > 0 && (
+            <div className="sub-track">
+              {p.cues.map((c, i) => (
+                <div
+                  key={i}
+                  className="sub-block"
+                  style={{ left: x(c.start_ms), width: Math.max(12, x(c.end_ms - c.start_ms)) }}
+                  title={`${fmtTime(c.start_ms)} – ${fmtTime(c.end_ms)}: ${c.text}`}
+                  onClick={(e) => { e.stopPropagation(); p.onSeek(c.start_ms); }}
+                >
+                  <span className="sub-text">{c.text}</span>
+                </div>
+              ))}
+            </div>
+          )}
           {drag && <div className="tl-ghost" style={{ left: x(drag.ms) }}><span>{fmtTime(drag.ms)}</span></div>}
           {hoverMs != null && !drag && (
             <div className="tl-hover-ghost" style={{ left: x(hoverMs) }}>

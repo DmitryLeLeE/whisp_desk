@@ -1,6 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
+from app.editing import subtitles as subs
 from app.editing import timeline as T
 from app.editing.exports import to_davinci_markers_csv
 from app.main import create_app
@@ -57,3 +58,33 @@ def test_system_endpoints(client):
     upd_data = r_upd.json()
     assert "current_version" in upd_data
     assert "has_update" in upd_data
+
+
+def test_duplicate_project(client):
+    r_create = client.post("/api/projects", json={"name": "Original Video", "type": "lecture"})
+    assert r_create.status_code == 201
+    orig_id = r_create.json()["id"]
+
+    r_dup = client.post(f"/api/projects/{orig_id}/duplicate")
+    assert r_dup.status_code == 201
+    dup_data = r_dup.json()
+    assert dup_data["id"] != orig_id
+    assert "Original Video (Копия)" in dup_data["name"]
+
+
+def test_system_cache_endpoints(client):
+    r_cache = client.get("/api/system/cache")
+    assert r_cache.status_code == 200
+    assert "files_count" in r_cache.json()
+
+    r_clean = client.post("/api/system/cache/clean")
+    assert r_clean.status_code == 200
+    assert "deleted_count" in r_clean.json()
+
+
+def test_render_ass_bold_and_shadow():
+    cues = [subs.Cue(start_ms=0, end_ms=2000, text="Viral Hook")]
+    ass_text = subs.render_ass(cues, style={"font": "Impact", "size": 84, "bold": 1, "shadow": 3})
+    assert "Impact" in ass_text
+    assert "84" in ass_text
+    assert ",1," in ass_text  # bold=1

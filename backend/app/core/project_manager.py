@@ -134,6 +134,34 @@ class ProjectManager:
         self.db.execute("DELETE FROM history WHERE project_id=?", (pid,))
         self.db.execute("DELETE FROM jobs WHERE project_id=?", (pid,))
 
+    def duplicate(self, pid: str, new_name: str | None = None) -> dict:
+        """Создает полную копию проекта с новым идентификатором."""
+        src_dir = self.dir(pid)
+        orig = read_json(src_dir / "project.json")
+        ptype = orig.get("type", "lecture")
+        with self._create_lock:
+            n = 1
+            while (self.root / f"{ptype}_{n:03d}").exists():
+                n += 1
+            new_pid = f"{ptype}_{n:03d}"
+            dst_dir = self.root / new_pid
+            shutil.copytree(src_dir, dst_dir)
+            ts = now()
+            copy_name = new_name.strip() if new_name and new_name.strip() else f"{orig['name']} (Копия)"
+            p = {**orig, "id": new_pid, "name": copy_name, "created": ts, "updated": ts}
+            write_json_atomic(dst_dir / "project.json", p)
+            plan_file = dst_dir / "timeline" / "edit_plan.json"
+            if plan_file.is_file():
+                try:
+                    plan = read_json(plan_file)
+                    plan["project_id"] = new_pid
+                    write_json_atomic(plan_file, plan)
+                except Exception:
+                    pass
+            self.db.execute("INSERT INTO projects VALUES (?,?,?,?,?)", (new_pid, copy_name, ptype, ts, ts))
+        self.log_history(new_pid, "duplicate", f"Копия проекта {pid}")
+        return self.get(new_pid)
+
     # ----- история и журнал -----
     def log_history(self, pid: str, action: str, detail: str = "") -> None:
         self.db.execute("INSERT INTO history(project_id, ts, action, detail) VALUES (?,?,?,?)",
