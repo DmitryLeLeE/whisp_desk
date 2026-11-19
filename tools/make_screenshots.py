@@ -149,11 +149,15 @@ def main() -> None:
                 if name == "03-editor.png":
                     page.screenshot(path=str(out / name))
                     try:
-                        page.get_by_role("button", name=re.compile("Шаблоны")).first.click()
+                        page.locator('button:has-text("Параметры")').first.click()
+                        page.wait_for_timeout(400)
+                        page.locator('button:has-text("шаблоны"), button:has-text("Шаблоны")').first.click()
                         page.wait_for_timeout(800)
                         page.screenshot(path=str(out / "03b-patterns.png"))
-                        page.locator(".panel-header-bar button").first.click()
+                        page.locator(".panel-header-bar button, .modal button:has-text('Отмена'), .modal button:has-text('Cancel')").first.click()
                         page.wait_for_timeout(500)
+                        page.locator('button:has-text("Решения")').first.click()
+                        page.wait_for_timeout(400)
                     except Exception as ex:
                         print("Modal error:", ex)
                     continue
@@ -174,7 +178,7 @@ def main() -> None:
             # 7. Светлая тема (Light theme - демонстрация эргономики 2026)
             page.goto(BASE)
             page.wait_for_timeout(1000)
-            page.get_by_text("Светлая тема").first.click()
+            page.locator('button[title*="Светлая"], button[title*="тема"], button[title*="Theme"]').first.click()
             page.wait_for_timeout(800)
             page.screenshot(path=str(out / "07-light-theme.png"))
 

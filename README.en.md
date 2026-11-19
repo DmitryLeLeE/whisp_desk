@@ -47,24 +47,26 @@ flowchart LR
 
 ---
 
-## User Interface
+## Pro NLE Workstation Interface
 
-| Interactive Studio Timeline & Audio Scrubbing | Assembly Pattern Presets |
+Engineered following professional non-linear editing paradigms (DaVinci Resolve Studio, Apple Final Cut Pro): edge-to-edge layout (`100vw × 100vh`) with no wasted web margins, four dedicated studio rooms (`Media Setup` → `Cut Room` → `Caption Studio` → `Deliver Room`), dual-deck layout with program video monitor and decision inspector, full-width multi-track timeline, and hardware stereo VU meter.
+
+| Dual-Deck Cut Workstation & Full-Width NLE Timeline | Assembly Pattern Presets (Shorts, Podcast) |
 |:---:|:---:|
 | ![Timeline](docs/03-editor.png) | ![Patterns](docs/03b-patterns.png) |
 
-| Text-Based Editing & Diarization | Export Panel & Audio Mastering |
+| Caption Studio with Teleprompter & Diarization | Deliver Room & Audio Mastering |
 |:---:|:---:|
 | ![Subtitles](docs/04-subtitles.png) | ![Export](docs/05-export.png) |
 
 <details>
-<summary>Additional Screens (Light Theme, Project List, Model Settings)</summary>
+<summary>Additional Screens (Project Manager, Light Theme, Setup, Neural Models)</summary>
 
-| Dark Studio Theme | Light Studio Theme |
+| Project Manager (DaVinci Media Pool Style) | Project Manager in Light Theme (Final Cut Slate) |
 |:---:|:---:|
 | ![Dark Theme](docs/01-projects.png) | ![Light Theme](docs/07-light-theme.png) |
 
-| Light Theme Timeline Editor | Speech Detection Parameters |
+| Light Theme Timeline Workstation | Media Setup & Acoustic Analysis Room |
 |:---:|:---:|
 | ![Light Editor](docs/08-editor-light.png) | ![Setup](docs/02-setup.png) |
 
@@ -92,6 +94,16 @@ flowchart LR
 ---
 
 ## Core Features
+
+### 0. Pro NLE Workstation Architecture (DaVinci Resolve / Final Cut Pro)
+* **Edge-to-Edge Desktop Shell**: 100% viewport space utilization (`100vw × 100vh`) with zero web sidebars or vertical window scroll.
+* **Studio Workspaces (DaVinci Workflow)**: Dedicated rooms: `[ 1. Media Setup ]`, `[ 2. Cut & Edit ]`, `[ 3. Caption Studio ]`, and `[ 4. Deliver ]`.
+* **Dual-Deck Cut Room**:
+  * Program Monitor with `● REC` indicator, frame-stepping transport console (`◀` / `▶`), monospace LCD timecode, and live subtitles overlay.
+  * Inspector & Decision List placed side-by-side with video monitor for instant click-to-seek navigation.
+  * Multi-track NLE Timeline spanning 100% window width (`TC`, `V1`, `A1`, `T1`) with acoustic waveform and color-coded cuts.
+* **Stereo Peak VU Meter**: Real-time dB response (−42 dB .. 0 dB) with peak clipping indicator.
+* **Project Manager (Media Pool)**: Fast media hub with instant search, sorting, and cinematic drag-and-drop ingestion.
 
 ### 1. Automated Rough-Cut Assembly
 * Multi-stage voice activity detection (Silero VAD combined with energy thresholding).
