@@ -61,11 +61,11 @@ export default function ProjectView({ pid, onClose }: { pid: string; onClose: ()
     }
   };
 
-  const steps: [Tab, string][] = [
-    ["setup", t("step.setup")],
-    ["edit", t("step.editor")],
-    ["subs", t("step.subtitles")],
-    ["export", t("step.export")],
+  const steps: [Tab, string, string][] = [
+    ["setup", t("step.setup"), "sliders"],
+    ["edit", t("step.editor"), "scissors"],
+    ["subs", t("step.subtitles"), "captions"],
+    ["export", t("step.export"), "download"],
   ];
 
   const projectSteps: TourStep[] = [
@@ -202,12 +202,19 @@ export default function ProjectView({ pid, onClose }: { pid: string; onClose: ()
           </span>
         )}
         {payload && (
-          <span className="badge" style={{ marginLeft: 8 }}>
-            {fmtTime(payload.stats.output_ms, false)} / {fmtTime(payload.stats.source_ms, false)}
-          </span>
+          <div className="row" style={{ marginLeft: 6, gap: 6, alignItems: "center" }}>
+            <span className="badge" title={lang === "ru" ? "Итоговый хронометраж" : "Output duration"}>
+              {fmtTime(payload.stats.output_ms, false)}
+            </span>
+            {payload.stats.source_ms > payload.stats.output_ms && (
+              <span className="badge ok" title={lang === "ru" ? "Сокращение хронометража" : "Time saved"}>
+                -{Math.round(((payload.stats.source_ms - payload.stats.output_ms) / payload.stats.source_ms) * 100)}%
+              </span>
+            )}
+          </div>
         )}
         <nav className="stepper" aria-label="Steps" data-tour="proj-stepper">
-          {steps.map(([k, label], i) => (
+          {steps.map(([k, label, icon]) => (
             <button
               key={k}
               data-tour={`step-${k}`}
@@ -215,7 +222,7 @@ export default function ProjectView({ pid, onClose }: { pid: string; onClose: ()
               onClick={() => setTab(k)}
               aria-current={tab === k ? "step" : undefined}
             >
-              <span className="n">{done[k] ? <Icon name="check" /> : i + 1}</span>
+              <span className="n">{done[k] ? <Icon name="check" /> : <Icon name={icon} />}</span>
               {label}
             </button>
           ))}

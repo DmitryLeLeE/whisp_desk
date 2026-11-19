@@ -52,6 +52,19 @@ export default function SubtitlesPanel({ pid, project: _project, cues, busy, onJ
   const [cleaningFillers, setCleaningFillers] = useState(false);
   const [diarizing, setDiarizing] = useState(false);
 
+  // Фильтр списка субтитров и буфер
+  const [filterSpeaker, setFilterSpeaker] = useState<"ALL" | "SPEAKER_1" | "SPEAKER_2" | "CUT">("ALL");
+  const [copiedTranscript, setCopiedTranscript] = useState(false);
+
+  const copyTranscript = () => {
+    const text = displayCues
+      .map((c) => (c.speaker ? `[${c.speaker === "SPEAKER_2" ? (lang === "ru" ? "Спикер 2" : "Speaker 2") : (lang === "ru" ? "Спикер 1" : "Speaker 1")}]: ${c.text}` : c.text))
+      .join("\n");
+    navigator.clipboard.writeText(text);
+    setCopiedTranscript(true);
+    setTimeout(() => setCopiedTranscript(false), 2200);
+  };
+
   const handleDiarize = async () => {
     setDiarizing(true);
     try {
@@ -164,15 +177,24 @@ export default function SubtitlesPanel({ pid, project: _project, cues, busy, onJ
     return cues;
   }, [viewMode, activeTransCues, cues]);
 
+  const spk1Count = useMemo(() => cues.filter((c) => c.speaker === "SPEAKER_1").length, [cues]);
+  const spk2Count = useMemo(() => cues.filter((c) => c.speaker === "SPEAKER_2").length, [cues]);
+  const cutCount = useMemo(() => cues.filter((c) => isCueCut(c.start_ms, c.end_ms)).length, [cues, payload]);
+
   const found = useMemo(() => {
+    let list = displayCues;
+    if (filterSpeaker === "SPEAKER_1") list = list.filter((c) => c.speaker === "SPEAKER_1");
+    if (filterSpeaker === "SPEAKER_2") list = list.filter((c) => c.speaker === "SPEAKER_2");
+    if (filterSpeaker === "CUT") list = list.filter((c) => isCueCut(c.start_ms, c.end_ms));
+
     const n = q.trim().toLowerCase();
-    if (!n) return displayCues.slice(0, 500);
-    return displayCues.filter((c, i) => {
+    if (!n) return list.slice(0, 500);
+    return list.filter((c, i) => {
       const matchSelf = c.text.toLowerCase().includes(n);
       const matchOther = activeTransCues[i]?.text?.toLowerCase().includes(n) || cues[i]?.text?.toLowerCase().includes(n);
       return matchSelf || matchOther;
     }).slice(0, 500);
-  }, [q, displayCues, activeTransCues, cues]);
+  }, [q, displayCues, activeTransCues, cues, filterSpeaker, payload]);
 
   const importFile = async (f: File) => {
     setError(""); setMsg("");
@@ -452,8 +474,85 @@ export default function SubtitlesPanel({ pid, project: _project, cues, busy, onJ
           </div>
         ) : (
           <>
+            {/* Панель фильтров и быстрых действий */}
+            <div className="row wrap" style={{ justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+              <div className="tabs" style={{ background: "transparent", border: "none", padding: 0, gap: 4 }}>
+                <button
+                  className={`tab-btn ${filterSpeaker === "ALL" ? "active" : ""}`}
+                  onClick={() => setFilterSpeaker("ALL")}
+                  style={{ fontSize: 12, padding: "3px 8px" }}
+                >
+                  {lang === "ru" ? "Все" : "All"} ({displayCues.length})
+                </button>
+                {spk1Count > 0 && (
+                  <button
+                    className={`tab-btn ${filterSpeaker === "SPEAKER_1" ? "active" : ""}`}
+                    onClick={() => setFilterSpeaker("SPEAKER_1")}
+                    style={{ fontSize: 12, padding: "3px 8px" }}
+                  >
+                    {lang === "ru" ? "Спикер 1" : "Speaker 1"} ({spk1Count})
+                  </button>
+                )}
+                {spk2Count > 0 && (
+                  <button
+                    className={`tab-btn ${filterSpeaker === "SPEAKER_2" ? "active" : ""}`}
+                    onClick={() => setFilterSpeaker("SPEAKER_2")}
+                    style={{ fontSize: 12, padding: "3px 8px" }}
+                  >
+                    {lang === "ru" ? "Спикер 2" : "Speaker 2"} ({spk2Count})
+                  </button>
+                )}
+                {cutCount > 0 && (
+                  <button
+                    className={`tab-btn ${filterSpeaker === "CUT" ? "active" : ""}`}
+                    onClick={() => setFilterSpeaker("CUT")}
+                    style={{ fontSize: 12, padding: "3px 8px", color: filterSpeaker === "CUT" ? "var(--bad)" : "inherit" }}
+                  >
+                    {lang === "ru" ? "Вырезанные" : "Cut"} ({cutCount})
+                  </button>
+                )}
+              </div>
+
+              <div className="row" style={{ gap: 6, marginLeft: "auto" }}>
+                <button
+                  className="small ghost"
+                  onClick={copyTranscript}
+                  title={lang === "ru" ? "Скопировать всю транскрипцию в буфер обмена" : "Copy full transcript to clipboard"}
+                  style={{ fontWeight: 500 }}
+                >
+                  <Icon name="copy" /> {copiedTranscript ? (lang === "ru" ? "Скопировано!" : "Copied!") : (lang === "ru" ? "Копировать текст" : "Copy text")}
+                </button>
+                <button
+                  className="small ghost"
+                  onClick={handleDiarize}
+                  disabled={busy || diarizing}
+                  title={lang === "ru" ? "Автоматическое определение и разделение голосов спикеров" : "Speaker Diarization"}
+                >
+                  <Icon name="mic" /> {diarizing ? (lang === "ru" ? "Анализ..." : "Analyzing...") : (lang === "ru" ? "Спикеры" : "Speakers")}
+                </button>
+              </div>
+            </div>
+
             <div className="row">
-              <input className="grow" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("subs.search")} />
+              <div className="row grow" style={{ position: "relative" }}>
+                <input
+                  className="grow"
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  placeholder={t("subs.search")}
+                  style={{ paddingRight: q ? 28 : 10 }}
+                />
+                {q && (
+                  <button
+                    className="ghost small"
+                    onClick={() => setQ("")}
+                    title={lang === "ru" ? "Очистить поиск" : "Clear search"}
+                    style={{ position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)", padding: "2px 6px" }}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
               <button
                 className={`small ${showReplace ? "primary" : "ghost"}`}
                 onClick={() => setShowReplace(!showReplace)}
@@ -467,14 +566,6 @@ export default function SubtitlesPanel({ pid, project: _project, cues, busy, onJ
                 title={lang === "ru" ? "Поиск и удаление слов-паразитов" : "Filler words cleaner"}
               >
                 <Icon name="scissors" /> {lang === "ru" ? `Слова-паразиты (${fillerMatches.length})` : `Fillers (${fillerMatches.length})`}
-              </button>
-              <button
-                className="small ghost"
-                onClick={handleDiarize}
-                disabled={busy || diarizing}
-                title={lang === "ru" ? "Автоматическое определение и разделение голосов спикеров" : "Speaker Diarization"}
-              >
-                <Icon name="mic" /> {diarizing ? (lang === "ru" ? "Анализ..." : "Analyzing...") : (lang === "ru" ? "Спикеры" : "Speakers")}
               </button>
               {viewMode === "trans" && transLangs.length > 1 && (
                 <select value={selectedTransLang} onChange={(e) => setSelectedTransLang(e.target.value)}>
@@ -551,7 +642,13 @@ export default function SubtitlesPanel({ pid, project: _project, cues, busy, onJ
 
                 return (
                   <li key={i} onDoubleClick={() => startEdit(i, c.text)} style={isCut ? { background: "rgba(239, 68, 68, 0.05)" } : undefined}>
-                    <button className="link" onClick={() => onJump(c.start_ms)} title={lang === "ru" ? "Перейти в таймлайне" : "Jump in timeline"}>
+                    <button
+                      className="link"
+                      onClick={() => onJump(c.start_ms)}
+                      title={lang === "ru" ? "Перейти и воспроизвести в плеере" : "Jump and play"}
+                      style={{ display: "inline-flex", alignItems: "center", gap: 5 }}
+                    >
+                      <Icon name="play" style={{ width: 10, height: 10, opacity: 0.65 }} />
                       {fmtTime(c.start_ms, false)}
                     </button>
 

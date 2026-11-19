@@ -168,6 +168,11 @@ input, select, textarea {
   border-radius: var(--radius-sm); padding: 7px 11px; font-size: 13px; transition: border-color .12s ease;
 }
 input:focus, select:focus, textarea:focus { border-color: var(--accent); outline: none; }
+button:focus-visible, a.btn:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--panel), 0 0 0 3px var(--accent-hover);
+}
 input[type=checkbox], input[type=radio] { padding: 0; accent-color: var(--accent); width: 15px; height: 15px; cursor: pointer; }
 
 button, a.btn {
@@ -258,10 +263,10 @@ details.more[open] > summary { padding-bottom: 2px; }
 .proj-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
 .proj {
   background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden;
-  text-decoration: none; color: var(--text); display: flex; flex-direction: column; transition: border-color .15s ease;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+  text-decoration: none; color: var(--text); display: flex; flex-direction: column; transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
 }
-.proj:hover { border-color: var(--line-strong); text-decoration: none; }
+.proj:hover { border-color: var(--line-strong); text-decoration: none; transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.22); }
 .proj .thumb { aspect-ratio: 16/9; background: var(--panel2); display: grid; place-items: center; color: var(--muted); position: relative; }
 .proj .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .proj .thumb .dur { position: absolute; right: 8px; bottom: 8px; background: rgba(0,0,0,0.8); color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-variant-numeric: tabular-nums; }
@@ -281,7 +286,8 @@ details.more[open] > summary { padding-bottom: 2px; }
   background: none; border: none; color: var(--muted); font-weight: 500; font-size: 13px; cursor: pointer;
   transition: background .12s, color .12s;
 }
-.step .n { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; background: var(--raised); font-size: 11px; font-weight: 700; color: var(--muted); }
+.step .n { width: 20px; height: 20px; border-radius: 4px; display: grid; place-items: center; background: var(--raised); font-size: 11px; font-weight: 700; color: var(--muted); flex: none; }
+.step .n .icon { width: 12px; height: 12px; }
 .step:hover:not(:disabled) { background: var(--raised); color: var(--text); }
 .step.active { background: var(--panel); color: var(--text); font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,0.25); }
 .step.active .n { background: var(--accent); color: #fff; }
@@ -506,6 +512,15 @@ details.more[open] > summary { padding-bottom: 2px; }
   min-width: 100px; font-size: 13px; font-weight: 600; letter-spacing: 0.03em; background: var(--tc-bg);
   border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 4px 10px; color: var(--tc-text); text-align: center;
   display: inline-flex; align-items: center; justify-content: center;
+  transition: border-color .12s ease;
+}
+.tc:hover {
+  border-color: var(--line-strong);
+}
+input.tc {
+  width: 115px;
+  border-color: var(--accent);
+  outline: none;
 }
 
 /* ---------- таймлайн со студийными дорожками V1 / A1 ---------- */

@@ -174,6 +174,8 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
   const [audioScrub, setAudioScrub] = useState(() => {
     try { return localStorage.getItem("whisp_audio_scrub") !== "false"; } catch { return true; }
   });
+  const [editingTc, setEditingTc] = useState(false);
+  const [tcInput, setTcInput] = useState("");
 
   const rangeEnd = useRef<number | null>(null);
   const segsRef = useRef(segs);
@@ -734,7 +736,37 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
             ▶
           </button>
         </div>
-        <span className="tc" title={lang === "ru" ? "Текущий таймкод (чч:мм:сс.мс)" : "Current timecode"}>{fmtTime(current)}</span>
+        {editingTc ? (
+          <input
+            autoFocus
+            value={tcInput}
+            onChange={(e) => setTcInput(e.target.value)}
+            onBlur={() => {
+              const ms = parseTime(tcInput);
+              if (ms != null) seek(ms);
+              setEditingTc(false);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                const ms = parseTime(tcInput);
+                if (ms != null) seek(ms);
+                setEditingTc(false);
+              }
+              if (e.key === "Escape") setEditingTc(false);
+            }}
+            className="tc"
+            style={{ width: 115, padding: "3px 8px" }}
+          />
+        ) : (
+          <span
+            className="tc"
+            onClick={() => { setTcInput(fmtTime(current)); setEditingTc(true); }}
+            title={lang === "ru" ? "Кликните для ввода точного таймкода" : "Click to edit timecode"}
+            style={{ cursor: "text" }}
+          >
+            {fmtTime(current)}
+          </span>
+        )}
 
         <button onClick={() => setMarkIn(snapMs(current))}>[ In</button>
         <button onClick={() => setMarkOut(snapMs(current))}>Out ]</button>
@@ -927,14 +959,18 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
                   <td>{fmtTime(s.source_end_ms)}</td>
                   <td>{((s.source_end_ms - s.source_start_ms) / 1000).toFixed(2)} с</td>
                   <td>
-                    <b>{s.action === "KEEP" ? (lang === "ru" ? "Оставить" : "Keep") : (lang === "ru" ? "Удалить" : "Cut")}</b>
+                    <span className={`badge ${s.action === "KEEP" ? "ok" : "bad"}`} style={{ fontSize: 11 }}>
+                      {s.action === "KEEP" ? (lang === "ru" ? "Оставить" : "Keep") : (lang === "ru" ? "Удалить" : "Cut")}
+                    </span>
                     {s.locked ? " [Lock]" : ""}
                   </td>
                   <td>{REASONS[s.reason] ?? s.reason}</td>
                   <td>
-                    {s.manual ? (lang === "ru" ? "вручную" : "manual")
-                      : s.reviewed ? (lang === "ru" ? "проверено" : "reviewed")
-                      : (lang === "ru" ? "не проверено" : "unreviewed")}
+                    <span className={`badge ${s.manual ? "accent" : s.reviewed ? "ok" : "muted"}`} style={{ fontSize: 11, background: "transparent" }}>
+                      {s.manual ? (lang === "ru" ? "вручную" : "manual")
+                        : s.reviewed ? (lang === "ru" ? "проверено" : "reviewed")
+                        : (lang === "ru" ? "не проверено" : "unreviewed")}
+                    </span>
                   </td>
                   <td className="actions" onClick={(e) => e.stopPropagation()}>
                     <button title="Play" onClick={() => playRange(s.source_start_ms, s.source_end_ms)}>▶</button>
