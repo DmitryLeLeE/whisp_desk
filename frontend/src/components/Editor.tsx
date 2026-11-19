@@ -777,9 +777,9 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
                       <th style={{ width: 34 }}>#</th>
                       <th>{lang === "ru" ? "Начало" : "Start"}</th>
                       <th>{lang === "ru" ? "Длит." : "Dur."}</th>
-                      <th>{lang === "ru" ? "Действие" : "Action"}</th>
+                      <th>{lang === "ru" ? "Сейчас" : "Now"}</th>
                       <th>{lang === "ru" ? "Причина" : "Reason"}</th>
-                      <th style={{ textAlign: "right" }}>{lang === "ru" ? "Опции" : "Controls"}</th>
+                      <th style={{ textAlign: "right" }}> </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -804,47 +804,36 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
                           </td>
                           <td className="reason-cell">{REASONS[s.reason] ?? s.reason}</td>
                           <td className="actions" onClick={(e) => e.stopPropagation()}>
-                            <button className="nle-btn-micro" title="Play" onClick={() => playRange(s.source_start_ms, s.source_end_ms)}>▶</button>
+                            <button className="nle-btn-micro" title={lang === "ru" ? "Прослушать" : "Play"} onClick={() => playRange(s.source_start_ms, s.source_end_ms)}>▶</button>
                             <button
-                              className="nle-btn-micro"
+                              className="nle-btn-text"
                               disabled={busy}
-                              title={s.action === "KEEP" ? (lang === "ru" ? "Вырезать" : "Cut") : (lang === "ru" ? "Оставить" : "Keep")}
                               onClick={() => run({ op: "set_action", id: s.id, action: s.action === "KEEP" ? "CUT" : "KEEP" })}
                             >
-                              {s.action === "KEEP" ? "✂" : "✓"}
+                              {s.action === "KEEP" ? (lang === "ru" ? "Вырезать" : "Cut") : (lang === "ru" ? "Оставить" : "Keep")}
                             </button>
-                            <button
-                              className="nle-btn-micro"
-                              disabled={busy}
-                              title={s.locked ? "Unlock" : "Lock"}
-                              onClick={() => run({ op: "lock", id: s.id, locked: !s.locked })}
-                            >
-                              <Icon name={s.locked ? "unlock" : "lock"} style={{ width: 10, height: 10 }} />
-                            </button>
-                            <button
-                              className="nle-btn-micro"
-                              disabled={busy}
-                              title="Reviewed toggle"
-                              onClick={() => run({ op: "review", ids: [s.id], reviewed: !s.reviewed })}
-                            >
-                              {s.reviewed ? "✓" : "—"}
-                            </button>
-                            {next && (
-                              <button
-                                className="nle-btn-micro"
-                                disabled={busy}
-                                title="Merge with next"
-                                onClick={() => run({ op: "merge", id: s.id, second_id: next.id, action: s.action })}
-                              >
-                                ⇆
-                              </button>
-                            )}
-                            {s.action === "KEEP" && (
-                              <>
-                                <button className="nle-btn-micro" disabled={busy} title="Move up" onClick={() => moveSequence(s.id, "up")}>▲</button>
-                                <button className="nle-btn-micro" disabled={busy} title="Move down" onClick={() => moveSequence(s.id, "down")}>▼</button>
-                              </>
-                            )}
+                            <details className="row-menu">
+                              <summary title={lang === "ru" ? "Ещё действия" : "More"}>⋯</summary>
+                              <div className="row-menu-pop">
+                                <button disabled={busy} onClick={() => run({ op: "lock", id: s.id, locked: !s.locked })}>
+                                  {s.locked ? (lang === "ru" ? "Разблокировать" : "Unlock") : (lang === "ru" ? "Защитить от изменений" : "Lock")}
+                                </button>
+                                <button disabled={busy} onClick={() => run({ op: "review", ids: [s.id], reviewed: !s.reviewed })}>
+                                  {s.reviewed ? (lang === "ru" ? "Снять отметку «проверено»" : "Unmark reviewed") : (lang === "ru" ? "Отметить проверенным" : "Mark reviewed")}
+                                </button>
+                                {next && (
+                                  <button disabled={busy} onClick={() => run({ op: "merge", id: s.id, second_id: next.id, action: s.action })}>
+                                    {lang === "ru" ? "Объединить со следующим" : "Merge with next"}
+                                  </button>
+                                )}
+                                {s.action === "KEEP" && (
+                                  <>
+                                    <button disabled={busy} onClick={() => moveSequence(s.id, "up")}>{lang === "ru" ? "Переместить выше" : "Move up"}</button>
+                                    <button disabled={busy} onClick={() => moveSequence(s.id, "down")}>{lang === "ru" ? "Переместить ниже" : "Move down"}</button>
+                                  </>
+                                )}
+                              </div>
+                            </details>
                           </td>
                         </tr>
                       );

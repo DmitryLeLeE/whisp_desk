@@ -613,7 +613,13 @@ export default function SubtitlesPanel({ pid, project: _project, cues, busy, onJ
               : "On-device AI speech transcription. Turbo model is recommended for high accuracy and speed."}
           </p>
 
-          {wm && <ModelCards compact models={wm.models} selected={model} onSelect={setModel} onChanged={loadModels} onError={setError} />}
+          {wm && (<>
+            <ModelCards compact models={wm.models.filter((m) => m.name === model)} selected={model} onSelect={setModel} onChanged={loadModels} onError={setError} />
+            <details className="more">
+              <summary>Другие модели (точнее, но медленнее — или быстрее, но грубее)</summary>
+              <ModelCards compact models={wm.models.filter((m) => m.name !== model)} selected={model} onSelect={setModel} onChanged={loadModels} onError={setError} />
+            </details>
+          </>)}
 
           <div className="fields">
             <label>

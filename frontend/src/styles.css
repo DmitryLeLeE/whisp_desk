@@ -1744,3 +1744,29 @@ button.small { min-height: 24px; }
 .nle-inspector-tabs .nle-insp-tab:last-child { border-right: none; }
 .nle-inspector-tabs .nle-insp-tab:hover { background: var(--panel2); color: var(--text); }
 .nle-inspector-tabs .nle-insp-tab.active { background: var(--panel2); color: var(--text); font-weight: 600; border-bottom-color: var(--accent); }
+
+/* Экспорт: одна главная кнопка, остальное спрятано */
+.export-main { display: flex; align-items: center; gap: 10px; margin: 14px 0 10px; }
+.export-main .primary.big { min-width: 220px; height: 40px; font-size: 14px; }
+.nle-card p { display: none; }
+.nle-card { padding: 10px 12px; }
+.nle-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
+details.nle-help-box { margin-top: 10px !important; padding: 0; }
+details.nle-help-box .nle-help-grid { padding: 8px 12px 12px; }
+details.more > .row, details.more > .check { margin-top: 8px; }
+
+/* Строка решения: прослушать, вырезать/оставить текстом, остальное в меню «…» */
+.nle-btn-text { height: 22px; min-height: 22px; padding: 0 8px; font-size: 11px; border: 1px solid var(--line); background: var(--raised); color: var(--text); border-radius: 3px; }
+.nle-btn-text:hover { border-color: var(--accent); }
+td.actions { white-space: nowrap; text-align: right; }
+td.actions > * { vertical-align: middle; }
+.row-menu { position: relative; display: inline-block; margin-left: 4px; }
+.row-menu > summary { list-style: none; cursor: pointer; width: 22px; height: 22px; line-height: 20px; text-align: center; border-radius: 3px; border: 1px solid var(--line); color: var(--muted); user-select: none; }
+.row-menu > summary::-webkit-details-marker { display: none; }
+.row-menu[open] > summary, .row-menu > summary:hover { color: var(--text); background: var(--raised); }
+.row-menu-pop { position: absolute; right: 0; top: 26px; z-index: 20; min-width: 190px; background: var(--panel2); border: 1px solid var(--line); border-radius: 4px; padding: 4px; display: flex; flex-direction: column; box-shadow: 0 6px 20px rgba(0,0,0,.35); }
+.row-menu-pop button { height: 28px; text-align: left; border: none; background: none; color: var(--text); padding: 0 10px; border-radius: 3px; }
+.row-menu-pop button:hover { background: var(--raised); }
+.nle-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.nle-head b { font-size: 13px; white-space: nowrap; }
+.nle-head .badge { white-space: nowrap; }

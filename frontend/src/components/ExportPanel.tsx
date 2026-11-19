@@ -280,7 +280,7 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
         <section className="card">
           <div className="card-title">
             <span className="num"><Icon name="film" /></span>
-            <h2>{t("export.render_mp4")}</h2>
+            <h2>{lang === "ru" ? "Готовое видео" : "Final video"}</h2>
           </div>
           <p className="muted">
             {lang === "ru"
@@ -293,36 +293,10 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
             )}
           </p>
 
-          <div className="row wrap" style={{ gap: 8, alignItems: "center" }}>
-            <button className="primary big" onClick={() => render("final")} disabled={busy}>
-              <Icon name="film" /> {t("export.btn_render_final")}
-            </button>
-            <button className="big" onClick={() => render("fast")} disabled={busy} title="480p preview render">
-              {t("export.btn_render_fast")}
-            </button>
-            <button
-              className="big ghost"
-              onClick={() => setShowNotesOpen(true)}
-              style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
-              title={lang === "ru" ? "Сгенерировать шоу-ноуты, описание для YouTube и пост для Telegram" : "Show notes & publishing text"}
-            >
-              <Icon name="captions" /> {lang === "ru" ? "Шоу-ноуты" : "Show Notes"}
-            </button>
-          </div>
-
-          <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 8 }}>
-            <label className="check" style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
-              <input type="checkbox" checked={lossless} onChange={(e) => setLossless(e.target.checked)} />
-              <span style={{ fontWeight: 500, fontSize: 13 }}>
-                {lang === "ru" ? "Lossless экспорт (Stream Copy) — мгновенно за 2–3 сек без перекодирования" : "Lossless Export (Stream Copy) — instant 2–3s without re-encoding"}
-              </span>
-            </label>
-          </div>
-
           {/* Пресеты экспорта в 1 клик */}
           <div style={{ marginTop: 14, marginBottom: 10 }}>
             <span className="muted small" style={{ display: "block", marginBottom: 8, fontWeight: 500 }}>
-              {lang === "ru" ? "Готовые пресеты для соцсетей и стримингов:" : "1-Click Export Presets:"}
+              {lang === "ru" ? "Куда публикуете? Выберите — настройки подставятся сами:" : "Where to publish? Pick one to fill in the settings:"}
             </span>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 8 }}>
               <button
@@ -376,9 +350,35 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
             </div>
           </div>
 
+          <div className="export-main">
+            <button className="primary big" onClick={() => render("final")} disabled={busy}>
+              <Icon name="film" /> {lang === "ru" ? "Собрать видео" : "Render video"}
+            </button>
+            <button className="ghost" onClick={() => render("fast")} disabled={busy} title="480p">
+              {lang === "ru" ? "Быстрый тест (480p)" : "Quick test (480p)"}
+            </button>
+          </div>
           {error && <p className="error">{error}</p>}
           {msg && <p className="ok">{msg}</p>}
 
+          <details className="more">
+            <summary>{lang === "ru" ? "Дополнительно: качество, звук, субтитры" : "More: quality, audio, captions"}</summary>
+          <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 8 }}>
+            <label className="check" style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <input type="checkbox" checked={lossless} onChange={(e) => setLossless(e.target.checked)} />
+              <span style={{ fontWeight: 500, fontSize: 13 }}>
+                {lang === "ru" ? "Lossless экспорт (Stream Copy) — мгновенно за 2–3 сек без перекодирования" : "Lossless Export (Stream Copy) — instant 2–3s without re-encoding"}
+              </span>
+            </label>
+          </div>
+
+            <button
+              className="ghost"
+              onClick={() => setShowNotesOpen(true)}
+              title={lang === "ru" ? "Сгенерировать шоу-ноуты, описание для YouTube и пост для Telegram" : "Show notes & publishing text"}
+            >
+              <Icon name="captions" /> {lang === "ru" ? "Шоу-ноуты и описание для публикации" : "Show Notes"}
+            </button>
           <div className="rset">
             <div className="ptabs" role="tablist">
               <button role="tab" aria-selected={rset === "video"} className={rset === "video" ? "active" : ""} onClick={() => setRset("video")}>{lang === "ru" ? "Видео" : "Video"}</button>
@@ -593,6 +593,7 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
             </>)}
             </div>
           </div>
+          </details>
         </section>
 
         {/* Экспортированные файлы */}
@@ -690,11 +691,7 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
           </div>
 
           {/* Инструкция по импорту файлов в NLE */}
-          <div className="nle-help-box">
-            <b style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13.5 }}>
-              <Icon name="lightbulb" style={{ color: "var(--accent)" }} />
-              {t("export.nle_help.title")}
-            </b>
+          <details className="more nle-help-box"><summary>{t("export.nle_help.title")}</summary>
             <div className="nle-help-grid">
               <div className="nle-help-item">
                 <b>Adobe Premiere Pro</b>
@@ -709,7 +706,7 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
                 <p>{t("export.nle_help.fcpx")}</p>
               </div>
             </div>
-          </div>
+          </details>
 
           <details className="more" style={{ marginTop: 8 }}>
             <summary>{lang === "ru" ? "Выбрать отдельные форматы для экспорта" : "Customize Export Formats"}</summary>
