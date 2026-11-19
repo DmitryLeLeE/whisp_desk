@@ -149,21 +149,21 @@ def main() -> None:
                 if name == "03-editor.png":
                     page.screenshot(path=str(out / name))
                     try:
-                        page.get_by_role("button", name=re.compile("Паттерны сборки")).first.click()
+                        page.get_by_role("button", name=re.compile("Шаблоны")).first.click()
                         page.wait_for_timeout(800)
                         page.screenshot(path=str(out / "03b-patterns.png"))
                         page.locator(".panel-header-bar button").first.click()
                         page.wait_for_timeout(500)
-                    except Exception:
-                        pass
+                    except Exception as ex:
+                        print("Modal error:", ex)
                     continue
                 if name == "04-subtitles.png":
                     # Раскроем блок слов-паразитов для демонстрации фичи
                     try:
-                        page.get_by_role("button", name=re.compile("Паразиты")).first.click()
+                        page.get_by_role("button", name=re.compile("Слова-паразиты")).first.click()
                         page.wait_for_timeout(800)
-                    except Exception:
-                        pass
+                    except Exception as ex:
+                        print("Fillers error:", ex)
                 page.screenshot(path=str(out / name))
 
             # 6. Настройки и модели

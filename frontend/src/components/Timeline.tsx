@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { fmtTime } from "../api";
 import type { Cue, Segment, TimelineMarker, Waveform } from "../types";
+import Icon from "./Icon";
 
 interface Props {
   durationMs: number;
@@ -78,18 +79,18 @@ export default function Timeline(p: Props) {
         </div>
         <div className="th-cell th-v1" title="Video Track 1">
           <span className="th-badge">V1</span>
-          <span className="th-icon">👁</span>
-          <span className="th-icon">🔒</span>
+          <span className="th-icon"><Icon name="eye" style={{ width: 11, height: 11 }} /></span>
+          <span className="th-icon"><Icon name="lock" style={{ width: 10, height: 10 }} /></span>
         </div>
         <div className="th-cell th-a1" title="Audio Track 1 (Waveform & Speech)">
           <span className="th-badge">A1</span>
-          <span className="th-icon">🔊</span>
+          <span className="th-icon"><Icon name="volume" style={{ width: 11, height: 11 }} /></span>
           <span className="th-mute">M</span>
         </div>
         {p.cues && p.cues.length > 0 && (
           <div className="th-cell th-t1" title="Subtitle / Text Track 1">
             <span className="th-badge th-badge-t1">T1</span>
-            <span className="th-icon" style={{ fontSize: 10 }}>💬</span>
+            <span className="th-icon"><Icon name="captions" style={{ width: 11, height: 11 }} /></span>
           </div>
         )}
       </div>

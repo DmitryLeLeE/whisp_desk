@@ -265,11 +265,10 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
           <b style={{ fontSize: 14 }}>{lang === "ru" ? "Перетащите видеофайл сюда или нажмите для выбора" : "Drag and drop video here or click to browse"}</b>
           <p className="muted small" style={{ margin: "2px 0 0" }}>
             {lang === "ru"
-              ? "MP4, MOV, MKV, WebM • Автоматически найдет паузы, тишину и синхронизирует субтитры"
-              : "MP4, MOV, MKV, WebM • Automatically detects silences and synchronizes speech"}
+              ? "MP4, MOV, MKV, WebM • Анализ пауз, тишины и генерация субтитров"
+              : "MP4, MOV, MKV, WebM • Audio silence analysis & subtitle sync"}
           </p>
         </div>
-        <span className="badge" style={{ fontSize: 11 }}>100% Offline</span>
       </div>
 
       {/* Сетка проектов */}
@@ -308,9 +307,9 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
                     {r.removed_ms ? (
                       <span className="badge ok">-{fmtTime(r.removed_ms, false)}</span>
                     ) : null}
-                    <span className={`badge ${r.has_plan ? "ok" : ""}`}>{r.has_plan ? "Монтаж ✓" : "Ждёт анализа"}</span>
-                    {r.has_subtitles && <span className="badge ok">Субтитры ✓</span>}
-                    {r.rendered && <span className="badge ok">MP4 ✓</span>}
+                    <span className={`badge ${r.has_plan ? "ok" : ""}`}>{r.has_plan ? "Монтаж" : "Ждёт анализа"}</span>
+                    {r.has_subtitles && <span className="badge ok">Субтитры</span>}
+                    {r.rendered && <span className="badge ok">Готово</span>}
                   </div>
                 )}
                 <div className="row" style={{ alignItems: "center", gap: 6, marginTop: 4 }}>

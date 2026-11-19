@@ -303,42 +303,50 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 8 }}>
               <button
                 type="button"
-                className="ghost"
+                className="ghost platform-preset-btn"
                 onClick={() => applyPlatformPreset("telegram")}
                 title="720p, быстрый рендер, малый вес"
-                style={{ flexDirection: "column", padding: "8px 10px", alignItems: "flex-start", gap: 2, border: "1px solid var(--line)", background: "var(--panel2)", borderRadius: "var(--radius-sm)" }}
               >
-                <b style={{ fontSize: 13 }}>✈️ Telegram</b>
+                <div className="row" style={{ gap: 6, alignItems: "center" }}>
+                  <Icon name="send" />
+                  <b>Telegram</b>
+                </div>
                 <span className="muted small">720p Fast</span>
               </button>
               <button
                 type="button"
-                className="ghost"
+                className="ghost platform-preset-btn"
                 onClick={() => applyPlatformPreset("youtube")}
                 title="1080p, нормализация -14 LUFS, фильтр чёткости"
-                style={{ flexDirection: "column", padding: "8px 10px", alignItems: "flex-start", gap: 2, border: "1px solid var(--line)", background: "var(--panel2)", borderRadius: "var(--radius-sm)" }}
               >
-                <b style={{ fontSize: 13 }}>🎬 YouTube</b>
+                <div className="row" style={{ gap: 6, alignItems: "center" }}>
+                  <Icon name="video" />
+                  <b>YouTube</b>
+                </div>
                 <span className="muted small">1080p Master</span>
               </button>
               <button
                 type="button"
-                className="ghost"
+                className="ghost platform-preset-btn"
                 onClick={() => applyPlatformPreset("shorts")}
                 title="9:16 вертикальный кроп, караоке-субтитры"
-                style={{ flexDirection: "column", padding: "8px 10px", alignItems: "flex-start", gap: 2, border: "1px solid var(--line)", background: "var(--panel2)", borderRadius: "var(--radius-sm)" }}
               >
-                <b style={{ fontSize: 13 }}>📱 Shorts / Reels</b>
+                <div className="row" style={{ gap: 6, alignItems: "center" }}>
+                  <Icon name="smartphone" />
+                  <b>Shorts / Reels</b>
+                </div>
                 <span className="muted small">9:16 + Караоке</span>
               </button>
               <button
                 type="button"
-                className="ghost"
+                className="ghost platform-preset-btn"
                 onClick={() => applyPlatformPreset("podcast")}
                 title="Только аудио MP3 192k, -16 LUFS, теплый тембр"
-                style={{ flexDirection: "column", padding: "8px 10px", alignItems: "flex-start", gap: 2, border: "1px solid var(--line)", background: "var(--panel2)", borderRadius: "var(--radius-sm)" }}
               >
-                <b style={{ fontSize: 13 }}>🎙️ Подкаст</b>
+                <div className="row" style={{ gap: 6, alignItems: "center" }}>
+                  <Icon name="mic" />
+                  <b>Подкаст</b>
+                </div>
                 <span className="muted small">MP3 Аудио</span>
               </button>
             </div>
@@ -386,10 +394,10 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
               {lang === "ru" ? "Улучшение голоса (Voice Enhancer)" : "Voice Enhancer Preset"}
               <select value={voiceEnhancer} onChange={(e) => setVoiceEnhancer(e.target.value)}>
                 <option value="off">{lang === "ru" ? "Отключено (исходный звук)" : "Off (Original sound)"}</option>
-                <option value="podcast">{lang === "ru" ? "🎙️ Подкаст (тёплый, плотный, без бубнежа <80Гц)" : "🎙️ Podcast (Warm, rich, rumble filter)"}</option>
-                <option value="clarity">{lang === "ru" ? "✨ Чёткость речи (смягчение свистящих + разборчивость)" : "✨ Clarity (De-esser + presence)"}</option>
-                <option value="warmth">{lang === "ru" ? "☕ Теплота голоса (мягкий ламповый тон)" : "☕ Warmth (Gentle analog tone)"}</option>
-                <option value="radio">{lang === "ru" ? "📻 Студийное радио (компрессия и пробивная подача)" : "📻 Broadcast Radio (Punchy compression)"}</option>
+                <option value="podcast">{lang === "ru" ? "Подкаст (НЧ-фильтр и сглаживание <80Гц)" : "Podcast (Warm, rumble filter)"}</option>
+                <option value="clarity">{lang === "ru" ? "Чёткость речи (De-esser + присутствие)" : "Clarity (De-esser + presence)"}</option>
+                <option value="warmth">{lang === "ru" ? "Тёплый тон голоса (Аналоговый характер)" : "Warmth (Gentle analog tone)"}</option>
+                <option value="radio">{lang === "ru" ? "Студийное радио (Компрессия и плотность)" : "Broadcast Radio (Punchy compression)"}</option>
               </select>
             </label>
 
@@ -406,7 +414,7 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
               <div style={{ marginLeft: 24, marginTop: 4, display: "flex", flexDirection: "column", gap: 6 }}>
                 <label className="check">
                   <input type="checkbox" checked={wordHighlight} onChange={(e) => setWordHighlight(e.target.checked)} />
-                  <span>✨ {lang === "ru" ? "Караоке-подсветка активного слова" : "Word-by-word active karaoke highlight"}</span>
+                  <span>{lang === "ru" ? "Пословная подсветка караоке" : "Word-by-word active karaoke highlight"}</span>
                 </label>
                 {wordHighlight && (
                   <div className="row" style={{ gap: 10, alignItems: "center" }}>
@@ -449,7 +457,7 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
             {/* Фоновая музыка и Auto-Ducking */}
             <div style={{ borderTop: "1px solid var(--line)", paddingTop: 12, marginTop: 12 }}>
               <label style={{ fontWeight: 600 }}>
-                🎵 {lang === "ru" ? "Фоновая музыка (BGM)" : "Background Music (BGM)"}
+                {lang === "ru" ? "Фоновая музыка (BGM)" : "Background Music (BGM)"}
                 <input
                   type="text"
                   value={bgmPath}

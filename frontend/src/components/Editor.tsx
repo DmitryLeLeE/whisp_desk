@@ -560,7 +560,7 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
             ◀
           </button>
           <button onClick={togglePlay} className="primary" style={{ minWidth: 96 }}>
-            <Icon name={playing ? "pause" : "play"} /> {playing ? (lang === "ru" ? "Пауза" : "Pause") : (lang === "ru" ? "Пуск" : "Play")}
+            <Icon name={playing ? "pause" : "play"} /> {playing ? (lang === "ru" ? "Пауза" : "Pause") : (lang === "ru" ? "Старт" : "Play")}
           </button>
           <button
             className="ghost small"
@@ -625,9 +625,9 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
         <button
           className="btn-pattern"
           onClick={() => setShowPatterns(true)}
-          title={lang === "ru" ? "Автоматический монтаж по паттернам (Shorts, Подкаст, Лекция, Дубли)" : "Auto-Pattern Editing Studio"}
+          title={lang === "ru" ? "Готовые шаблоны монтажа (Shorts, Подкаст, Лекция, Дубли)" : "Assembly Presets"}
         >
-          <Icon name="zap" /> {lang === "ru" ? "Паттерны сборки" : "Patterns"}
+          <Icon name="sliders" /> {lang === "ru" ? "Шаблоны" : "Presets"}
         </button>
 
         <span className="grow" />
@@ -769,7 +769,7 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
                   <td>{((s.source_end_ms - s.source_start_ms) / 1000).toFixed(2)} с</td>
                   <td>
                     <b>{s.action === "KEEP" ? (lang === "ru" ? "Оставить" : "Keep") : (lang === "ru" ? "Удалить" : "Cut")}</b>
-                    {s.locked ? " 🔒" : ""}
+                    {s.locked ? " [Lock]" : ""}
                   </td>
                   <td>{REASONS[s.reason] ?? s.reason}</td>
                   <td>
@@ -782,11 +782,11 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
                     <button disabled={busy} onClick={() => run({ op: "set_action", id: s.id, action: s.action === "KEEP" ? "CUT" : "KEEP" })}>
                       {s.action === "KEEP" ? (lang === "ru" ? "Удалить" : "Cut") : (lang === "ru" ? "Вернуть" : "Keep")}
                     </button>
-                    <button disabled={busy} title="Lock" onClick={() => run({ op: "lock", id: s.id, locked: !s.locked })}>
-                      {s.locked ? "🔓" : "🔒"}
+                    <button disabled={busy} title={s.locked ? "Unlock" : "Lock"} onClick={() => run({ op: "lock", id: s.id, locked: !s.locked })}>
+                      <Icon name={s.locked ? "unlock" : "lock"} style={{ width: 12, height: 12 }} />
                     </button>
                     <button disabled={busy} title="Review" onClick={() => run({ op: "review", ids: [s.id], reviewed: !s.reviewed })}>
-                      {s.reviewed ? "✓" : "○"}
+                      {s.reviewed ? "✓" : "—"}
                     </button>
                     {next && (
                       <button disabled={busy} title="Merge" onClick={() => run({ op: "merge", id: s.id, second_id: next.id, action: s.action })}>

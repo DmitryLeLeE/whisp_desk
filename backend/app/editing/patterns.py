@@ -26,7 +26,7 @@ from .timeline import (
 PATTERNS_CATALOG: list[dict[str, Any]] = [
     {
         "id": "shorts_jumpcut",
-        "name": "⚡ Динамичный Shorts / Reels / TikTok",
+        "name": "Динамичный монтаж (Shorts / Reels)",
         "category": "social",
         "description": "Максимальный темп: убирает микро-паузы (>250 мс), срезает слова-паразиты и склеивает фразы в плотный Jump-Cut.",
         "icon": "zap",
@@ -39,7 +39,7 @@ PATTERNS_CATALOG: list[dict[str, Any]] = [
     },
     {
         "id": "podcast_flow",
-        "name": "🎙️ Подкаст и диалог (Естественное дыхание)",
+        "name": "Подкаст и диалог (Естественные паузы)",
         "category": "podcast",
         "description": "Сохраняет паузы размышлений (<1.4 с) и вздохи. Вырезает только мёртвые зависания, сохраняя естественность речи.",
         "icon": "mic",
@@ -52,7 +52,7 @@ PATTERNS_CATALOG: list[dict[str, Any]] = [
     },
     {
         "id": "slides_sync",
-        "name": "🎓 Лекция и вебинар (Синхронизация сцен)",
+        "name": "Лекция со слайдами (Синхронизация)",
         "category": "education",
         "description": "Притягивает точки склеек к моменту переключения слайдов презентации (в окне ±750 мс), исключая моргание кадров.",
         "icon": "monitor",
@@ -64,7 +64,7 @@ PATTERNS_CATALOG: list[dict[str, Any]] = [
     },
     {
         "id": "retakes_removal",
-        "name": "✂️ Удаление оговорок и дублей (Retakes)",
+        "name": "Удаление повторных дублей (Retakes)",
         "category": "ai_cleanup",
         "description": "Находит фразы, где спикер сбился и начал предложение заново. Удаляет неудачные попытки, оставляя финальный дубль.",
         "icon": "scissors",
@@ -76,7 +76,7 @@ PATTERNS_CATALOG: list[dict[str, Any]] = [
     },
     {
         "id": "pause_compression",
-        "name": "⏱️ Сжатие пауз до ровной длины",
+        "name": "Сжатие длинных пауз",
         "category": "pacing",
         "description": "Не вырезает паузы под ноль, а сокращает каждую длинную паузу ровно до 350 мс. Видео звучит ровно и без спешки.",
         "icon": "clock",
@@ -88,7 +88,7 @@ PATTERNS_CATALOG: list[dict[str, Any]] = [
     },
     {
         "id": "highlights_teaser",
-        "name": "⭐ Тизер / Хайлайты (Выжимка сути)",
+        "name": "Тизер и хайлайты (Выжимка)",
         "category": "summary",
         "description": "Автоматически выбирает самые насыщенные речью фрагменты и собирает компактный тизер на заданное время.",
         "icon": "star",

@@ -99,56 +99,56 @@ One-click rule-based assembly algorithms for fast rough-cut workflows:
 
 | Pattern | Description | Best For |
 |---|---|---|
-| **⚡ Dynamic Shorts / Reels** | Jump-cut editing cutting micro-pauses and removing filler words | TikTok, Reels, Shorts |
-| **🎙️ Podcast & Dialogue** | Natural breathing rhythm, gentle pauses (500ms), zero harsh transitions | Podcasts, discussions |
-| **🎓 Lecture with Slides** | Syncs cut points with scene and slide transitions | Webinars, course videos |
-| **🧹 Retakes & Stumble Remover** | Identifies repeated spoken attempts using transcript and removes failed takes | Unscripted recordings |
-| **⏱️ Silence Compressor** | Shortens prolonged dead air to a comfortable 350ms duration | Long lectures |
-| **🔥 Teaser / Highlight Reel** | Extracts high-energy key statements into a 30s, 60s, or 90s teaser | Promos, trailers |
+| **Dynamic Shorts / Reels** | Jump-cut editing cutting micro-pauses and removing filler words | TikTok, Reels, Shorts |
+| **Podcast & Dialogue** | Natural breathing rhythm, gentle pauses (500ms), zero harsh transitions | Podcasts, discussions |
+| **Lecture with Slides** | Syncs cut points with scene and slide transitions | Webinars, course videos |
+| **Retakes & Stumble Remover** | Identifies repeated spoken attempts using transcript and removes failed takes | Unscripted recordings |
+| **Silence Compressor** | Shortens prolonged dead air to a comfortable 350ms duration | Long lectures |
+| **Teaser / Highlight Reel** | Extracts high-energy key statements into a 30s, 60s, or 90s teaser | Promos, trailers |
 
 ---
 
-### 2. 🎵 Background Music with Smart Auto-Ducking
+### 2. Background Music with Smart Auto-Ducking
 * Seamless looping of any soundtrack (`-stream_loop -1`).
-* **Sidechain Compression**: music dynamically and smoothly attenuates by 7x whenever speech is detected, and naturally rises back during pauses.
+* **Sidechain Compression**: music dynamically and smoothly attenuates whenever speech is detected, and naturally rises back during pauses.
 * Customizable music volume slider and ducking toggle in export settings.
 
 ---
 
-### 3. ✨ Word-by-Word Active Karaoke Subtitles
+### 3. Word-by-Word Active Karaoke Subtitles
 * Real-time word-level synchronization powered by Whisp timestamps.
 * Highlights the currently spoken word with an accent color (`{\c&H00EAFF&}`) in sync with speech tempo.
 * Built-in viral presets:
-  * **🔥 MrBeast Viral Shorts**: Ultra-bold Impact font in yellow with 5px outline and 3D shadow.
-  * **⚡ Cyber Neon**: Vibrant cyan lettering with a magenta-purple glow.
-  * **✨ Clean Minimal**: Elegant white typography with subtle drop shadow.
+  * **Viral Shorts**: Ultra-bold Impact font in yellow with 5px outline and 3D shadow.
+  * **Cyber Neon**: Vibrant cyan lettering with a magenta-purple glow.
+  * **Clean Minimal**: Elegant white typography with subtle drop shadow.
 * Full custom color picker support.
 
 ---
 
-### 4. 🚀 1-Click Platform & Social Media Presets
-* ✈️ **Telegram Fast**: 720p, lightning-fast encoding, lightweight file size for instant sharing.
-* 🎬 **YouTube Master**: 1080p Full HD, -14 LUFS loudness mastering, Clarity Voice Enhancer.
-* 📱 **Shorts / Reels 9:16**: 1080x1920 vertical center-crop with active karaoke subtitles.
-* 🎙️ **Podcast MP3**: Audio-only export (192 kbps), -16 LUFS mastering, warm podcast EQ.
+### 4. 1-Click Platform & Social Media Presets
+* **Telegram Fast**: 720p, lightning-fast encoding, lightweight file size for instant sharing.
+* **YouTube Master**: 1080p Full HD, -14 LUFS loudness mastering, Clarity Voice Enhancer.
+* **Shorts / Reels 9:16**: 1080x1920 vertical center-crop with active karaoke subtitles.
+* **Podcast MP3**: Audio-only export (192 kbps), -16 LUFS mastering, warm podcast EQ.
 
 ---
 
-### 5. 📦 Portable Project Archive Bundles (.whisp)
+### 5. Portable Project Archive Bundles (.whisp)
 * Export the entire project state (markers, cuts, transcript, chapters, history) into a compact `.whisp` archive under 200 KB.
 * Share projects with team members instantly without sending gigabytes of heavy video files.
 * Restore anytime via **"Import .whisp"** on the home screen.
 
 ---
 
-### 6. ✂️ Text-Based Video Editing & Filler Cleaner
-* Edit video directly by reading the transcript: click the scissors icon `✂️` to cut a sentence from the timeline, or `↩️` to restore it.
+### 6. Text-Based Video Editing & Filler Cleaner
+* Edit video directly by reading the transcript: click the cut action to cut a sentence from the timeline, or click again to restore it.
 * Automatically detect filler words (*"um"*, *"uh"*, *"like"*, *"you know"*, etc.) and batch-remove them with a single click.
 * Custom vocabulary dictionary (`initial_prompt`) ensures accurate brand names and technical jargon without AI hallucinations.
 
 ---
 
-### 7. 🎛️ Studio Audio Mastering & Normalization
+### 7. Studio Audio Mastering & Normalization
 * Automatic loudness normalization matching industry standards (**EBU R128 / LUFS**):
   * `-14 LUFS` — YouTube, Shorts, TikTok, Reels.
   * `-16 LUFS` — Podcasts, Spotify, Apple Podcasts.

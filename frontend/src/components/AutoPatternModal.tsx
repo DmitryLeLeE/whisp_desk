@@ -65,20 +65,20 @@ export default function AutoPatternModal({ pid, onClose, onPayload }: Props) {
         {/* Шапка модального окна */}
         <div className="panel-header-bar">
           <div className="row" style={{ gap: 8, alignItems: "center" }}>
-            <span className="panel-tag">RECIPES</span>
-            <h3 style={{ margin: 0, fontSize: 16 }}>
-              {lang === "ru" ? "Мастер авто-монтажа по паттернам" : "Auto-Pattern Editing Studio"}
+            <span className="panel-tag">{lang === "ru" ? "Шаблоны" : "Presets"}</span>
+            <h3 style={{ margin: 0, fontSize: 15 }}>
+              {lang === "ru" ? "Шаблоны сборки таймлайна" : "Timeline Assembly Presets"}
             </h3>
           </div>
           <button className="ghost small" onClick={onClose} style={{ marginLeft: "auto" }}>
-            ✕
+            <Icon name="x" />
           </button>
         </div>
 
         <p className="muted small" style={{ margin: "2px 0 12px" }}>
           {lang === "ru"
-            ? "Выберите готовый сценарий сборки: алгоритм автоматически перестроит склейки, удалит паразиты или синхронизирует видео."
-            : "Select an automated assembly pattern: the engine will recalculate cuts, trim filler words, or synchronize slides."}
+            ? "Выберите алгоритм сборки: пересчёт пауз, удаление дублей или синхронизация со слайдами."
+            : "Select an automated assembly pattern: recalculate cuts, trim filler words, or synchronize slides."}
         </p>
 
         {error && <p className="error">{error}</p>}
@@ -86,8 +86,8 @@ export default function AutoPatternModal({ pid, onClose, onPayload }: Props) {
         {result && (
           <div className="notice ok" style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
             <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
-              <b>✓ {result.summary}</b>
-              <span className="badge small" style={{ background: "rgba(16, 185, 129, 0.2)", color: "#10b981", fontWeight: 700 }}>
+              <b>{result.summary}</b>
+              <span className="badge small ok">
                 {lang === "ru" ? "Сэкономлено" : "Trimmed"}: {fmtTime(Math.abs(result.saved_ms || 0), false)}
               </span>
             </div>

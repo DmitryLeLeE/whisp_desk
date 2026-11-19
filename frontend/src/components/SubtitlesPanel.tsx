@@ -374,18 +374,10 @@ export default function SubtitlesPanel({ pid, project: _project, cues, busy, onJ
               {lang === "ru" ? "Стили оформления субтитров для рендера (Hardsub):" : "Hardsub Style Presets:"}
             </span>
             <div className="row wrap" style={{ gap: 6 }}>
-              <span className="badge" style={{ background: "#FFEA00", color: "#000", fontWeight: 800, border: "1px solid #eab308" }}>
-                🔥 MrBeast Viral
-              </span>
-              <span className="badge" style={{ background: "rgba(0, 240, 255, 0.15)", color: "#00f0ff", border: "1px solid #d946ef", fontWeight: 700 }}>
-                ⚡ Cyber Neon
-              </span>
-              <span className="badge" style={{ background: "rgba(255, 255, 255, 0.1)", color: "#fff", border: "1px solid rgba(255,255,255,0.2)", fontWeight: 600 }}>
-                ✨ Clean Minimal
-              </span>
-              <span className="badge" style={{ background: "rgba(255, 255, 255, 0.05)", color: "var(--muted)", border: "1px solid var(--line)" }}>
-                📖 Классика
-              </span>
+              <span className="badge">Accent Bold (Жёлтый)</span>
+              <span className="badge">Cyber Neon (Циан)</span>
+              <span className="badge">Minimal (Белый)</span>
+              <span className="badge">Классический</span>
             </div>
             <p className="small muted" style={{ margin: "6px 0 0", fontSize: 11 }}>
               {lang === "ru"
@@ -447,7 +439,7 @@ export default function SubtitlesPanel({ pid, project: _project, cues, busy, onJ
                 onClick={() => setShowFillers(!showFillers)}
                 title={lang === "ru" ? "Поиск и удаление слов-паразитов" : "Filler words cleaner"}
               >
-                🧽 {lang === "ru" ? `Паразиты (${fillerMatches.length})` : `Fillers (${fillerMatches.length})`}
+                <Icon name="scissors" /> {lang === "ru" ? `Слова-паразиты (${fillerMatches.length})` : `Fillers (${fillerMatches.length})`}
               </button>
               {viewMode === "trans" && transLangs.length > 1 && (
                 <select value={selectedTransLang} onChange={(e) => setSelectedTransLang(e.target.value)}>

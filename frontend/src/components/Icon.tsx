@@ -39,6 +39,16 @@ const PATHS: Record<string, string> = {
   upload: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12",
   zap: "M13 2L3 14h9l-1 8 10-12h-9l1-8z",
   sliders: "M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6",
+  eye: "M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z",
+  lock: "M7 11V7a5 5 0 0 1 10 0v4M4 11h16v10H4z",
+  unlock: "M7 11V7a5 5 0 0 1 9.9-1M4 11h16v10H4z",
+  music: "M9 18V5l12-2v13M9 18a3 3 0 1 1-6 0 3 3 0 0 1 6 0zm12-2a3 3 0 1 1-6 0 3 3 0 0 1 6 0z",
+  tv: "M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2zM17 2l-5 5-5-5",
+  smartphone: "M5 2h14a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm7 17h.01",
+  send: "M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z",
+  video: "M23 7l-7 5 7 5V7zM1 5h15v14H1z",
+  message: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z",
+  radio: "M4.9 19.1A10 10 0 0 1 19.1 4.9M7.8 16.2a6 6 0 0 1 8.4-8.4M12 12h.01",
 };
 
 export default function Icon({ name, className = "", style }: { name: keyof typeof PATHS | string; className?: string; style?: React.CSSProperties }) {
