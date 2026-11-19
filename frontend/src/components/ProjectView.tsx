@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { api, fmtTime } from "../api";
+import SaveIndicator from "./SaveIndicator";
+import { api, fmtTime, saveState } from "../api";
 import { useTranslation } from "../i18n";
 import type { Cue, Job, PlanPayload, Project, Scenes, SettingsData, Waveform } from "../types";
 import Editor from "./Editor";
@@ -206,10 +207,22 @@ export default function ProjectView({ pid, onClose, sys, theme, onToggleTheme, o
     return () => clearInterval(interval);
   }, [job, loadAll]);
 
+  // Alt+1…4 — переход между шагами
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!e.altKey || e.ctrlKey || e.metaKey) return;
+      const n = Number(e.key);
+      if (n >= 1 && n <= steps.length) { e.preventDefault(); setTab(steps[n - 1][0]); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Защита от случайного закрытия окна при активной задаче
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (job && (job.status === "QUEUED" || job.status === "RUNNING")) {
+      if ((job && (job.status === "QUEUED" || job.status === "RUNNING")) || saveState.get().pending > 0) {
         e.preventDefault();
         e.returnValue = "";
       }
@@ -271,6 +284,7 @@ export default function ProjectView({ pid, onClose, sys, theme, onToggleTheme, o
                 <Icon name="edit" className="edit-ico" />
               </span>
             )}
+            <SaveIndicator />
             {payload && (
               <div className="nle-stats-pill-group">
                 <span className="nle-badge-dur" title={lang === "ru" ? "Итоговый хронометраж" : "Output duration"}>
@@ -294,6 +308,7 @@ export default function ProjectView({ pid, onClose, sys, theme, onToggleTheme, o
               data-tour={`step-${k}`}
               className={`nle-workspace-tab ${tab === k ? "active" : ""} ${done[k] ? "done" : ""}`}
               onClick={() => setTab(k)}
+              title={`${label} (Alt+${steps.findIndex((x) => x[0] === k) + 1})`}
               aria-current={tab === k ? "step" : undefined}
             >
               <Icon name={done[k] ? "check" : icon} />
@@ -350,6 +365,7 @@ export default function ProjectView({ pid, onClose, sys, theme, onToggleTheme, o
               project={project}
               payload={payload}
               onPayload={setPayload}
+              onCuesChanged={loadAll}
               scenes={scenes}
               wave={wave}
               cues={cues}

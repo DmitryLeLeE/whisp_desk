@@ -104,7 +104,7 @@ export interface TemplateInfo {
 
 export interface ProjectSummary extends ProjectRow {
   filename?: string | null; duration_ms?: number | null; has_source?: boolean; has_plan?: boolean; has_subtitles?: boolean;
-  unreviewed?: number | null; output_ms?: number | null; removed_ms?: number | null; rendered?: boolean; thumb?: string | null; broken?: boolean;
+  unreviewed?: number | null; output_ms?: number | null; removed_ms?: number | null; rendered?: boolean; thumb?: string | null; thumbs?: string[]; broken?: boolean;
 }
 export interface WhispModel {
   name: string; size_mb: number; speed: string; quality: string; downloaded: boolean | null;

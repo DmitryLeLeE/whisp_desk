@@ -119,3 +119,25 @@ main:has(> .nle-manager-toolbar) { max-width: 1400px; }
 .skel-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; padding: 16px 0; }
 .skel-card { height: 190px; border-radius: 8px; background: linear-gradient(90deg, var(--panel) 25%, var(--raised) 50%, var(--panel) 75%); background-size: 200% 100%; animation: skel 1.2s linear infinite; }
 @keyframes skel { to { background-position: -200% 0; } }
+
+/* Индикатор сохранения */
+.save-ind { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--muted); margin: 0 8px; white-space: nowrap; }
+.save-ind svg { width: 12px; height: 12px; color: var(--keep, #3fb950); }
+.save-ind.saving { color: var(--accent); }
+.save-ind.failed { color: var(--cut, #e5484d); font-weight: 600; }
+
+/* Превью кадров по наведению на карточку */
+.nle-proj-card .thumb { position: relative; }
+.nle-proj-card .thumb.scrubbing::after { content: ""; position: absolute; top: 0; bottom: 0; left: var(--scrub, 0); width: 2px; background: var(--accent); opacity: .85; pointer-events: none; }
+
+/* Масштаб интерфейса: zoom на корне увеличивает и vh, поэтому делим на коэффициент */
+.nle-app { width: calc(100vw / var(--ui-zoom, 1)); height: calc(100vh / var(--ui-zoom, 1)); }
+.nle-workstation { width: calc(100vw / var(--ui-zoom, 1)); height: calc(100vh / var(--ui-zoom, 1)); }
+
+.nle-monitor-panel.fullscreen-monitor { width: calc(100vw / var(--ui-zoom, 1)); height: calc(100vh / var(--ui-zoom, 1)); }
+.sub-edit { width: 100%; min-width: 160px; height: 100%; border: 1px solid var(--accent); background: var(--panel); color: var(--text); font-size: 12px; padding: 0 6px; border-radius: 3px; }
+.sub-block:has(.sub-edit) { overflow: visible; z-index: 5; min-width: 200px; }
+
+.nle-monitor-panel.fullscreen-monitor { width: calc(100vw / var(--ui-zoom, 1)); height: calc(100vh / var(--ui-zoom, 1)); }
+.sub-edit { width: 100%; min-width: 160px; height: 100%; border: 1px solid var(--accent); background: var(--panel); color: var(--text); font-size: 12px; padding: 0 6px; border-radius: 3px; }
+.sub-block:has(.sub-edit) { overflow: visible; z-index: 5; min-width: 200px; }

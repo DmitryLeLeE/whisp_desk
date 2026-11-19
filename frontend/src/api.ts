@@ -2,7 +2,36 @@ export class ApiError extends Error {
   constructor(message: string, public status: number) { super(message); }
 }
 
+/** Состояние сохранения: сколько записывающих запросов сейчас в пути и чем закончился последний. */
+export interface SaveSnapshot { pending: number; lastSaved: number | null; failed: boolean }
+let saveSnap: SaveSnapshot = { pending: 0, lastSaved: null, failed: false };
+const saveListeners = new Set<() => void>();
+const setSave = (patch: Partial<SaveSnapshot>) => { saveSnap = { ...saveSnap, ...patch }; saveListeners.forEach((l) => l()); };
+export const saveState = {
+  subscribe: (l: () => void) => { saveListeners.add(l); return () => { saveListeners.delete(l); }; },
+  get: () => saveSnap,
+};
+const tracksSave = (method: string, url: string) => method !== "GET" && !/\/(open-file|reveal|download|analyze|render|transcribe)\b/.test(url);
+
 async function request<T>(method: string, url: string, body?: unknown): Promise<T> {
+  const track = tracksSave(method, url);
+  if (track) setSave({ pending: saveSnap.pending + 1 });
+  try {
+    const r = await rawRequest<T>(method, url, body);
+    if (track) setSave({ failed: false });
+    return r;
+  } catch (e) {
+    if (track) setSave({ failed: true });
+    throw e;
+  } finally {
+    if (track) {
+      const failed = saveSnap.failed;
+      setSave({ pending: Math.max(0, saveSnap.pending - 1), ...(failed ? {} : { lastSaved: Date.now() }) });
+    }
+  }
+}
+
+async function rawRequest<T>(method: string, url: string, body?: unknown): Promise<T> {
   const res = await fetch(url, {
     method,
     headers: body !== undefined ? { "Content-Type": "application/json" } : undefined,

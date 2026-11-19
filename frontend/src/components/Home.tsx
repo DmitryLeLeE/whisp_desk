@@ -428,7 +428,20 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
         <div className="nle-proj-grid">
           {filteredRows.map((r) => (
             <a key={r.id} className="nle-proj-card" href={`#/p/${r.id}`}>
-              <div className="thumb">
+              <div className="thumb"
+                onMouseMove={r.thumbs && r.thumbs.length > 1 ? (e) => {
+                  const box = e.currentTarget.getBoundingClientRect();
+                  const i = Math.min(r.thumbs!.length - 1, Math.max(0, Math.floor(((e.clientX - box.left) / box.width) * r.thumbs!.length)));
+                  const img = e.currentTarget.querySelector("img");
+                  if (img && img.getAttribute("src") !== r.thumbs![i]) img.setAttribute("src", r.thumbs![i]);
+                  e.currentTarget.style.setProperty("--scrub", `${((i + 0.5) / r.thumbs!.length) * 100}%`);
+                  e.currentTarget.classList.add("scrubbing");
+                } : undefined}
+                onMouseLeave={r.thumbs && r.thumbs.length > 1 ? (e) => {
+                  const img = e.currentTarget.querySelector("img");
+                  if (img && r.thumb) img.setAttribute("src", r.thumb);
+                  e.currentTarget.classList.remove("scrubbing");
+                } : undefined}>
                 {r.thumb ? <img src={r.thumb} alt="" loading="lazy" /> : <Icon name="film" style={{ width: 36, height: 36, opacity: 0.4 }} />}
                 {r.duration_ms ? <span className="dur">{fmtTime(r.duration_ms, false)}</span> : null}
                 {r.removed_ms ? <span className="saved-badge">-{fmtTime(r.removed_ms, false)}</span> : null}

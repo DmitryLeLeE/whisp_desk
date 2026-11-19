@@ -62,14 +62,18 @@ def summary(request: Request):
             if p["has_plan"]:
                 stats = T.stats(m.load_plan(pid))
             thumbs = m.path(pid, "analysis", "thumbnails")
-            first = next(iter(sorted(thumbs.glob("*.jpg"))), None) if thumbs.is_dir() else None
+            frames = sorted(thumbs.glob("*.jpg")) if thumbs.is_dir() else []
+            first = frames[0] if frames else None
+            step = max(1, len(frames) // 10)  # не больше ~10 кадров для превью по наведению
+            scrub = [f"/api/projects/{pid}/thumbnails/{f.name}" for f in frames[::step][:10]]
             exports = m.path(pid, "exports")
             done = any(f.suffix == ".mp4" and ".part" not in f.name for f in exports.glob("*.mp4")) if exports.is_dir() else False
             out.append({**row, "filename": (p["source"] or {}).get("filename"), "duration_ms": meta.get("duration_ms"),
                         "has_source": p["source"] is not None, "has_plan": p["has_plan"], "has_subtitles": p["has_subtitles"],
                         "unreviewed": stats["unreviewed"] if stats else None, "output_ms": stats["output_ms"] if stats else None,
                         "removed_ms": stats["removed_ms"] if stats else None, "rendered": done,
-                        "thumb": f"/api/projects/{pid}/thumbnails/{first.name}" if first else None})
+                        "thumb": f"/api/projects/{pid}/thumbnails/{first.name}" if first else None,
+                        "thumbs": scrub})
         except Exception:  # noqa: BLE001  повреждённый проект не должен ломать весь список
             out.append({**row, "broken": True})
     return out

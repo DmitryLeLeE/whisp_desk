@@ -1,3 +1,4 @@
+import { getUiScale } from "../uiScale";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { fmtTime } from "../api";
 import type { Cue, Segment, TimelineMarker, Waveform } from "../types";
@@ -24,6 +25,7 @@ interface Props {
   scrollRef: React.RefObject<HTMLDivElement>;
   onContextAction?: (action: "toggle" | "split" | "marker" | "lock" | "play", seg: Segment | null, ms: number) => void;
   onZoom?: (factor: number) => void;
+  onCueEdit?: (index: number, text: string) => void;
 }
 
 const tickStep = (pps: number): number => {
@@ -38,6 +40,7 @@ export default function Timeline(p: Props) {
   const [drag, setDrag] = useState<{ id: string; ms: number } | null>(null);
   const [hoverMs, setHoverMs] = useState<number | null>(null);
   const sel = useRef<{ x: number; ms: number; moved: boolean } | null>(null);
+  const [editCue, setEditCue] = useState<{ i: number; text: string } | null>(null);
   const [menu, setMenu] = useState<{ x: number; y: number; ms: number; seg: Segment | null } | null>(null);
   const ppsRef = useRef(p.pps);
   ppsRef.current = p.pps;
@@ -52,7 +55,7 @@ export default function Timeline(p: Props) {
       if (!(e.ctrlKey || e.metaKey) || !onZoomRef.current) return;
       e.preventDefault();
       const rect = el.getBoundingClientRect();
-      const offset = e.clientX - rect.left;
+      const offset = (e.clientX - rect.left) / getUiScale();
       const anchorSec = (el.scrollLeft + offset) / ppsRef.current;
       const factor = e.deltaY < 0 ? 1.18 : 1 / 1.18;
       const next = Math.min(300, Math.max(0.5, ppsRef.current * factor));
@@ -95,7 +98,8 @@ export default function Timeline(p: Props) {
 
   const msAt = (clientX: number) => {
     const r = inner.current!.getBoundingClientRect();
-    return Math.min(p.durationMs, Math.max(0, ((clientX - r.left) / p.pps) * 1000));
+    // доля от ширины в экранных пикселях, поэтому масштаб интерфейса (zoom) не искажает позицию
+    return Math.min(p.durationMs, Math.max(0, ((clientX - r.left) / r.width) * p.durationMs));
   };
   const snap = (ms: number) => { const f = 1000 / p.fps; return Math.round(Math.round(ms / f) * f); };
 
@@ -158,7 +162,7 @@ export default function Timeline(p: Props) {
             const ms = snap(msAt(e.clientX));
             const seg = p.segments.find((g) => g.source_start_ms <= ms && ms < g.source_end_ms) ?? null;
             if (seg) p.onSelect(seg.id);
-            setMenu({ x: Math.min(e.clientX, window.innerWidth - 230), y: Math.min(e.clientY, window.innerHeight - 220), ms, seg });
+            { const z = getUiScale(); setMenu({ x: Math.min(e.clientX, window.innerWidth - 230 * z) / z, y: Math.min(e.clientY, window.innerHeight - 220 * z) / z, ms, seg }); }
           }}
           onPointerLeave={() => { setHoverMs(null); }}
           onPointerUp={() => { sel.current = null; }}>
@@ -196,10 +200,28 @@ export default function Timeline(p: Props) {
                   key={i}
                   className="sub-block"
                   style={{ left: x(c.start_ms), width: Math.max(12, x(c.end_ms - c.start_ms)) }}
-                  title={`${fmtTime(c.start_ms)} – ${fmtTime(c.end_ms)}: ${c.text}`}
+                  title={`${fmtTime(c.start_ms)} – ${fmtTime(c.end_ms)}: ${c.text}${p.onCueEdit ? (ru ? " · двойной клик — править" : " · double-click to edit") : ""}`}
                   onClick={(e) => { e.stopPropagation(); p.onSeek(c.start_ms); }}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onDoubleClick={(e) => { e.stopPropagation(); if (p.onCueEdit) setEditCue({ i, text: c.text }); }}
                 >
-                  <span className="sub-text">{c.text}</span>
+                  {editCue?.i === i ? (
+                    <input
+                      className="sub-edit"
+                      autoFocus
+                      value={editCue.text}
+                      onChange={(e) => setEditCue({ i, text: e.target.value })}
+                      onFocus={(e) => e.currentTarget.select()}
+                      onClick={(e) => e.stopPropagation()}
+                      onDoubleClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => {
+                        e.stopPropagation();
+                        if (e.key === "Enter") { const t = editCue.text.trim(); setEditCue(null); if (t && t !== c.text) p.onCueEdit?.(i, t); }
+                        if (e.key === "Escape") setEditCue(null);
+                      }}
+                      onBlur={() => { const t = editCue.text.trim(); setEditCue(null); if (t && t !== c.text) p.onCueEdit?.(i, t); }}
+                    />
+                  ) : <span className="sub-text">{c.text}</span>}
                 </div>
               ))}
             </div>
@@ -236,7 +258,7 @@ export default function Timeline(p: Props) {
               <button role="menuitem" onClick={() => { p.onContextAction!("play", menu.seg, menu.ms); setMenu(null); }}>{ru ? "Прослушать фрагмент" : "Play segment"}</button>
               <button role="menuitem" onClick={() => { p.onContextAction!("lock", menu.seg, menu.ms); setMenu(null); }}>{menu.seg.locked ? (ru ? "Снять защиту" : "Unlock") : (ru ? "Защитить от изменений" : "Lock")}</button>
               <div className="ctx-sep" />
-              <button role="menuitem" onClick={() => { p.onContextAction!("split", menu.seg, menu.ms); setMenu(null); }}>{ru ? "Разрезать здесь" : "Split here"}<kbd>C</kbd></button>
+              <button role="menuitem" onClick={() => { p.onContextAction!("split", menu.seg, menu.ms); setMenu(null); }}>{ru ? "Разрезать здесь" : "Split here"}<kbd>S</kbd></button>
             </>
           )}
           <button role="menuitem" onClick={() => { p.onContextAction!("marker", menu.seg, menu.ms); setMenu(null); }}>{ru ? "Поставить маркер" : "Add marker"}<kbd>M</kbd></button>

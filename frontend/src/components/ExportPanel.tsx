@@ -52,6 +52,30 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
   const [smartReframe, setSmartReframe] = useState(false);
   const [showNotesOpen, setShowNotesOpen] = useState(false);
 
+  // Оценка времени и размера: по длительности результата и размеру исходника, без пробного рендера
+  const estimate = (() => {
+    const outMs = payload.stats.output_ms, srcMs = payload.stats.source_ms;
+    if (!outMs || !srcMs) return null;
+    const outSec = outMs / 1000;
+    let sizeBytes: number, speed: number; // speed: секунд работы на секунду результата
+    if (audioOnly) { sizeBytes = outSec * 16000; speed = 0.03; }
+    else {
+      const srcBytes = project.source?.size_bytes ?? 0;
+      if (!srcBytes) return null;
+      const ratio = outMs / srcMs;
+      if (lossless) { sizeBytes = srcBytes * ratio; speed = 0.03; }
+      else {
+        sizeBytes = srcBytes * ratio * (aspectRatio === "original" ? 0.9 : 0.7);
+        speed = encoder === "libx264" ? 0.5 : 0.15;
+        if (burn && project.has_subtitles) speed += 0.2;
+        if (denoise) speed += 0.4;
+      }
+    }
+    const sec = Math.max(5, Math.round(outSec * speed));
+    const time = sec < 90 ? `≈ ${sec} ${lang === "ru" ? "с" : "s"}` : `≈ ${Math.round(sec / 60)} ${lang === "ru" ? "мин" : "min"}`;
+    return { time, size: `≈ ${fmtSize(sizeBytes)}` };
+  })();
+
   interface Chapter { time_ms: number; title: string; source_ms?: number }
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [loadingChapters, setLoadingChapters] = useState(false);
@@ -396,6 +420,12 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
               {lang === "ru" ? "Быстрый тест (480p)" : "Quick test (480p)"}
             </button>
           </div>
+          {estimate && (
+            <p className="export-estimate muted small" title={lang === "ru" ? "Грубая оценка по длительности и параметрам; зависит от компьютера" : "Rough estimate; depends on your computer"}>
+              {lang === "ru" ? "Оценка: " : "Estimate: "}
+              <b>{estimate.time}</b> · <b>{estimate.size}</b>
+            </p>
+          )}
           {error && <p className="error">{error}</p>}
           {msg && <p className="ok">{msg}</p>}
 

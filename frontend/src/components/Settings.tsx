@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { getUiScale, setUiScaleValue } from "../uiScale";
 import { api } from "../api";
 import { useTranslation } from "../i18n";
 import { hasNativePicker, nativePickFolder } from "../native";
@@ -40,6 +41,7 @@ export default function Settings() {
   const [wm, setWm] = useState<WhispModels | null>(null);
   const [dir, setDir] = useState("");
   const [browse, setBrowse] = useState(false);
+  const [uiScale, setUiScale] = useState(() => getUiScale());
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
   const [askStart, setAskStart] = useState(() => { try { return localStorage.getItem("whisp_start_skip") !== "1"; } catch { return true; } });
@@ -150,6 +152,20 @@ export default function Settings() {
             <span>{lang === "ru" ? "Спрашивать, как обработать видео, при каждом добавлении" : "Ask how to process the video every time one is added"}</span>
           </label>
           <p className="muted small">{lang === "ru" ? "Если выключить, будет использоваться последний выбранный профиль." : "When off, the last chosen profile is used."}</p>
+        </section>
+
+        <section className="card">
+          <div className="card-title">
+            <h2>{lang === "ru" ? "Размер интерфейса" : "Interface size"}</h2>
+          </div>
+          <div className="row" style={{ gap: 6, flexWrap: "wrap" }}>
+            {[0.9, 1, 1.1, 1.25].map((v) => (
+              <button key={v} className={uiScale === v ? "primary" : "ghost"} onClick={() => { setUiScale(v); setUiScaleValue(v); }}>
+                {Math.round(v * 100)}%
+              </button>
+            ))}
+          </div>
+          <p className="muted small">{lang === "ru" ? "Увеличивает или уменьшает весь интерфейс. Подойдёт для больших мониторов и ноутбуков с мелким экраном." : "Scales the whole interface for large monitors or small laptop screens."}</p>
         </section>
 
         <section className="card">

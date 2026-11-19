@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, fmtTime, parseTime } from "../api";
 import { useTranslation } from "../i18n";
-import type { Cue, PlanPayload, Project, Scenes, Segment, Thumbs, Waveform } from "../types";
+import type { Cue, PlanPayload, TemplateInfo, Project, Scenes, Segment, Thumbs, Waveform } from "../types";
 import Icon from "./Icon";
 import AutoPatternModal from "./AutoPatternModal";
 import InsightsModal from "./InsightsModal";
@@ -10,7 +10,7 @@ import Timeline from "./Timeline";
 
 interface Props {
   pid: string; project: Project; payload: PlanPayload; onPayload: (p: PlanPayload) => void;
-  scenes: Scenes | null; wave: Waveform | null; cues: Cue[]; busy: boolean; seekTo: { ms: number; n: number } | null;
+  scenes: Scenes | null; wave: Waveform | null; cues: Cue[]; busy: boolean; seekTo: { ms: number; n: number } | null; onCuesChanged?: () => void;
 }
 
 const REASONS_EN: Record<string, string> = {
@@ -146,7 +146,7 @@ function AudioMeter({ videoRef, playing }: { videoRef: React.RefObject<HTMLVideo
   );
 }
 
-export default function Editor({ pid, project, payload, onPayload, scenes, wave, cues, busy, seekTo }: Props) {
+export default function Editor({ pid, project, payload, onPayload, scenes, wave, cues, busy, seekTo, onCuesChanged }: Props) {
   const { t, lang } = useTranslation();
   const { plan, stats } = payload;
   const segs = plan.segments;
@@ -549,6 +549,7 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
             if (sel) run({ op: "set_action", id: sel.id, action: "CUT" });
           }
           break;
+        case "x": if (sel) run({ op: "set_action", id: sel.id, action: sel.action === "KEEP" ? "CUT" : "KEEP" }); break;
         case "s": if (here) run({ op: "split", id: here.id, at_ms: snapMs(current) }); break;
         case "n": reviewNext(false); break;
         case "enter": reviewNext(true); break;
@@ -567,6 +568,22 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
   };
   useEffect(() => { fit(); }, [plan.duration_ms]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const [templates, setTemplates] = useState<TemplateInfo[]>([]);
+  useEffect(() => { api.get<TemplateInfo[]>("/api/templates").then(setTemplates).catch(() => undefined); }, []);
+  // Вид субтитров на мониторе повторяет стиль выбранного шаблона, чтобы результат не был сюрпризом
+  const subStyleCss = useMemo<React.CSSProperties>(() => {
+    const st = templates.find((x) => x.id === project.settings.template)?.subtitles;
+    if (!st) return {};
+    const o = st.outline ?? 0, oc = st.outline_colour || "#000";
+    const outline = o ? [[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([dx, dy]) => `${dx * Math.min(o, 3)}px ${dy * Math.min(o, 3)}px 0 ${oc}`).join(", ") : "";
+    return {
+      fontFamily: st.font ? `"${st.font}", Impact, sans-serif` : undefined,
+      color: st.colour || undefined,
+      fontWeight: st.bold === 0 ? 500 : 800,
+      fontSize: Math.round(Math.min(30, Math.max(14, (st.size ?? 72) / 4))),
+      textShadow: outline ? `${outline}, 0 2px 4px rgba(0,0,0,.8)` : undefined,
+    };
+  }, [templates, project.settings.template]);
   const cue = useMemo(() => cues.find((c) => current >= c.start_ms && current < c.end_ms), [cues, current]);
   const rows = onlyUnreviewed ? segs.filter((s) => !s.reviewed) : segs;
   const rangeOk = markIn != null && markOut != null && markOut > markIn;
@@ -621,7 +638,7 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
                 {lang === "ru" ? "Копия для предпросмотра создаётся во время анализа." : "Proxy video is created during analysis."}
               </p>
             )}
-            {cue && <div className="subtitle">{cue.text}</div>}
+            {cue && <div className="subtitle" style={subStyleCss}>{cue.text}</div>}
             {here?.action === "CUT" && (
               <div className="cutflag">{lang === "ru" ? "вырезается" : "cut"}</div>
             )}
@@ -781,7 +798,7 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
                     <Icon name="check" /> {t("editor.accept_next")}
                   </button>
                   {stats.unreviewed > 0 && (
-                    <button className="nle-btn-ghost small" onClick={acceptAll} disabled={busy} title={(lang === "ru" ? "Принять всё" : "Accept all")}>
+                    <button className="nle-btn-ghost small" onClick={acceptAll} disabled={busy} title={(lang === "ru" ? "Отметить все фрагменты проверенными; можно отменить" : "Mark all segments reviewed; can be undone")}>
                       {lang === "ru" ? `Принять всё (${stats.unreviewed})` : `Accept All (${stats.unreviewed})`}
                     </button>
                   )}
@@ -835,6 +852,7 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
                             <button className="nle-btn-micro" title={lang === "ru" ? "Прослушать" : "Play"} onClick={() => playRange(s.source_start_ms, s.source_end_ms)}>▶</button>
                             <button
                               className="nle-btn-text"
+                              title={lang === "ru" ? "Вырезать или оставить фрагмент (X)" : "Cut or keep the segment (X)"}
                               disabled={busy}
                               onClick={() => run({ op: "set_action", id: s.id, action: s.action === "KEEP" ? "CUT" : "KEEP" })}
                             >
@@ -947,9 +965,9 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
             className="nle-tool-btn"
             disabled={!here || busy}
             onClick={razorCut}
-            title={lang === "ru" ? "Лезвие: разрезать фрагмент по курсору (C)" : "Razor tool: split at playhead (C)"}
+            title={lang === "ru" ? "Лезвие: разрезать фрагмент по курсору (B)" : "Razor tool: split at playhead (B)"}
           >
-            <Icon name="scissors" /> <span>{lang === "ru" ? "Лезвие (C)" : "Razor (C)"}</span>
+            <Icon name="scissors" /> <span>{lang === "ru" ? "Лезвие (B)" : "Razor (B)"}</span>
           </button>
           <button
             className="nle-tool-btn"
@@ -1005,10 +1023,10 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
         </div>
 
         <div className="row" style={{ gap: 6, marginLeft: "auto", alignItems: "center" }}>
-          <button className="nle-btn-ghost small" onClick={() => setPps((p) => Math.max(0.5, p * 0.75))} title={t("editor.zoom_out")}>
+          <button className="nle-btn-ghost small" onClick={() => setPps((p) => Math.max(0.5, p * 0.75))} title={`${t("editor.zoom_out")} (Ctrl + ${lang === "ru" ? "колесо" : "wheel"})`}>
             <Icon name="zoom-out" />
           </button>
-          <button className="nle-btn-ghost small" onClick={() => setPps((p) => Math.min(300, p * 1.33))} title={t("editor.zoom_in")}>
+          <button className="nle-btn-ghost small" onClick={() => setPps((p) => Math.min(300, p * 1.33))} title={`${t("editor.zoom_in")} (Ctrl + ${lang === "ru" ? "колесо" : "wheel"})`}>
             <Icon name="zoom-in" />
           </button>
           <button className="nle-btn-ghost small" onClick={fit} title={t("editor.zoom_fit")}>
@@ -1044,6 +1062,14 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
           scrollRef={scrollRef}
           onMoveBoundary={(id, ms) => run({ op: "move_boundary", id, at_ms: ms })}
           onRange={(a, b) => { setMarkIn(a); setMarkOut(b); }}
+          onCueEdit={async (i, text) => {
+            try {
+              const updated = cues.map((c, k) => (k === i ? { ...c, text } : c));
+              await api.put(`/api/projects/${pid}/subtitles`, { cues: updated, lang: "original" });
+              onCuesChanged?.();
+              showToast(lang === "ru" ? "Реплика изменена" : "Cue edited");
+            } catch (e) { setError((e as Error).message); }
+          }}
           onZoom={(f) => setPps((v) => Math.min(300, Math.max(0.5, v * f)))}
           onContextAction={(action, seg, ms) => {
             if (action === "marker") run({ op: "add_marker", time_ms: ms, label: lang === "ru" ? "Маркер" : "Marker", color: "cyan" });
@@ -1067,7 +1093,7 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
         </div>
         <div className="nle-hotkey-cheatsheet">
           <span><kbd>Пробел</kbd> {lang === "ru" ? "Воспроизведение" : "Play"}</span>
-          <span><kbd>C</kbd> {lang === "ru" ? "Разрезать" : "Razor"}</span>
+          <span><kbd>S</kbd> {lang === "ru" ? "Разрезать" : "Split"}</span>
           <span><kbd>X</kbd> {lang === "ru" ? "Оставить / вырезать" : "Toggle Cut"}</span>
           <button className="nle-btn-ghost small" onClick={() => setShowHelp(true)}>{lang === "ru" ? "Все клавиши" : "All shortcuts"}</button>
         </div>

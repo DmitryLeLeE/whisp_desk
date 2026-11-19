@@ -69,8 +69,18 @@ def main() -> int:
             page.get_by_text("Лезвие").count()
             page.get_by_role("button", name="Перейти к монтажу").click()
             page.get_by_text("Лезвие").first.wait_for()
+            # правка реплики двойным кликом, плашка отмены и индикатор сохранения
+            page.locator(".sub-block").first.dblclick()
+            page.locator(".sub-edit").fill("Правка из смоук-теста")
+            page.locator(".sub-edit").press("Enter")
+            page.get_by_text("Реплика изменена").wait_for()
+            page.locator(".save-ind.saved").wait_for()
+            # контекстное меню таймлайна
+            page.locator(".tl-inner").click(position={"x": 200, "y": 60}, button="right")
+            page.get_by_role("menuitem", name="Поставить маркер").wait_for()
+            page.keyboard.press("Escape")
             page.get_by_text("Субтитры", exact=False).first.click()
-            page.get_by_text("Демонстрационный проект", exact=False).first.wait_for()
+            page.get_by_text("Правка из смоук-теста", exact=False).first.wait_for()
             page.get_by_text("Экспорт", exact=False).first.click()
             page.get_by_role("button", name="Собрать видео").wait_for()
 
