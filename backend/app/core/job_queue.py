@@ -145,12 +145,18 @@ class JobQueue:
 
     # ----- внутреннее -----
     def _update(self, job_id: int, **fields) -> None:
-        cols = ", ".join(f"{k}=?" for k in fields)
-        self.db.execute(f"UPDATE jobs SET {cols} WHERE id=?", (*fields.values(), job_id))
+        try:
+            cols = ", ".join(f"{k}=?" for k in fields)
+            self.db.execute(f"UPDATE jobs SET {cols} WHERE id=?", (*fields.values(), job_id))
+        except Exception:
+            pass
 
     def _log(self, job_id: int, project_id: str, line: str) -> None:
-        self._logs.setdefault(job_id, deque(maxlen=LOG_LINES)).append(f"{time.strftime('%H:%M:%S')} {line}")
-        self.projects.append_log(project_id, f"[job {job_id}] {line}")
+        try:
+            self._logs.setdefault(job_id, deque(maxlen=LOG_LINES)).append(f"{time.strftime('%H:%M:%S')} {line}")
+            self.projects.append_log(project_id, f"[job {job_id}] {line}")
+        except Exception:
+            pass
 
     def _run(self) -> None:
         while True:

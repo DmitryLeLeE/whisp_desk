@@ -41,13 +41,24 @@ class Database:
         with self._lock:
             yield self._conn
 
-    def execute(self, sql: str, args: tuple = ()) -> sqlite3.Cursor:
+    def execute(self, sql: str, args: tuple = ()) -> sqlite3.Cursor | None:
         with self._lock:
-            return self._conn.execute(sql, args)
+            try:
+                return self._conn.execute(sql, args)
+            except sqlite3.ProgrammingError as e:
+                if "closed database" in str(e).lower():
+                    return None
+                raise
 
     def query(self, sql: str, args: tuple = ()) -> list[dict]:
         with self._lock:
-            return [dict(r) for r in self._conn.execute(sql, args).fetchall()]
+            try:
+                cur = self._conn.execute(sql, args)
+                return [dict(r) for r in cur.fetchall()]
+            except sqlite3.ProgrammingError as e:
+                if "closed database" in str(e).lower():
+                    return []
+                raise
 
     def close(self) -> None:
         with self._lock:

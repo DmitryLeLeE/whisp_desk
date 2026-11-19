@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="https://github.com/DmitryLeLeE/whisp_desk/releases"><img src="https://img.shields.io/github/v/release/DmitryLeLeE/whisp_desk?color=38bdf8&style=flat-square" alt="Release"></a>
-  <img src="https://img.shields.io/badge/Версия-1.2.0-38bdf8?style=flat-square" alt="Версия 1.2.0">
+  <img src="https://img.shields.io/badge/Версия-2.0.0-38bdf8?style=flat-square" alt="Версия 2.0.0">
   <img src="https://img.shields.io/badge/Платформа-Windows-0078D6?style=flat-square" alt="Платформа">
   <img src="https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square" alt="Python">
   <img src="https://img.shields.io/badge/Конфиденциальность-100%25%20Offline-10b981?style=flat-square" alt="100% Offline">

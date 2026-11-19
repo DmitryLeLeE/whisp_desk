@@ -1,7 +1,7 @@
 ; Установщик WHISP MEDIA DESK (Inno Setup 6). Сборка: iscc installer\whisp_desk.iss
 ; Программа — один exe; установщик нужен ради ярлыков и удаления через «Программы и компоненты».
 #define AppName "WHISP MEDIA DESK"
-#define AppVersion "1.0.0"
+#define AppVersion "2.0.0"
 [Setup]
 AppId={{6E0D2A64-6B8C-4E3B-9A62-5B7E1D7B0F31}
 AppName={#AppName}
