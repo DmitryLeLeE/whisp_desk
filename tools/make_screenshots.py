@@ -120,15 +120,16 @@ def main() -> None:
             except Exception:
                 browser = pw.chromium.launch()
 
-            context = browser.new_context(viewport={"width": 1440, "height": 920}, locale="ru-RU")
+            context = browser.new_context(viewport={"width": 1440, "height": 920}, locale="ru-RU", color_scheme="dark")
             page = context.new_page()
             page.add_init_script("""
                 localStorage.setItem('whisp_seen_home_tour', 'true');
                 localStorage.setItem('whisp_seen_project_tour', 'true');
+                localStorage.setItem('whisp_wizard_done', '1');
             """)
 
             # 1. Список проектов
-            page.goto(BASE)
+            page.goto(BASE + "#/")
             page.wait_for_timeout(1500)
             page.screenshot(path=str(out / "01-projects.png"))
 
@@ -192,7 +193,7 @@ def main() -> None:
                     print("shownotes:", ex)
 
             # 7. Светлая тема (Light theme - демонстрация эргономики 2026)
-            page.goto(BASE)
+            page.goto(BASE + "#/")
             page.wait_for_timeout(1000)
             page.locator('button[title*="Светлая"], button[title*="тема"], button[title*="Theme"]').first.click()
             page.wait_for_timeout(800)
