@@ -295,23 +295,51 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
             </button>
           </div>
 
-          {/* Пресеты в 1 клик для соцсетей */}
-          <div style={{ marginTop: 12, marginBottom: 8 }}>
-            <span className="muted small" style={{ display: "block", marginBottom: 6 }}>
-              {lang === "ru" ? "Пресеты платформы в 1 клик:" : "1-Click Platform Presets:"}
+          {/* Пресеты экспорта в 1 клик */}
+          <div style={{ marginTop: 14, marginBottom: 10 }}>
+            <span className="muted small" style={{ display: "block", marginBottom: 8, fontWeight: 500 }}>
+              {lang === "ru" ? "Готовые пресеты для соцсетей и стримингов:" : "1-Click Export Presets:"}
             </span>
-            <div className="row wrap" style={{ gap: 6 }}>
-              <button type="button" className="ghost small" onClick={() => applyPlatformPreset("telegram")} title="Telegram Fast (720p, быстрый экспорт)">
-                ✈️ Telegram Fast
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 8 }}>
+              <button
+                type="button"
+                className="ghost"
+                onClick={() => applyPlatformPreset("telegram")}
+                title="720p, быстрый рендер, малый вес"
+                style={{ flexDirection: "column", padding: "8px 10px", alignItems: "flex-start", gap: 2, border: "1px solid var(--line)", background: "var(--panel2)", borderRadius: "var(--radius-sm)" }}
+              >
+                <b style={{ fontSize: 13 }}>✈️ Telegram</b>
+                <span className="muted small">720p Fast</span>
               </button>
-              <button type="button" className="ghost small" onClick={() => applyPlatformPreset("youtube")} title="YouTube Master (1080p, -14 LUFS, чёткость речи)">
-                🎬 YouTube 1080p
+              <button
+                type="button"
+                className="ghost"
+                onClick={() => applyPlatformPreset("youtube")}
+                title="1080p, нормализация -14 LUFS, фильтр чёткости"
+                style={{ flexDirection: "column", padding: "8px 10px", alignItems: "flex-start", gap: 2, border: "1px solid var(--line)", background: "var(--panel2)", borderRadius: "var(--radius-sm)" }}
+              >
+                <b style={{ fontSize: 13 }}>🎬 YouTube</b>
+                <span className="muted small">1080p Master</span>
               </button>
-              <button type="button" className="ghost small" onClick={() => applyPlatformPreset("shorts")} title="Shorts / Reels (9:16 верт. кроп, караоке-субтитры)">
-                📱 Shorts 9:16
+              <button
+                type="button"
+                className="ghost"
+                onClick={() => applyPlatformPreset("shorts")}
+                title="9:16 вертикальный кроп, караоке-субтитры"
+                style={{ flexDirection: "column", padding: "8px 10px", alignItems: "flex-start", gap: 2, border: "1px solid var(--line)", background: "var(--panel2)", borderRadius: "var(--radius-sm)" }}
+              >
+                <b style={{ fontSize: 13 }}>📱 Shorts / Reels</b>
+                <span className="muted small">9:16 + Караоке</span>
               </button>
-              <button type="button" className="ghost small" onClick={() => applyPlatformPreset("podcast")} title="Подкаст (MP3 звук, -16 LUFS, тёплый голос)">
-                🎙️ Подкаст MP3
+              <button
+                type="button"
+                className="ghost"
+                onClick={() => applyPlatformPreset("podcast")}
+                title="Только аудио MP3 192k, -16 LUFS, теплый тембр"
+                style={{ flexDirection: "column", padding: "8px 10px", alignItems: "flex-start", gap: 2, border: "1px solid var(--line)", background: "var(--panel2)", borderRadius: "var(--radius-sm)" }}
+              >
+                <b style={{ fontSize: 13 }}>🎙️ Подкаст</b>
+                <span className="muted small">MP3 Аудио</span>
               </button>
             </div>
           </div>

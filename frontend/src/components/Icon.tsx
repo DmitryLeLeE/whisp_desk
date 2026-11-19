@@ -36,6 +36,9 @@ const PATHS: Record<string, string> = {
   minimize: "M4 14h6v6m10-10h-6V4m0 6 7-7M3 21l7-7",
   "chevron-left": "M15 18l-6-6 6-6",
   "chevron-right": "M9 18l6-6-6-6",
+  upload: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12",
+  zap: "M13 2L3 14h9l-1 8 10-12h-9l1-8z",
+  sliders: "M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6",
 };
 
 export default function Icon({ name, className = "", style }: { name: keyof typeof PATHS | string; className?: string; style?: React.CSSProperties }) {

@@ -12,15 +12,12 @@ const stem = (path: string) => (path.split(/[\\/]/).pop() ?? "").replace(/\.[^.]
 export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
   const { t, lang } = useTranslation();
   const [rows, setRows] = useState<ProjectSummary[] | null>(null);
-  const [type, setType] = useState("lecture");
+  const type = "lecture";
   const [browse, setBrowse] = useState(false);
   const [drag, setDrag] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [showTour, setShowTour] = useState(false);
-  const [showQuickStart, setShowQuickStart] = useState(() => {
-    try { return localStorage.getItem("whisp_hide_quickstart") !== "true"; } catch { return true; }
-  });
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<"updated_desc" | "updated_asc" | "name_asc" | "name_desc" | "duration_desc">("updated_desc");
 
@@ -198,150 +195,127 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
     try { localStorage.setItem("whisp_seen_home_tour", "true"); } catch { /* ignore */ }
   };
 
-  const toggleQuickStart = () => {
-    setShowQuickStart((prev) => {
-      const next = !prev;
-      try { localStorage.setItem("whisp_hide_quickstart", next ? "false" : "true"); } catch { /* ignore */ }
-      return next;
-    });
-  };
-
   return (
     <main className="page">
-      {/* Карточка быстрого старта и обучения */}
-      <div className="quick-start-box">
-        <div className="quick-start-head">
-          <div className="row" style={{ gap: 10 }}>
-            <Icon name="sparkles" style={{ color: "var(--accent)" }} />
-            <b style={{ fontSize: 15 }}>{t("quickstart.title")}</b>
+      {/* Верхняя панель управления */}
+      <div className="page-head" style={{ alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
+        <div>
+          <div className="row" style={{ gap: 8, alignItems: "center" }}>
+            <h1 style={{ margin: 0 }}>{t("home.title")}</h1>
+            {rows && rows.length > 0 && (
+              <span className="badge" style={{ fontSize: 12, padding: "2px 8px" }}>{rows.length}</span>
+            )}
           </div>
-          <div className="row" style={{ gap: 8 }}>
-            <button className="primary small" onClick={() => setShowTour(true)} title="Запустить тур со стрелочками">
-              <Icon name="compass" /> {t("quickstart.btn_tour")}
-            </button>
-            <button className="ghost small" onClick={toggleQuickStart}>
-              {showQuickStart ? (lang === "ru" ? "Свернуть" : "Collapse") : (lang === "ru" ? "Развернуть" : "Expand")}
-            </button>
-          </div>
+          <p className="muted" style={{ marginTop: 2 }}>{t("home.subtitle")}</p>
         </div>
 
-        {showQuickStart && (
-          <div className="quick-start-steps">
-            <div className="quick-step-card">
-              <span className="num">1</span>
-              <b>{t("quickstart.step1.title")}</b>
-              <p>{t("quickstart.step1.desc")}</p>
-            </div>
-            <div className="quick-step-card">
-              <span className="num">2</span>
-              <b>{t("quickstart.step2.title")}</b>
-              <p>{t("quickstart.step2.desc")}</p>
-            </div>
-            <div className="quick-step-card">
-              <span className="num">3</span>
-              <b>{t("quickstart.step3.title")}</b>
-              <p>{t("quickstart.step3.desc")}</p>
-            </div>
-            <div className="quick-step-card">
-              <span className="num">4</span>
-              <b>{t("quickstart.step4.title")}</b>
-              <p>{t("quickstart.step4.desc")}</p>
-            </div>
-          </div>
-        )}
+        <div className="row wrap" style={{ gap: 8, alignItems: "center" }}>
+          {rows && rows.length > 0 && (
+            <>
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={lang === "ru" ? "Поиск проектов…" : "Search projects…"}
+                style={{ width: 180, padding: "7px 11px", fontSize: 13 }}
+              />
+              <select
+                value={sortKey}
+                onChange={(e) => setSortKey(e.target.value as any)}
+                style={{ padding: "7px 10px", fontSize: 13 }}
+              >
+                <option value="updated_desc">{lang === "ru" ? "Сначала новые" : "Recently updated"}</option>
+                <option value="updated_asc">{lang === "ru" ? "Сначала старые" : "Oldest first"}</option>
+                <option value="name_asc">{lang === "ru" ? "По названию (А–Я)" : "Name (A–Z)"}</option>
+                <option value="name_desc">{lang === "ru" ? "По названию (Я–А)" : "Name (Z–A)"}</option>
+                <option value="duration_desc">{lang === "ru" ? "По длительности" : "Duration"}</option>
+              </select>
+            </>
+          )}
+
+          <label className="button ghost" style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer", margin: 0 }} title={lang === "ru" ? "Импортировать проект из архива .whisp" : "Import project from .whisp bundle"}>
+            <Icon name="folder" /> <span>{lang === "ru" ? "Импорт .whisp" : "Import .whisp"}</span>
+            <input type="file" accept=".whisp,.zip" style={{ display: "none" }} onChange={handleImportBundle} />
+          </label>
+
+          <button className="primary" onClick={pick} disabled={busy} data-tour="hero-upload">
+            <Icon name="plus" /> {busy ? t("common.loading") : (lang === "ru" ? "Выбрать видео" : "Add Video")}
+          </button>
+
+          <button className="ghost" onClick={() => setShowTour(true)} title="Краткий обзор программы">
+            <Icon name="help" />
+          </button>
+        </div>
       </div>
 
+      {error && <p className="error">{error}</p>}
+      {browse && <FileBrowser onPick={start} onPickMultiple={(paths) => startBatch(paths)} onClose={() => setBrowse(false)} />}
+
+      {/* Зона перетаскивания файлов */}
       <div
         className={`hero ${drag ? "drag" : ""}`}
         onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
         onDragLeave={() => setDrag(false)}
         onDrop={onDrop}
-        data-tour="hero-upload"
+        style={{ padding: "16px 20px", marginBottom: 20, cursor: "pointer" }}
+        onClick={pick}
       >
-        <Icon name="film" className="icon-big" />
+        <Icon name="upload" className="icon-big" style={{ width: 28, height: 28 }} />
         <div className="grow">
-          <h2>{lang === "ru" ? "Новый проект из видео" : "New Project from Video"}</h2>
-          <p className="muted">
+          <b style={{ fontSize: 14 }}>{lang === "ru" ? "Перетащите видеофайл сюда или нажмите для выбора" : "Drag and drop video here or click to browse"}</b>
+          <p className="muted small" style={{ margin: "2px 0 0" }}>
             {lang === "ru"
-              ? "Выберите запись лекции, интервью или вебинара. Программа найдёт паузы, соберёт черновой монтаж, перенесёт субтитры и экспортирует проект в Premiere, DaVinci и MP4."
-              : "Select a video lecture, interview, or webinar. Automatically detects silences, synchronizes subtitles, and exports to Premiere Pro, DaVinci Resolve, and MP4."}
+              ? "MP4, MOV, MKV, WebM • Автоматически найдет паузы, тишину и синхронизирует субтитры"
+              : "MP4, MOV, MKV, WebM • Automatically detects silences and synchronizes speech"}
           </p>
         </div>
-        <div className="col" style={{ alignItems: "stretch", minWidth: 220 }} data-tour="content-type">
-          <button className="primary big" onClick={pick} disabled={busy}>
-            <Icon name="plus" /> {busy ? t("common.loading") : (lang === "ru" ? "Выбрать видео…" : "Choose Video…")}
-          </button>
-          <select value={type} onChange={(e) => setType(e.target.value)} aria-label="Type">
-            {Object.entries(typesMap).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-          </select>
-          <label className="button ghost" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, cursor: "pointer", marginTop: 4 }} title={lang === "ru" ? "Импортировать проект из архива .whisp" : "Import project from .whisp bundle"}>
-            <Icon name="folder" /> <span>{lang === "ru" ? "Импорт .whisp" : "Import .whisp"}</span>
-            <input type="file" accept=".whisp,.zip" style={{ display: "none" }} onChange={handleImportBundle} />
-          </label>
-        </div>
-      </div>
-      {error && <p className="error">{error}</p>}
-      {browse && <FileBrowser onPick={start} onPickMultiple={(paths) => startBatch(paths)} onClose={() => setBrowse(false)} />}
-
-      <div className="page-head" style={{ alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-        <div>
-          <h1>{t("home.title")} {rows && rows.length > 0 && <span className="muted" style={{ fontSize: 18, fontWeight: 500 }}>({rows.length})</span>}</h1>
-          <p className="muted">{t("home.subtitle")}</p>
-        </div>
-        {rows && rows.length > 0 && (
-          <div className="row wrap" style={{ gap: 8, alignItems: "center" }}>
-            <input
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={lang === "ru" ? "Поиск проектов…" : "Search projects…"}
-              style={{ width: 200, padding: "6px 10px", fontSize: 13 }}
-            />
-            <select
-              value={sortKey}
-              onChange={(e) => setSortKey(e.target.value as any)}
-              style={{ padding: "6px 10px", fontSize: 13 }}
-            >
-              <option value="updated_desc">{lang === "ru" ? "Сначала новые" : "Recently updated"}</option>
-              <option value="updated_asc">{lang === "ru" ? "Сначала старые" : "Oldest first"}</option>
-              <option value="name_asc">{lang === "ru" ? "По названию (А–Я)" : "Name (A–Z)"}</option>
-              <option value="name_desc">{lang === "ru" ? "По названию (Я–А)" : "Name (Z–A)"}</option>
-              <option value="duration_desc">{lang === "ru" ? "По длительности" : "Duration"}</option>
-            </select>
-          </div>
-        )}
+        <span className="badge" style={{ fontSize: 11 }}>100% Offline</span>
       </div>
 
+      {/* Сетка проектов */}
       {filteredRows === null ? (
         <p className="muted">{t("common.loading")}</p>
       ) : filteredRows.length === 0 ? (
-        <div className="empty card">
-          <Icon name="folder" />
-          <b>{search ? (lang === "ru" ? "Ничего не найдено по запросу" : "No projects match your search") : t("home.empty")}</b>
+        <div className="empty card" style={{ padding: "60px 20px" }}>
+          <Icon name="film" style={{ width: 44, height: 44, opacity: 0.3 }} />
+          <b>{search ? (lang === "ru" ? "Ничего не найдено по запросу" : "No projects match your search") : (lang === "ru" ? "У вас пока нет проектов" : "No projects yet")}</b>
+          <p className="muted small" style={{ maxWidth: 400, textAlign: "center" }}>
+            {lang === "ru"
+              ? "Выберите файл видеозаписи выше, чтобы создать свой первый проект чернового монтажа."
+              : "Select a video file above to create your first rough-cut project."}
+          </p>
+          <button className="primary" onClick={pick} disabled={busy}>
+            <Icon name="plus" /> {lang === "ru" ? "Создать первый проект" : "Create First Project"}
+          </button>
         </div>
       ) : (
         <div className="proj-grid">
           {filteredRows.map((r) => (
             <a key={r.id} className="proj" href={`#/p/${r.id}`}>
               <div className="thumb">
-                {r.thumb ? <img src={r.thumb} alt="" loading="lazy" /> : <Icon name="film" className="icon-big" />}
+                {r.thumb ? <img src={r.thumb} alt="" loading="lazy" /> : <Icon name="film" style={{ width: 36, height: 36, opacity: 0.4 }} />}
                 {r.duration_ms ? <span className="dur">{fmtTime(r.duration_ms, false)}</span> : null}
               </div>
               <div className="body">
-                <b>{r.name}</b>
-                <span className="muted small">{typesMap[r.type] ?? r.type}{r.filename ? ` · ${r.filename}` : ""}</span>
+                <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                  <b style={{ lineHeight: 1.3 }}>{r.name}</b>
+                </div>
+                <span className="muted small" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {r.filename || (typesMap[r.type] ?? r.type)}
+                </span>
                 {r.broken ? <span className="badge bad">Проект повреждён</span> : (
                   <div className="steps-mini">
-                    <span className={`badge ${r.has_plan ? "ok" : ""}`}>{r.has_plan ? "Анализ ✓" : r.has_source ? "Ждёт анализа" : "Нет видео"}</span>
-                    {r.has_plan && <span className={`badge ${r.unreviewed ? "warn" : "ok"}`}>{r.unreviewed ? `Проверить: ${r.unreviewed}` : "Проверен ✓"}</span>}
+                    {r.removed_ms ? (
+                      <span className="badge ok">-{fmtTime(r.removed_ms, false)}</span>
+                    ) : null}
+                    <span className={`badge ${r.has_plan ? "ok" : ""}`}>{r.has_plan ? "Монтаж ✓" : "Ждёт анализа"}</span>
                     {r.has_subtitles && <span className="badge ok">Субтитры ✓</span>}
                     {r.rendered && <span className="badge ok">MP4 ✓</span>}
                   </div>
                 )}
-                {r.removed_ms ? <span className="muted small" style={{ color: "var(--keep)" }}>Убрано: {fmtTime(r.removed_ms, false)}</span> : null}
-                <div className="row" style={{ alignItems: "center", gap: 4 }}>
+                <div className="row" style={{ alignItems: "center", gap: 6, marginTop: 4 }}>
                   <span className="muted small grow">
-                    {new Date(r.updated).toLocaleDateString(lang === "ru" ? "ru-RU" : "en-US")}
+                    {new Date(r.updated).toLocaleDateString(lang === "ru" ? "ru-RU" : "en-US", { month: "short", day: "numeric" })}
                   </span>
                   <button className="ghost small" onClick={(e) => duplicate(r, e)} aria-label="Дублировать проект" title={lang === "ru" ? "Создать копию проекта" : "Duplicate Project"}>
                     <Icon name="copy" />

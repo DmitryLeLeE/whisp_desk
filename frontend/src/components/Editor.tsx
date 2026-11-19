@@ -439,14 +439,15 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
         <div className="side">
           <div className="studio-panel-bar" style={{ marginBottom: 2 }}>
             <span className="studio-panel-title">
-              <Icon name="sliders" /> {lang === "ru" ? "ИНСПЕКТОР СЕКВЕНЦИИ" : "SEQUENCE INSPECTOR"}
+              <Icon name="sliders" /> {lang === "ru" ? "Параметры монтажа" : "Edit Decisions"}
             </span>
             <button
-              className="btn-pattern-pill"
+              className="ghost small"
               onClick={() => setShowPatterns(true)}
-              title={lang === "ru" ? "Открыть мастер сборки по паттернам" : "Open Auto-Pattern Recipes"}
+              title={lang === "ru" ? "Умные шаблоны авто-монтажа" : "Smart Assembly Templates"}
+              style={{ fontWeight: 600, color: "var(--accent)" }}
             >
-              <Icon name="zap" /> {lang === "ru" ? "Паттерны" : "Recipes"}
+              <Icon name="zap" /> {lang === "ru" ? "Шаблоны сборки" : "Templates"}
             </button>
           </div>
 

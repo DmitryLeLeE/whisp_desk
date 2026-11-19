@@ -15,15 +15,15 @@ const FIELDS: { key: keyof Profile; labelRu: string; labelEn: string; step: numb
 ];
 
 const PROFILE_TEXT_RU: Record<string, string> = {
-  careful: "Убирает только долгие паузы. Размышления и вдохи остаются. Для спокойных лекций.",
-  standard: "Убирает заметные паузы, оставляя запас до и после речи. Оптимально для большинства записей.",
-  aggressive: "Убирает даже короткие паузы и тихие места. Максимально динамично.",
+  careful: "Для спокойных лекций и бесед. Оставляет паузы для размышлений и естественное дыхание (паузы от 2.0 с).",
+  standard: "Рекомендуется: оптимальный баланс темпа. Вырезает явные паузы (от 1.2 с) с мягким запасом речи.",
+  aggressive: "Плотный и быстрый монтаж. Вырезает даже короткие паузы (от 0.7 с). Идеально для Shorts и Reels.",
 };
 
 const PROFILE_TEXT_EN: Record<string, string> = {
-  careful: "Cuts only long pauses. Preserves natural breathing. Ideal for slow lectures.",
-  standard: "Cuts noticeable pauses with smooth padding. Recommended for most videos.",
-  aggressive: "Cuts short pauses and quiet gaps aggressively for fast-paced content.",
+  careful: "Preserves natural breathing and thinking gaps. Ideal for slow-paced lectures and discussions (2.0s+).",
+  standard: "Recommended: balanced pacing. Trims noticeable pauses (1.2s+) with smooth speech padding.",
+  aggressive: "Fast-paced jump-cut pacing. Cuts short pauses (0.7s+). Ideal for Shorts and TikTok.",
 };
 
 const sec = (n: number) => String(n).replace(".", ",");
@@ -140,18 +140,23 @@ export default function SetupPanel({ project, payload: _payload, busy, onJob, on
             {Object.entries(profiles).map(([k, p]) => (
               <label key={k} className={`profile ${profile === k ? "on" : ""}`} onClick={() => { setProfile(k); setOverrides({}); }}>
                 <input type="radio" name="profile" checked={profile === k} onChange={() => undefined} />
-                <b>{p.label}</b>
-                <span className="muted small">{profText[k]}</span>
+                <div className="row" style={{ justifyContent: "space-between", alignItems: "center" }}>
+                  <b>{p.label}</b>
+                  {k === "standard" && (
+                    <span className="badge ok" style={{ fontSize: 10 }}>{lang === "ru" ? "Рекомендуется" : "Recommended"}</span>
+                  )}
+                </div>
+                <span className="muted small" style={{ lineHeight: 1.45 }}>{profText[k]}</span>
                 <span className="tags">
-                  <span className="badge">{p.noise_db} dBFS</span>
                   <span className="badge">≥ {sec(p.min_pause_s)} с</span>
+                  <span className="badge">{p.noise_db} dBFS</span>
                 </span>
               </label>
             ))}
           </div>
 
           <details className="more">
-            <summary>{lang === "ru" ? "Точная настройка порогов" : "Custom Silence Thresholds"}</summary>
+            <summary>{lang === "ru" ? "Экспертная настройка порогов (dB, секунды)" : "Expert Threshold Controls"}</summary>
             {project.has_plan && (
               <div className="row wrap">
                 <button onClick={suggest}>{lang === "ru" ? "Подобрать порог по звуку" : "Auto-detect Threshold"}</button>
@@ -175,7 +180,7 @@ export default function SetupPanel({ project, payload: _payload, busy, onJob, on
 
           <div className="row wrap" style={{ marginTop: 8 }}>
             <button className="primary big" onClick={analyze} disabled={busy || !project.source}>
-              <Icon name="scissors" /> {project.has_plan ? t("setup.btn.reanalyze") : t("setup.btn.analyze")}
+              <Icon name="scissors" /> {project.has_plan ? (lang === "ru" ? "Пересчитать монтаж" : "Re-analyze") : (lang === "ru" ? "Найти паузы и начать монтаж" : "Detect Pauses & Edit")}
             </button>
             {ae?.available && (
               <button onClick={compare} disabled={busy || !project.has_plan} title="Сравнить с Auto-Editor">
