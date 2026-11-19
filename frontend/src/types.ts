@@ -86,7 +86,20 @@ export interface Thumbs { files: string[]; times_ms: number[] }
 export interface Scenes { engine: string; boundaries_ms: number[] }
 export interface Waveform { peaks_per_second: number; peaks: number[] }
 export interface VersionInfo { name: string; label: string; created: string }
-export interface TemplateInfo { id: string; name: string; description: string }
+export interface TemplateInfo {
+  id: string;
+  name: string;
+  description: string;
+  subtitles?: {
+    font?: string;
+    size?: number;
+    colour?: string;
+    outline_colour?: string;
+    outline?: number;
+    shadow?: number;
+    bold?: number;
+  };
+}
 
 export interface ProjectSummary extends ProjectRow {
   filename?: string | null; duration_ms?: number | null; has_source?: boolean; has_plan?: boolean; has_subtitles?: boolean;

@@ -1,6 +1,6 @@
 {
-  "name": "✨ Clean Minimal",
-  "description": "Элегантный лаконичный стиль: аккуратный белый гротеск на темной подложке для подкастов и интервью.",
+  "name": "Clean Minimal",
+  "description": "Лаконичный стиль: нейтральный белый гротеск с аккуратной темной обводкой для подкастов и докладов.",
   "subtitles": {"font": "Segoe UI", "size": 62, "colour": "#FFFFFF", "outline_colour": "#0F172A", "outline": 2, "shadow": 1, "margin_v": 70, "bold": 0},
   "audio": {"normalize": true, "target_lufs": -16, "true_peak_db": -1.5, "limiter": true, "declick_ms": 8},
   "export": {"crf": 18, "preset": "veryfast", "audio_bitrate": "192k"}

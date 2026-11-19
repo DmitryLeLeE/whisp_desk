@@ -18,6 +18,130 @@ const REASONS: Record<string, string> = {
   scene_boundary: "смена сцены", opening_trim: "тишина в начале", ending_trim: "тишина в конце", speech: "речь", opening: "начало",
 };
 
+function AudioMeter({ videoRef, playing }: { videoRef: React.RefObject<HTMLVideoElement>; playing: boolean }) {
+  const [level, setLevel] = useState(0);
+  const [peak, setPeak] = useState(0);
+  const animRef = useRef<number | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const connectedRef = useRef(false);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const setupAudio = () => {
+      if (connectedRef.current) return;
+      try {
+        const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const source = ctx.createMediaElementSource(video);
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 256;
+        analyser.smoothingTimeConstant = 0.5;
+        source.connect(analyser);
+        analyser.connect(ctx.destination);
+        audioCtxRef.current = ctx;
+        analyserRef.current = analyser;
+        connectedRef.current = true;
+      } catch {
+        // Cross-origin or already hooked
+      }
+    };
+
+    video.addEventListener("play", setupAudio, { once: true });
+    return () => {
+      video.removeEventListener("play", setupAudio);
+    };
+  }, [videoRef]);
+
+  useEffect(() => {
+    if (!playing || !analyserRef.current) {
+      setLevel(0);
+      return;
+    }
+
+    if (audioCtxRef.current?.state === "suspended") {
+      audioCtxRef.current.resume().catch(() => undefined);
+    }
+
+    const analyser = analyserRef.current;
+    const data = new Uint8Array(analyser.frequencyBinCount);
+
+    const update = () => {
+      analyser.getByteTimeDomainData(data);
+      let sum = 0;
+      for (let i = 0; i < data.length; i++) {
+        const v = (data[i] - 128) / 128;
+        sum += v * v;
+      }
+      const rms = Math.sqrt(sum / data.length);
+      const db = 20 * Math.log10(rms + 1e-4);
+      const clamped = Math.max(0, Math.min(1, (db + 42) / 42));
+
+      setLevel(clamped);
+      setPeak((prev) => Math.max(clamped, prev * 0.94));
+      animRef.current = requestAnimationFrame(update);
+    };
+
+    animRef.current = requestAnimationFrame(update);
+    return () => {
+      if (animRef.current) cancelAnimationFrame(animRef.current);
+    };
+  }, [playing]);
+
+  const leds = [
+    { thresh: 0.90, color: "#ef4444" },
+    { thresh: 0.76, color: "#f59e0b" },
+    { thresh: 0.62, color: "#eab308" },
+    { thresh: 0.48, color: "#10b981" },
+    { thresh: 0.34, color: "#10b981" },
+    { thresh: 0.20, color: "#10b981" },
+    { thresh: 0.08, color: "#059669" },
+  ];
+
+  return (
+    <div
+      title="Audio Peak VU Meter (-42 dB .. 0 dB)"
+      style={{
+        position: "absolute",
+        right: 12,
+        bottom: 14,
+        display: "flex",
+        flexDirection: "column-reverse",
+        gap: 2,
+        width: 6,
+        height: 64,
+        background: "rgba(0, 0, 0, 0.65)",
+        padding: "3px 2px",
+        borderRadius: 3,
+        border: "1px solid rgba(255, 255, 255, 0.12)",
+        zIndex: 6,
+        pointerEvents: "none",
+        backdropFilter: "blur(4px)",
+      }}
+    >
+      {leds.map((led, i) => {
+        const on = level >= led.thresh;
+        const isPeak = peak >= led.thresh && peak < led.thresh + 0.14;
+        return (
+          <div
+            key={i}
+            style={{
+              flex: 1,
+              borderRadius: 1,
+              background: on ? led.color : isPeak ? `${led.color}88` : "rgba(255, 255, 255, 0.08)",
+              boxShadow: on ? `0 0 3px ${led.color}` : "none",
+              transition: "background 0.04s ease",
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
 export default function Editor({ pid, project, payload, onPayload, scenes, wave, cues, busy, seekTo }: Props) {
   const { t, lang } = useTranslation();
   const { plan, stats } = payload;
@@ -448,14 +572,17 @@ export default function Editor({ pid, project, payload, onPayload, scenes, wave,
           </div>
           <div className="player">
             {project.has_proxy ? (
-              <video
-                ref={videoRef}
-                src={`/api/projects/${pid}/media/proxy`}
-                preload="auto"
-                onPlay={() => setPlaying(true)}
-                onPause={() => setPlaying(false)}
-                onClick={togglePlay}
-              />
+              <>
+                <video
+                  ref={videoRef}
+                  src={`/api/projects/${pid}/media/proxy`}
+                  preload="auto"
+                  onPlay={() => setPlaying(true)}
+                  onPause={() => setPlaying(false)}
+                  onClick={togglePlay}
+                />
+                <AudioMeter videoRef={videoRef} playing={playing} />
+              </>
             ) : (
               <p className="muted pad" style={{ padding: 40, textAlign: "center" }}>
                 {lang === "ru" ? "Копия для предпросмотра создаётся во время анализа." : "Proxy video is created during analysis."}

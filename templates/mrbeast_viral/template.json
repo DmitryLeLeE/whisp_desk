@@ -1,6 +1,6 @@
 {
-  "name": "🔥 Viral Shorts (MrBeast)",
-  "description": "Стиль вирусных Shorts/Reels/TikTok: крупный жирный шрифт, ярко-жёлтый цвет, глубокая чёрная обводка.",
+  "name": "High Contrast (Shorts / Reels)",
+  "description": "Высококонтрастное оформление для вертикальных видео: плотный шрифт, яркий акцент и плотная обводка.",
   "subtitles": {"font": "Impact", "size": 84, "colour": "#FFEA00", "outline_colour": "#000000", "outline": 5, "shadow": 3, "margin_v": 110, "bold": 1},
   "audio": {"normalize": true, "target_lufs": -14, "true_peak_db": -1.5, "limiter": true, "declick_ms": 8},
   "export": {"crf": 18, "preset": "veryfast", "audio_bitrate": "192k"}

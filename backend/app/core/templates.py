@@ -16,7 +16,12 @@ def list_templates(root: Path | None = None) -> list[dict]:
     for d in sorted(root.iterdir()) if root.exists() else []:
         data = read_json(d / "template.json")
         if data:
-            out.append({"id": d.name, "name": data.get("name", d.name), "description": data.get("description", "")})
+            out.append({
+                "id": d.name,
+                "name": data.get("name", d.name),
+                "description": data.get("description", ""),
+                "subtitles": data.get("subtitles", {}),
+            })
     return out
 
 

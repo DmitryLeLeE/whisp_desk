@@ -160,16 +160,34 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
     if (hasNativePicker()) { const p = await nativePickFile(); if (p) start(p); } else setBrowse(true);
   };
 
+  const uploadAndStart = async (file: File) => {
+    setError(""); setBusy(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/projects/upload", { method: "POST", body: formData });
+      if (!res.ok) throw new Error(await res.text());
+      const p = await res.json();
+      onOpen(p.id);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault(); setDrag(false);
-    const files = Array.from(e.dataTransfer.files) as (File & { pywebviewFullPath?: string })[];
-    const valid = files.map((f) => f.pywebviewFullPath).filter(Boolean) as string[];
+    const rawFiles = Array.from(e.dataTransfer.files) as (File & { pywebviewFullPath?: string; path?: string })[];
+    if (!rawFiles.length) return;
+
+    const valid = rawFiles.map((f) => f.pywebviewFullPath || (f as any).path).filter(Boolean) as string[];
     if (valid.length > 1) {
       startBatch(valid);
     } else if (valid.length === 1) {
       start(valid[0]);
     } else {
-      setError(lang === "ru" ? "Браузер не сообщает путь к перетащенному файлу. Нажмите «Выбрать видео»." : "Browser does not provide local path. Click 'Choose Video'.");
+      uploadAndStart(rawFiles[0]);
     }
   };
 
@@ -198,7 +216,44 @@ export default function Home({ onOpen }: { onOpen: (id: string) => void }) {
   };
 
   return (
-    <main className="page">
+    <main
+      className="page"
+      onDragOver={(e) => {
+        e.preventDefault();
+        if (!drag) setDrag(true);
+      }}
+    >
+      {drag && (
+        <div
+          onDragOver={(e) => e.preventDefault()}
+          onDragLeave={(e) => {
+            if (e.currentTarget === e.target) setDrag(false);
+          }}
+          onDrop={onDrop}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(9, 9, 11, 0.88)",
+            backdropFilter: "blur(8px)",
+            zIndex: 9999,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            border: "2px dashed var(--accent, #38bdf8)",
+            margin: 12,
+            borderRadius: 8,
+          }}
+        >
+          <Icon name="upload" style={{ width: 44, height: 44, color: "var(--accent)", marginBottom: 12 }} />
+          <h2 style={{ margin: "0 0 6px", fontSize: 20 }}>
+            {lang === "ru" ? "Отпустите видеофайл для создания проекта" : "Drop video file to create project"}
+          </h2>
+          <p className="muted" style={{ margin: 0, fontSize: 13 }}>
+            MP4, MOV, MKV, WebM
+          </p>
+        </div>
+      )}
       {/* Верхняя панель управления */}
       <div className="page-head" style={{ alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
         <div>

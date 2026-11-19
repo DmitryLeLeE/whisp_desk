@@ -167,6 +167,24 @@ async def import_bundle(file: UploadFile, request: Request):
         tmp_path.unlink(missing_ok=True)
 
 
+@router.post("/upload", status_code=201)
+async def upload_video(file: UploadFile, request: Request):
+    """Принимает видеофайл через браузер, сохраняет в projects/_uploads/ и создаёт проект."""
+    import shutil
+    m = pm(request)
+    name = Path(file.filename or "video.mp4").stem
+    uploads_dir = Path(request.app.state.config.projects_dir) / "_uploads"
+    uploads_dir.mkdir(parents=True, exist_ok=True)
+    dest_path = uploads_dir / (file.filename or "video.mp4")
+
+    with open(dest_path, "wb") as f:
+        shutil.copyfileobj(file.file, f)
+
+    p = m.create(name=name, ptype="lecture")
+    m.set_source(p["id"], str(dest_path))
+    return p
+
+
 @router.put("/{pid}/source")
 def set_source(pid: str, body: SourceBody, request: Request):
     """Добавляет или заново указывает путь к исходному файлу. Файл не копируется и не изменяется."""

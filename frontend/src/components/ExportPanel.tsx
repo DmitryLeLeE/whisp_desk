@@ -451,6 +451,68 @@ export default function ExportPanel({ pid, project, payload, busy, onJob, onPayl
                     <span className="muted small">{highlightColor}</span>
                   </div>
                 )}
+                {(() => {
+                  const curTemplate = templates.find((tItem) => tItem.id === template);
+                  const subStyle = curTemplate?.subtitles || {};
+                  return (
+                    <div style={{
+                      marginTop: 6,
+                      padding: "12px 14px",
+                      background: "var(--bg-canvas, #09090b)",
+                      borderRadius: 6,
+                      border: "1px solid var(--border)",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 8,
+                    }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span className="muted small" style={{ fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", fontSize: 10 }}>
+                          {lang === "ru" ? "Предпросмотр стиля субтитров" : "Live Subtitle Preview"}
+                        </span>
+                        <span className="muted small" style={{ fontSize: 11 }}>
+                          {subStyle.font || "Impact"} · {subStyle.size || 72}pt
+                        </span>
+                      </div>
+                      <div style={{
+                        minHeight: 64,
+                        background: "radial-gradient(ellipse at center, rgba(39, 39, 42, 0.6) 0%, rgba(9, 9, 11, 0.95) 100%)",
+                        borderRadius: 4,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "8px 14px",
+                        border: "1px dashed rgba(255, 255, 255, 0.12)",
+                        textAlign: "center",
+                        userSelect: "none",
+                      }}>
+                        <span style={{
+                          fontFamily: subStyle.font ? `"${subStyle.font}", Impact, sans-serif` : "Impact, sans-serif",
+                          fontSize: 18,
+                          fontWeight: subStyle.bold !== 0 ? 800 : 500,
+                          color: subStyle.colour || "#FFFFFF",
+                          textShadow: subStyle.outline ? `
+                            -${subStyle.outline}px -${subStyle.outline}px 0 ${subStyle.outline_colour || "#000"},
+                             ${subStyle.outline}px -${subStyle.outline}px 0 ${subStyle.outline_colour || "#000"},
+                            -${subStyle.outline}px  ${subStyle.outline}px 0 ${subStyle.outline_colour || "#000"},
+                             ${subStyle.outline}px  ${subStyle.outline}px 0 ${subStyle.outline_colour || "#000"},
+                             0 ${subStyle.shadow || 2}px 4px rgba(0,0,0,0.8)
+                          ` : "0 2px 4px rgba(0,0,0,0.8)",
+                          letterSpacing: "0.02em",
+                          lineHeight: 1.25,
+                        }}>
+                          {lang === "ru" ? "Синхронизация речи и " : "Synchronized speech with "}
+                          <span style={{
+                            color: wordHighlight ? highlightColor : (subStyle.colour || "#FFFFFF"),
+                            textDecoration: wordHighlight ? "underline" : "none",
+                            textUnderlineOffset: "3px",
+                          }}>
+                            {lang === "ru" ? "активного слова" : "active word"}
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             )}
             <label className="check">
